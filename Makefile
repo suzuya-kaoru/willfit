@@ -1,3 +1,11 @@
+init:
+	rm -rf .next
+	rm -rf node_modules
+	rm -rf package-lock.json
+	docker compose build
+	docker compose run --rm node npm install
+	@make up
+
 up:
 	docker compose up -d
 	docker compose exec node npm run dev-debug
@@ -5,15 +13,8 @@ up:
 down:
 	docker compose down
 
-re-up:
-	rm -rf .next
-	docker compose down
-	docker compose build
-	docker compose up -d
-
 re-install:
+	rm -rf .next
 	rm -rf node_modules
 	rm -rf package-lock.json
-	rm -rf .next
-	npm install
-	npm run dev-debug
+	docker compose run --rm node npm install
