@@ -1,0 +1,69 @@
+services:
+  nginx:
+    image: nginx:latest
+    container_name: "nginx"
+    ports:
+      - "443:443"
+      - "80:80"
+    depends_on:
+      # - laravel
+      - mailhog
+      - node
+    working_dir: /var/www
+    volumes:
+      - .:/var/www:cached
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/ssl/server.crt:/etc/nginx/ssl/server.crt
+      - ./docker/nginx/ssl/server.key:/etc/nginx/ssl/server.key
+    restart: always
+
+  # laravel:
+  #   build: ./docker/laravel
+  #   container_name: "laravel"
+  #   working_dir: /var/www
+  #   volumes:
+  #     - ./docker/laravel/src/php.ini:/usr/local/etc/php/php.ini
+  #     - .:/var/www:cached
+  #   networks:
+  #     - allbum_network
+  #   ports:
+  #     - "9000:9000"
+
+  node:
+    image: node:24
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - 3000:3000
+      - 9229:9229
+    working_dir: /usr/src/app
+    tty: true
+    environment:
+      NODE_ENV: development
+    restart: always
+
+  mailhog:
+    image: axllent/mailpit
+    environment:
+      MP_WEBROOT: mailpit
+
+  adminer:
+    image: adminer
+    restart: on-failure
+    environment:
+      ADMINER_DESIGN: rmsoft
+      ADMINER_DEFAULT_SERVER: host.docker.internal:3306
+
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+      MYSQL_DATABASE: my-fitness-app
+      MYSQL_USER: docker_user
+      MYSQL_PASSWORD: docker_pass
+      TZ: 'Asia/Tokyo'
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./docker/mysql/dump:/docker-entrypoint-initdb.d
+      - ./docker/mysql/data:/var/lib/mysql
+    restart: on-failure
