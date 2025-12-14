@@ -576,12 +576,3 @@ export function getSessionWithDetails(
 
   return { ...session, menu, exerciseLogs };
 }
-
-// =============================================================================
-// 後方互換性のためのエイリアス（非推奨、移行期間後に削除）
-// =============================================================================
-
-/**
- * @deprecated getMenuWithExercises を使用してください
- */
-export const weekSchedule = mockWeekSchedule;
