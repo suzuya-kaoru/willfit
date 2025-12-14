@@ -12,7 +12,8 @@
       "!node_modules",
       "!.next",
       "!**/*.css",
-      "!docker/mysql/data"
+      "!docker/mysql/data",
+      "!components/ui/*"
     ]
   },
   "formatter": {
