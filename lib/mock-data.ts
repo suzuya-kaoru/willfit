@@ -305,15 +305,15 @@ export const mockSessions: WorkoutSession[] = [
 ];
 
 // セット
-// exerciseLogIdは、セッションIDと種目の順序から生成される数値ID
-// session-001 (id: 1) の1番目の種目 → exerciseLogId: 1
-// session-001 (id: 1) の2番目の種目 → exerciseLogId: 2
-// session-002 (id: 2) の1番目の種目 → exerciseLogId: 3
+// exerciseRecordIdは、セッションIDと種目の順序から生成される数値ID
+// session-001 (id: 1) の1番目の種目 → exerciseRecordId: 1
+// session-001 (id: 1) の2番目の種目 → exerciseRecordId: 2
+// session-002 (id: 2) の1番目の種目 → exerciseRecordId: 3
 export const mockSets: WorkoutSet[] = [
-  // session-001, ベンチプレス (exerciseLogId: 1)
+  // session-001, ベンチプレス (exerciseRecordId: 1)
   {
     id: 1,
-    exerciseLogId: 1,
+    exerciseRecordId: 1,
     setNumber: 1,
     weight: 60,
     reps: 10,
@@ -323,7 +323,7 @@ export const mockSets: WorkoutSet[] = [
   },
   {
     id: 2,
-    exerciseLogId: 1,
+    exerciseRecordId: 1,
     setNumber: 2,
     weight: 60,
     reps: 10,
@@ -333,7 +333,7 @@ export const mockSets: WorkoutSet[] = [
   },
   {
     id: 3,
-    exerciseLogId: 1,
+    exerciseRecordId: 1,
     setNumber: 3,
     weight: 60,
     reps: 8,
@@ -341,10 +341,10 @@ export const mockSets: WorkoutSet[] = [
     createdAt: new Date("2024-12-01T10:25:00"),
     updatedAt: new Date("2024-12-01T10:25:00"),
   },
-  // session-001, ラットプルダウン (exerciseLogId: 2)
+  // session-001, ラットプルダウン (exerciseRecordId: 2)
   {
     id: 4,
-    exerciseLogId: 2,
+    exerciseRecordId: 2,
     setNumber: 1,
     weight: 50,
     reps: 12,
@@ -354,7 +354,7 @@ export const mockSets: WorkoutSet[] = [
   },
   {
     id: 5,
-    exerciseLogId: 2,
+    exerciseRecordId: 2,
     setNumber: 2,
     weight: 50,
     reps: 10,
@@ -362,10 +362,10 @@ export const mockSets: WorkoutSet[] = [
     createdAt: new Date("2024-12-01T10:45:00"),
     updatedAt: new Date("2024-12-01T10:45:00"),
   },
-  // session-002, スクワット (exerciseLogId: 3)
+  // session-002, スクワット (exerciseRecordId: 3)
   {
     id: 6,
-    exerciseLogId: 3,
+    exerciseRecordId: 3,
     setNumber: 1,
     weight: 80,
     reps: 8,
@@ -375,7 +375,7 @@ export const mockSets: WorkoutSet[] = [
   },
   {
     id: 7,
-    exerciseLogId: 3,
+    exerciseRecordId: 3,
     setNumber: 2,
     weight: 80,
     reps: 8,
@@ -568,18 +568,18 @@ export function getSessionWithDetails(
     .filter((me) => me.menuId === session.menuId)
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
-  // exerciseLogIdの計算: セッションごとに連番を割り当て
-  // session-001 (id: 1) の1番目の種目 → exerciseLogId: 1
-  // session-001 (id: 1) の2番目の種目 → exerciseLogId: 2
-  // session-002 (id: 2) の1番目の種目 → exerciseLogId: 3
-  let exerciseLogIdCounter = 1;
+  // exerciseRecordIdの計算: セッションごとに連番を割り当て
+  // session-001 (id: 1) の1番目の種目 → exerciseRecordId: 1
+  // session-001 (id: 1) の2番目の種目 → exerciseRecordId: 2
+  // session-002 (id: 2) の1番目の種目 → exerciseRecordId: 3
+  let exerciseRecordIdCounter = 1;
   for (let i = 0; i < session.id; i++) {
     const prevSession = mockSessions[i];
     if (prevSession) {
       const prevMenuExercises = mockMenuExercises.filter(
         (me) => me.menuId === prevSession.menuId,
       );
-      exerciseLogIdCounter += prevMenuExercises.length;
+      exerciseRecordIdCounter += prevMenuExercises.length;
     }
   }
 
@@ -589,13 +589,13 @@ export function getSessionWithDetails(
     if (!exercise) continue;
 
     // このセッション・種目のセットを取得
-    const currentExerciseLogId = exerciseLogIdCounter + i;
+    const currentExerciseRecordId = exerciseRecordIdCounter + i;
     const sets = mockSets.filter(
-      (s) => s.exerciseLogId === currentExerciseLogId,
+      (s) => s.exerciseRecordId === currentExerciseRecordId,
     );
 
     exerciseLogs.push({
-      id: currentExerciseLogId,
+      id: currentExerciseRecordId,
       sessionId: session.id,
       exerciseId: me.exerciseId,
       exercise,

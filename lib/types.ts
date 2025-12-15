@@ -106,8 +106,8 @@ export interface MenuExercise extends BaseEntity {
 // =============================================================================
 
 /**
- * トレーニングセッション
- * @table workout_sessions
+ * トレーニング記録（ドメインでは Session と呼称）
+ * @table workout_records
  */
 export interface WorkoutSession extends BaseEntity {
   userId: number; // FK → users.id
@@ -116,24 +116,24 @@ export interface WorkoutSession extends BaseEntity {
   endedAt?: Date; // 終了日時
   condition: number; // 体調（1-10）
   fatigue: number; // 疲労感（1-10）
-  note: string; // セッションメモ
+  note: string; // メモ（ドメイン: session note）
 }
 
 /**
  * 種目ごとの記録
- * @table exercise_logs
+ * @table exercise_records
  */
 export interface ExerciseLog extends BaseEntity {
-  sessionId: number; // FK → workout_sessions.id
+  sessionId: number; // FK → workout_records.id
   exerciseId: number; // FK → exercises.id
 }
 
 /**
  * セットごとの記録
- * @table workout_sets
+ * @table workout_set_records
  */
 export interface WorkoutSet extends BaseEntity {
-  exerciseLogId: number; // FK → exercise_logs.id
+  exerciseRecordId: number; // FK → exercise_records.id
   setNumber: number; // セット番号（1, 2, 3...）
   weight: number; // 重量（kg）- 小数点1桁
   reps: number; // 回数

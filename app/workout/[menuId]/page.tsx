@@ -21,7 +21,7 @@ import { WorkoutClient } from "./_components/workout-client";
 /**
  * 指定されたメニューIDの前回セッションを取得
  * TODO: DB移行時は、この関数を DB アクセス層に置き換える
- * 例: SELECT * FROM workout_sessions WHERE menu_id = ? AND user_id = ? ORDER BY started_at DESC LIMIT 1
+ * 例: SELECT * FROM workout_records WHERE menu_id = ? AND user_id = ? ORDER BY started_at DESC LIMIT 1
  */
 function getPreviousSession(menuId: number) {
   return mockSessions
@@ -35,8 +35,8 @@ function getPreviousSession(menuId: number) {
 /**
  * 指定された種目IDの前回セットを取得
  * TODO: DB移行時は、この関数を DB アクセス層に置き換える
- * 例: SELECT * FROM workout_sets WHERE exercise_log_id IN (
- *   SELECT id FROM exercise_logs WHERE exercise_id = ? AND session_id = ?
+ * 例: SELECT * FROM workout_set_records WHERE exercise_record_id IN (
+ *   SELECT id FROM exercise_records WHERE exercise_id = ? AND session_id = ?
  * ) ORDER BY set_number
  */
 function getPreviousSetsByExercise(
@@ -58,25 +58,25 @@ function getPreviousSetsByExercise(
 
   if (exerciseOrder === -1) return [];
 
-  // exerciseLogIdの計算: セッションごとに連番を割り当て
-  // session-001 (id: 1) の1番目の種目 → exerciseLogId: 1
-  // session-001 (id: 1) の2番目の種目 → exerciseLogId: 2
-  // session-002 (id: 2) の1番目の種目 → exerciseLogId: 3
-  let exerciseLogIdCounter = 1;
+  // exerciseRecordIdの計算: セッションごとに連番を割り当て
+  // session-001 (id: 1) の1番目の種目 → exerciseRecordId: 1
+  // session-001 (id: 1) の2番目の種目 → exerciseRecordId: 2
+  // session-002 (id: 2) の1番目の種目 → exerciseRecordId: 3
+  let exerciseRecordIdCounter = 1;
   for (let i = 0; i < session.id; i++) {
     const prevSession = mockSessions[i];
     if (prevSession) {
       const prevMenuExercises = mockMenuExercises.filter(
         (me) => me.menuId === prevSession.menuId,
       );
-      exerciseLogIdCounter += prevMenuExercises.length;
+      exerciseRecordIdCounter += prevMenuExercises.length;
     }
   }
 
-  const expectedLogId = exerciseLogIdCounter + exerciseOrder;
+  const expectedRecordId = exerciseRecordIdCounter + exerciseOrder;
 
-  // 該当するexerciseLogIdのセットを取得
-  return mockSets.filter((set) => set.exerciseLogId === expectedLogId);
+  // 該当するexerciseRecordIdのセットを取得
+  return mockSets.filter((set) => set.exerciseRecordId === expectedRecordId);
 }
 
 /**

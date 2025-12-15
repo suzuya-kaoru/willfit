@@ -1,10 +1,11 @@
 import {
   getAllExercisesWithBodyParts,
+  mockMenuExercises,
   mockSessions,
   mockSets,
   mockWeightRecords,
 } from "@/lib/mock-data";
-import type { ExerciseWithBodyParts } from "@/lib/types";
+import type { ExerciseWithBodyParts, MenuExercise } from "@/lib/types";
 import {
   AnalyticsClient,
   type ExerciseDataPoint,
@@ -54,6 +55,39 @@ function getSets() {
 }
 
 /**
+ * セッションIDと種目IDから exercise_record_id を算出
+ * - mockデータのIDはセッション順 × メニュー内の並び順で連番
+ * - DB移行時は exercise_records をJOINして取得する想定
+ */
+function getExerciseRecordId(sessionId: number, exerciseId: number) {
+  const session = mockSessions.find((s) => s.id === sessionId);
+  if (!session) return null;
+
+  // セッションIDより前のセッションに含まれる種目数を合計
+  const countBefore = mockSessions
+    .filter((s) => s.id < sessionId)
+    .reduce((acc: number, s) => {
+      const exercisesInMenu = mockMenuExercises.filter(
+        (me: MenuExercise) => me.menuId === s.menuId,
+      );
+      return acc + exercisesInMenu.length;
+    }, 0);
+
+  // 現在のセッションのメニュー内での順序を取得
+  const menuExercises = mockMenuExercises
+    .filter((me: MenuExercise) => me.menuId === session.menuId)
+    .sort(
+      (a: MenuExercise, b: MenuExercise) => a.displayOrder - b.displayOrder,
+    );
+  const exerciseOrder = menuExercises.findIndex(
+    (me) => me.exerciseId === exerciseId,
+  );
+  if (exerciseOrder === -1) return null;
+
+  return countBefore + exerciseOrder + 1;
+}
+
+/**
  * 全種目を取得
  * TODO: DB移行時に DB アクセス層に置き換える
  */
@@ -78,14 +112,21 @@ function calculateExerciseData(
 ): ExerciseDataPoint[] {
   const sessionData = sessions
     .map((session) => {
-      // このセッションのセットを取得
-      // exerciseLogIdは数値なので、セッションIDと種目の順序から計算
-      // TODO: DB移行時は、exercise_logs テーブルを経由して正しく関連付ける
-      const sessionDate = session.startedAt.toISOString().split("T")[0];
-      const sessionSets = sets.filter((set) => {
-        const setDate = set.createdAt.toISOString().split("T")[0];
-        return setDate === sessionDate;
-      });
+      // このセッションに紐づく exercise_record_id を算出し、それに紐づくセットのみを取得
+      const menuExercises = mockMenuExercises
+        .filter((me: MenuExercise) => me.menuId === session.menuId)
+        .sort(
+          (a: MenuExercise, b: MenuExercise) => a.displayOrder - b.displayOrder,
+        );
+      const recordIdsForSession = menuExercises
+        .map((me: MenuExercise) =>
+          getExerciseRecordId(session.id, me.exerciseId),
+        )
+        .filter((id): id is number => id !== null);
+
+      const sessionSets = sets.filter((set) =>
+        recordIdsForSession.includes(set.exerciseRecordId),
+      );
 
       if (sessionSets.length === 0) return null;
 
@@ -134,14 +175,12 @@ function calculatePersonalBests(
     let bestDate = "";
 
     for (const session of sessions) {
-      // このセッションのセットを取得
-      // exerciseLogIdは数値なので、セッションIDと種目の順序から計算
-      // TODO: DB移行時は、exercise_logs テーブルを経由して正しく関連付ける
-      const sessionDate = session.startedAt.toISOString().split("T")[0];
-      const sessionSets = sets.filter((set) => {
-        const setDate = set.createdAt.toISOString().split("T")[0];
-        return setDate === sessionDate;
-      });
+      const recordId = getExerciseRecordId(session.id, exercise.id);
+      if (recordId === null) continue;
+
+      const sessionSets = sets.filter(
+        (set) => set.exerciseRecordId === recordId,
+      );
       for (const set of sessionSets) {
         if (set.weight > maxWeight) {
           maxWeight = set.weight;
