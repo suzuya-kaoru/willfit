@@ -79,11 +79,13 @@ function calculateExerciseData(
   const sessionData = sessions
     .map((session) => {
       // このセッションのセットを取得
-      // Note: 現在の実装では全セットを取得しているが、
-      // 将来的には sessionId でフィルタリングする必要がある
-      const sessionSets = sets.filter((set) =>
-        set.exerciseLogId.startsWith("log-"),
-      );
+      // exerciseLogIdは数値なので、セッションIDと種目の順序から計算
+      // TODO: DB移行時は、exercise_logs テーブルを経由して正しく関連付ける
+      const sessionDate = session.startedAt.toISOString().split("T")[0];
+      const sessionSets = sets.filter((set) => {
+        const setDate = set.createdAt.toISOString().split("T")[0];
+        return setDate === sessionDate;
+      });
 
       if (sessionSets.length === 0) return null;
 
@@ -133,11 +135,13 @@ function calculatePersonalBests(
 
     for (const session of sessions) {
       // このセッションのセットを取得
-      // Note: 現在の実装では全セットを取得しているが、
-      // 将来的には sessionId と exerciseId でフィルタリングする必要がある
-      const sessionSets = sets.filter((set) =>
-        set.exerciseLogId.startsWith("log-"),
-      );
+      // exerciseLogIdは数値なので、セッションIDと種目の順序から計算
+      // TODO: DB移行時は、exercise_logs テーブルを経由して正しく関連付ける
+      const sessionDate = session.startedAt.toISOString().split("T")[0];
+      const sessionSets = sets.filter((set) => {
+        const setDate = set.createdAt.toISOString().split("T")[0];
+        return setDate === sessionDate;
+      });
       for (const set of sessionSets) {
         if (set.weight > maxWeight) {
           maxWeight = set.weight;
@@ -148,7 +152,7 @@ function calculatePersonalBests(
 
     if (maxWeight > 0) {
       bests.push({
-        id: exercise.id,
+        id: exercise.id, // number型
         exerciseName: exercise.name,
         weight: maxWeight,
         date: bestDate,

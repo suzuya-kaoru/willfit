@@ -1,175 +1,145 @@
-"use client";
-
-import { ArrowLeft, Check, Clock, Info, Plus, Save } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { use, useEffect, useMemo, useState } from "react";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
-import { getMenuWithExercises, mockSessions, mockSets } from "@/lib/mock-data";
-import type { ExerciseWithBodyParts } from "@/lib/types";
+  getMenuWithExercises,
+  mockMenuExercises,
+  mockSessions,
+  mockSets,
+} from "@/lib/mock-data";
+import { WorkoutClient } from "./_components/workout-client";
 
+/**
+ * ============================================================================
+ * Server Component: データ取得と計算（サーバー側で実行）
+ * ============================================================================
+ *
+ * 将来的に DB に切り替える際は、以下の関数を DB アクセス層に置き換える：
+ * - getMenuWithExercises() → DB クエリ
+ * - getPreviousSession() → DB クエリ
+ * - getPreviousSetsByExercise() → DB クエリ
+ * - calculatePreviousRecords() → サーバー側の計算ロジック（変更なし）
+ */
+
+/**
+ * 指定されたメニューIDの前回セッションを取得
+ * TODO: DB移行時は、この関数を DB アクセス層に置き換える
+ * 例: SELECT * FROM workout_sessions WHERE menu_id = ? AND user_id = ? ORDER BY started_at DESC LIMIT 1
+ */
+function getPreviousSession(menuId: number) {
+  return mockSessions
+    .filter((s) => s.menuId === menuId)
+    .sort(
+      (a, b) =>
+        new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+    )[0];
+}
+
+/**
+ * 指定された種目IDの前回セットを取得
+ * TODO: DB移行時は、この関数を DB アクセス層に置き換える
+ * 例: SELECT * FROM workout_sets WHERE exercise_log_id IN (
+ *   SELECT id FROM exercise_logs WHERE exercise_id = ? AND session_id = ?
+ * ) ORDER BY set_number
+ */
+function getPreviousSetsByExercise(
+  exerciseId: number,
+  sessionId: number,
+): typeof mockSets {
+  const session = mockSessions.find((s) => s.id === sessionId);
+  if (!session) return [];
+
+  // セッションのメニューから種目の順序を取得
+  const menuExercises = mockMenuExercises
+    .filter((me) => me.menuId === session.menuId)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+
+  // 指定された種目IDの順序（displayOrder）を取得
+  const exerciseOrder = menuExercises.findIndex(
+    (me) => me.exerciseId === exerciseId,
+  );
+
+  if (exerciseOrder === -1) return [];
+
+  // exerciseLogIdの計算: セッションごとに連番を割り当て
+  // session-001 (id: 1) の1番目の種目 → exerciseLogId: 1
+  // session-001 (id: 1) の2番目の種目 → exerciseLogId: 2
+  // session-002 (id: 2) の1番目の種目 → exerciseLogId: 3
+  let exerciseLogIdCounter = 1;
+  for (let i = 0; i < session.id; i++) {
+    const prevSession = mockSessions[i];
+    if (prevSession) {
+      const prevMenuExercises = mockMenuExercises.filter(
+        (me) => me.menuId === prevSession.menuId,
+      );
+      exerciseLogIdCounter += prevMenuExercises.length;
+    }
+  }
+
+  const expectedLogId = exerciseLogIdCounter + exerciseOrder;
+
+  // 該当するexerciseLogIdのセットを取得
+  return mockSets.filter((set) => set.exerciseLogId === expectedLogId);
+}
+
+/**
+ * 各種目の前回記録を計算
+ * この関数は DB 移行後もサーバー側で実行される
+ */
+function calculatePreviousRecords(
+  menuId: number,
+  exerciseIds: number[],
+): Map<number, string> {
+  const previousRecords = new Map<number, string>();
+  const previousSession = getPreviousSession(menuId);
+
+  if (!previousSession) {
+    return previousRecords;
+  }
+
+  // 各種目ごとに前回記録を計算
+  for (const exerciseId of exerciseIds) {
+    const previousSets = getPreviousSetsByExercise(
+      exerciseId,
+      previousSession.id,
+    );
+
+    if (previousSets.length > 0) {
+      // セットをセット番号順にソート
+      const sortedSets = [...previousSets].sort(
+        (a, b) => a.setNumber - b.setNumber,
+      );
+      const recordString = sortedSets
+        .map((s) => `${s.weight}kg x ${s.reps}`)
+        .join(", ");
+      previousRecords.set(exerciseId, recordString);
+    }
+  }
+
+  return previousRecords;
+}
+
+/**
+ * Workout Page (Server Component)
+ */
 interface PageProps {
   params: Promise<{ menuId: string }>;
 }
 
-// ローカル用のセット型（IDはstring）
-interface LocalSet {
-  id: string;
-  setNumber: number;
-  weight: number;
-  reps: number;
-  completed: boolean;
-}
+export default async function ActiveWorkoutPage({ params }: PageProps) {
+  const { menuId: menuIdStr } = await params;
+  // URLパラメータは文字列で来るため、数値に変換
+  const menuId = parseInt(menuIdStr, 10);
 
-// ローカル用の種目ログ型
-interface LocalExerciseLog {
-  exerciseId: string;
-  exercise: ExerciseWithBodyParts;
-  sets: LocalSet[];
-  previousRecord?: string;
-}
-
-export default function ActiveWorkoutPage({ params }: PageProps) {
-  const { menuId } = use(params);
-  const router = useRouter();
-  // menu を useMemo でメモ化（menuId が変わった時のみ再計算）
-  const menu = useMemo(() => getMenuWithExercises(menuId), [menuId]);
-
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [exerciseLogs, setExerciseLogs] = useState<LocalExerciseLog[]>([]);
-  const [condition, setCondition] = useState(7);
-  const [fatigue, setFatigue] = useState(5);
-  const [note, setNote] = useState("");
-  const [showEndDialog, setShowEndDialog] = useState(false);
-
-  // Initialize exercise logs
-  useEffect(() => {
-    if (menu) {
-      const logs: LocalExerciseLog[] = menu.exercises.map((exercise) => {
-        // Find previous record for this exercise
-        const previousSession = mockSessions.find((s) => s.menuId === menu.id);
-        const previousSets = previousSession
-          ? mockSets.filter((set) => set.exerciseLogId.startsWith("log-"))
-          : [];
-
-        const previousRecord =
-          previousSets.length > 0
-            ? previousSets.map((s) => `${s.weight}kg x ${s.reps}`).join(", ")
-            : undefined;
-
-        return {
-          exerciseId: exercise.id,
-          exercise,
-          sets: [
-            {
-              id: `${exercise.id}-1`,
-              setNumber: 1,
-              weight: 0,
-              reps: 0,
-              completed: false,
-            },
-            {
-              id: `${exercise.id}-2`,
-              setNumber: 2,
-              weight: 0,
-              reps: 0,
-              completed: false,
-            },
-            {
-              id: `${exercise.id}-3`,
-              setNumber: 3,
-              weight: 0,
-              reps: 0,
-              completed: false,
-            },
-          ],
-          previousRecord,
-        };
-      });
-      setExerciseLogs(logs);
-    }
-  }, [menu]);
-
-  // Timer
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setElapsedTime((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    if (h > 0) {
-      return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-    }
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
-  const updateSet = (
-    exerciseId: string,
-    setId: string,
-    field: keyof LocalSet,
-    value: number | boolean,
-  ) => {
-    setExerciseLogs((prev) =>
-      prev.map((log) => {
-        if (log.exerciseId !== exerciseId) return log;
-        return {
-          ...log,
-          sets: log.sets.map((set) => {
-            if (set.id !== setId) return set;
-            return { ...set, [field]: value };
-          }),
-        };
-      }),
+  if (Number.isNaN(menuId)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">メニューが見つかりません</p>
+      </div>
     );
-  };
+  }
 
-  const addSet = (exerciseId: string) => {
-    setExerciseLogs((prev) =>
-      prev.map((log) => {
-        if (log.exerciseId !== exerciseId) return log;
-        const newSetNumber = log.sets.length + 1;
-        return {
-          ...log,
-          sets: [
-            ...log.sets,
-            {
-              id: `${exerciseId}-${newSetNumber}`,
-              setNumber: newSetNumber,
-              weight: 0,
-              reps: 0,
-              completed: false,
-            },
-          ],
-        };
-      }),
-    );
-  };
-
-  const handleSave = () => {
-    // In real app, save to database
-    router.push("/");
-  };
+  // ============================================================================
+  // データ取得（将来的に DB アクセス層に置き換え）
+  // ============================================================================
+  const menu = getMenuWithExercises(menuId);
 
   if (!menu) {
     return (
@@ -179,318 +149,14 @@ export default function ActiveWorkoutPage({ params }: PageProps) {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-md items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowEndDialog(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-secondary"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div>
-              <h1 className="text-sm font-semibold leading-tight">
-                {menu.name}
-              </h1>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                {formatTime(elapsedTime)}
-              </div>
-            </div>
-          </div>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setShowEndDialog(true)}
-          >
-            終了
-          </Button>
-        </div>
-      </header>
+  // ============================================================================
+  // 前回記録の計算（サーバー側で実行）
+  // ============================================================================
+  const exerciseIds = menu.exercises.map((e) => e.id);
+  const previousRecords = calculatePreviousRecords(menuId, exerciseIds);
 
-      <main className="mx-auto max-w-md space-y-4 p-4">
-        {/* Exercise List */}
-        <Accordion
-          type="multiple"
-          defaultValue={exerciseLogs.map((l) => l.exerciseId)}
-          className="space-y-3"
-        >
-          {exerciseLogs.map((log) => (
-            <AccordionItem
-              key={log.exerciseId}
-              value={log.exerciseId}
-              className="rounded-lg border border-border bg-card overflow-hidden"
-            >
-              <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-secondary/30">
-                <div className="flex flex-1 items-center justify-between pr-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{log.exercise.name}</span>
-                    <FormInfoDialog exercise={log.exercise} />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {log.sets.filter((s) => s.completed).length}/
-                      {log.sets.length}
-                    </span>
-                    {log.sets.every((s) => s.completed) && (
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary">
-                        <Check className="h-3 w-3 text-primary-foreground" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                {log.previousRecord && (
-                  <p className="mb-3 text-xs text-muted-foreground">
-                    前回: {log.previousRecord}
-                  </p>
-                )}
-
-                {/* Sets Table */}
-                <div className="space-y-2">
-                  <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground">
-                    <div className="col-span-2 text-center">Set</div>
-                    <div className="col-span-4 text-center">kg</div>
-                    <div className="col-span-4 text-center">Reps</div>
-                    <div className="col-span-2 text-center">Done</div>
-                  </div>
-
-                  {log.sets.map((set) => (
-                    <div
-                      key={set.id}
-                      className={`grid grid-cols-12 gap-2 items-center rounded-lg p-2 transition-colors ${
-                        set.completed ? "bg-primary/10" : "bg-secondary/30"
-                      }`}
-                    >
-                      <div className="col-span-2 text-center text-sm font-medium">
-                        {set.setNumber}
-                      </div>
-                      <div className="col-span-4">
-                        <Input
-                          type="number"
-                          step="0.5"
-                          value={set.weight || ""}
-                          onChange={(e) =>
-                            updateSet(
-                              log.exerciseId,
-                              set.id,
-                              "weight",
-                              Number.parseFloat(e.target.value) || 0,
-                            )
-                          }
-                          className="h-9 text-center"
-                          placeholder="60"
-                        />
-                      </div>
-                      <div className="col-span-4">
-                        <Input
-                          type="number"
-                          value={set.reps || ""}
-                          onChange={(e) =>
-                            updateSet(
-                              log.exerciseId,
-                              set.id,
-                              "reps",
-                              Number.parseInt(e.target.value, 10) || 0,
-                            )
-                          }
-                          className="h-9 text-center"
-                          placeholder="10"
-                        />
-                      </div>
-                      <div className="col-span-2 flex justify-center">
-                        <Checkbox
-                          checked={set.completed}
-                          onCheckedChange={(checked) =>
-                            updateSet(
-                              log.exerciseId,
-                              set.id,
-                              "completed",
-                              !!checked,
-                            )
-                          }
-                          className="h-6 w-6 rounded-md"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-3 w-full"
-                  onClick={() => addSet(log.exerciseId)}
-                >
-                  <Plus className="mr-1 h-4 w-4" />
-                  セット追加
-                </Button>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-
-        {/* Session Notes */}
-        <Card>
-          <CardHeader className="pb-3">
-            <h3 className="text-base font-medium">セッションメモ</h3>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-sm">体調</div>
-                <span className="text-sm font-medium text-primary">
-                  {condition}/10
-                </span>
-              </div>
-              <Slider
-                value={[condition]}
-                onValueChange={([v]) => setCondition(v)}
-                min={1}
-                max={10}
-                step={1}
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-sm">疲労感</div>
-                <span className="text-sm font-medium text-primary">
-                  {fatigue}/10
-                </span>
-              </div>
-              <Slider
-                value={[fatigue]}
-                onValueChange={([v]) => setFatigue(v)}
-                min={1}
-                max={10}
-                step={1}
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="text-sm">気づき・反省</div>
-              <Textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="今日のトレーニングで気づいたこと..."
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </main>
-
-      {/* Sticky Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 p-4 backdrop-blur-sm">
-        <div className="mx-auto max-w-md">
-          <Button onClick={handleSave} className="w-full gap-2" size="lg">
-            <Save className="h-5 w-5" />
-            トレーニングを終了して保存
-          </Button>
-        </div>
-      </div>
-
-      {/* End Confirmation Dialog */}
-      <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
-        <DialogContent className="max-w-[90vw] rounded-xl sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>トレーニングを終了しますか？</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            入力したデータは保存されます。
-          </p>
-          <div className="flex gap-2 pt-4">
-            <Button
-              variant="outline"
-              className="flex-1 bg-transparent"
-              onClick={() => setShowEndDialog(false)}
-            >
-              続ける
-            </Button>
-            <Button className="flex-1" onClick={handleSave}>
-              保存して終了
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-// Form Info Dialog Component
-function FormInfoDialog({ exercise }: { exercise: ExerciseWithBodyParts }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      {/* biome-ignore lint/a11y/useSemanticElements: AccordionTrigger が <button> のため、<div> を使用する必要がある */}
-      <div
-        role="button"
-        tabIndex={0}
-        className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full hover:bg-secondary"
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          setOpen(true);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.stopPropagation();
-            e.preventDefault();
-            setOpen(true);
-          }
-        }}
-      >
-        <Info className="h-4 w-4 text-muted-foreground" />
-      </div>
-      <DialogContent className="max-w-[90vw] rounded-xl sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {exercise.name}
-            <div className="flex gap-1">
-              {exercise.bodyParts.map((part) => (
-                <span
-                  key={part.id}
-                  className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
-                >
-                  {part.name}
-                </span>
-              ))}
-            </div>
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          {exercise.formNote && (
-            <div>
-              <h4 className="mb-2 text-sm font-medium">フォームのポイント</h4>
-              <p className="text-sm text-muted-foreground">
-                {exercise.formNote}
-              </p>
-            </div>
-          )}
-          {exercise.youtubeUrl && (
-            <div>
-              <h4 className="mb-2 text-sm font-medium">参考動画</h4>
-              <a
-                href={exercise.youtubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline"
-              >
-                YouTubeで見る
-              </a>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  // ============================================================================
+  // Client Component に props として渡す
+  // ============================================================================
+  return <WorkoutClient menu={menu} previousRecords={previousRecords} />;
 }

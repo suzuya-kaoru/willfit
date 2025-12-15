@@ -46,7 +46,7 @@ export interface ExerciseDataPoint {
 }
 
 export interface PersonalBest {
-  id: string;
+  id: number;
   exerciseName: string;
   weight: number;
   date: string;
@@ -74,7 +74,9 @@ export function AnalyticsClient({
 }: AnalyticsClientProps) {
   const [activeTab, setActiveTab] = useState<"body" | "exercise">("body");
   const [weightPeriod, setWeightPeriod] = useState<Period>("3m");
-  const [selectedExercise, setSelectedExercise] = useState(allExercises[0]?.id);
+  const [selectedExercise, setSelectedExercise] = useState<number | undefined>(
+    allExercises[0]?.id,
+  );
   const [selectedMetric, setSelectedMetric] = useState<Metric>("weight");
 
   // Filter weight data by period (クライアント側でフィルタリング)
@@ -288,15 +290,15 @@ export function AnalyticsClient({
           <TabsContent value="exercise" className="space-y-4">
             {/* Exercise Selector */}
             <Select
-              value={selectedExercise}
-              onValueChange={(v) => setSelectedExercise(v)}
+              value={selectedExercise?.toString()}
+              onValueChange={(v) => setSelectedExercise(parseInt(v, 10))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="種目を選択" />
               </SelectTrigger>
               <SelectContent>
                 {allExercises.map((exercise) => (
-                  <SelectItem key={exercise.id} value={exercise.id}>
+                  <SelectItem key={exercise.id} value={exercise.id.toString()}>
                     {exercise.name}
                   </SelectItem>
                 ))}

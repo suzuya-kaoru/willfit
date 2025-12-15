@@ -66,8 +66,8 @@ export function SettingsClient({
     if (isAddingExercise) {
       const newExercise: ExerciseWithBodyParts = {
         ...exercise,
-        id: `ex-${Date.now()}`,
-        userId: "user-001",
+        id: Date.now(), // 数値ID（実際のDBではAUTO_INCREMENT）
+        userId: 1, // 数値ID
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -83,7 +83,7 @@ export function SettingsClient({
     }
   };
 
-  const handleDeleteExercise = (id: string) => {
+  const handleDeleteExercise = (id: number) => {
     setExercises(exercises.filter((ex) => ex.id !== id));
   };
 
@@ -92,8 +92,8 @@ export function SettingsClient({
     if (isAddingMenu) {
       const newMenu: WorkoutMenuWithExercises = {
         ...menu,
-        id: `menu-${Date.now()}`,
-        userId: "user-001",
+        id: Date.now(), // 数値ID（実際のDBではAUTO_INCREMENT）
+        userId: 1, // 数値ID
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -109,7 +109,7 @@ export function SettingsClient({
     }
   };
 
-  const handleDeleteMenu = (id: string) => {
+  const handleDeleteMenu = (id: number) => {
     setMenus(menus.filter((m) => m.id !== id));
   };
 
@@ -137,8 +137,8 @@ export function SettingsClient({
               onClick={() => {
                 setIsAddingMenu(true);
                 setEditingMenu({
-                  id: "",
-                  userId: "user-001",
+                  id: 0, // 新規作成時は0（実際のDBではAUTO_INCREMENT）
+                  userId: 1, // 数値ID
                   name: "",
                   exercises: [],
                   createdAt: new Date(),
@@ -219,8 +219,8 @@ export function SettingsClient({
               onClick={() => {
                 setIsAddingExercise(true);
                 setEditingExercise({
-                  id: "",
-                  userId: "user-001",
+                  id: 0, // 新規作成時は0（実際のDBではAUTO_INCREMENT）
+                  userId: 1, // 数値ID
                   name: "",
                   bodyParts: [],
                   createdAt: new Date(),
@@ -313,7 +313,7 @@ interface ExerciseEditDialogProps {
   isNew: boolean;
   onClose: () => void;
   onSave: (exercise: ExerciseWithBodyParts) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
 }
 
 function ExerciseEditDialog({
@@ -325,7 +325,7 @@ function ExerciseEditDialog({
   onDelete,
 }: ExerciseEditDialogProps) {
   const [name, setName] = useState("");
-  const [selectedBodyParts, setSelectedBodyParts] = useState<string[]>([]);
+  const [selectedBodyParts, setSelectedBodyParts] = useState<number[]>([]);
   const [formNote, setFormNote] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
 
@@ -347,8 +347,8 @@ function ExerciseEditDialog({
     );
 
     onSave({
-      id: exercise?.id || "",
-      userId: exercise?.userId || "user-001",
+      id: exercise?.id || 0, // 新規作成時は0（実際のDBではAUTO_INCREMENT）
+      userId: exercise?.userId || 1, // 数値ID
       name: name.trim(),
       bodyParts,
       formNote: formNote.trim() || undefined,
@@ -358,7 +358,7 @@ function ExerciseEditDialog({
     });
   };
 
-  const toggleBodyPart = (partId: string) => {
+  const toggleBodyPart = (partId: number) => {
     setSelectedBodyParts((prev) =>
       prev.includes(partId)
         ? prev.filter((p) => p !== partId)
@@ -440,8 +440,10 @@ function ExerciseEditDialog({
             <Button
               variant="destructive"
               onClick={() => {
-                onDelete(exercise?.id || "");
-                onClose();
+                if (exercise?.id) {
+                  onDelete(exercise.id);
+                  onClose();
+                }
               }}
             >
               削除
@@ -468,7 +470,7 @@ interface MenuEditDialogProps {
   exercises: ExerciseWithBodyParts[];
   onClose: () => void;
   onSave: (menu: WorkoutMenuWithExercises) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
 }
 
 function MenuEditDialog({
@@ -496,8 +498,8 @@ function MenuEditDialog({
   const handleSave = () => {
     if (!name.trim()) return;
     onSave({
-      id: menu?.id || "",
-      userId: menu?.userId || "user-001",
+      id: menu?.id || 0, // 新規作成時は0（実際のDBではAUTO_INCREMENT）
+      userId: menu?.userId || 1, // 数値ID
       name: name.trim(),
       exercises: selectedExercises,
       createdAt: menu?.createdAt || new Date(),
@@ -625,8 +627,10 @@ function MenuEditDialog({
             <Button
               variant="destructive"
               onClick={() => {
-                onDelete(menu?.id || "");
-                onClose();
+                if (menu?.id) {
+                  onDelete(menu.id);
+                  onClose();
+                }
               }}
             >
               削除
