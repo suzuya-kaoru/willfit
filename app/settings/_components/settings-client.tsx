@@ -8,11 +8,14 @@ import {
   LayoutList,
   Pencil,
   Plus,
+  Scale,
   Search,
   Trash2,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { Badge } from "@/components/ui/badge";
@@ -31,21 +34,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { mockBodyParts } from "@/lib/mock-data";
 import type {
   ExerciseWithBodyParts,
+  WeightRecord,
   WorkoutMenuWithExercises,
 } from "@/lib/types";
 
 export interface SettingsClientProps {
   initialExercises: ExerciseWithBodyParts[];
   initialMenus: WorkoutMenuWithExercises[];
+  initialWeightRecords: WeightRecord[];
 }
 
 export function SettingsClient({
   initialExercises,
   initialMenus,
+  initialWeightRecords,
 }: SettingsClientProps) {
   const [exercises, setExercises] =
     useState<ExerciseWithBodyParts[]>(initialExercises);
   const [menus, setMenus] = useState<WorkoutMenuWithExercises[]>(initialMenus);
+  const [weightRecords, setWeightRecords] =
+    useState<WeightRecord[]>(initialWeightRecords);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingExercise, setEditingExercise] =
     useState<ExerciseWithBodyParts | null>(null);
@@ -53,6 +61,7 @@ export function SettingsClient({
     useState<WorkoutMenuWithExercises | null>(null);
   const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [isAddingMenu, setIsAddingMenu] = useState(false);
+  const [weightInput, setWeightInput] = useState("");
 
   // Filter exercises by search query
   const filteredExercises = exercises.filter(
@@ -113,20 +122,58 @@ export function SettingsClient({
     setMenus(menus.filter((m) => m.id !== id));
   };
 
+  // Weight Record CRUD
+  const handleSaveWeightRecord = () => {
+    const weight = parseFloat(weightInput);
+    if (Number.isNaN(weight) || weight <= 0) return;
+
+    const newRecord: WeightRecord = {
+      id: Date.now(), // 数値ID（実際のDBではAUTO_INCREMENT）
+      userId: 1, // 数値ID
+      recordedAt: new Date(),
+      weight,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    setWeightRecords([newRecord, ...weightRecords]);
+    setWeightInput("");
+  };
+
+  const handleDeleteWeightRecord = (id: number) => {
+    setWeightRecords(weightRecords.filter((r) => r.id !== id));
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <AppHeader title="設定" />
 
       <main className="mx-auto max-w-md p-4">
         <Tabs defaultValue="menus" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="menus" className="gap-2">
-              <LayoutList className="h-4 w-4" />
-              メニュー管理
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger
+              value="menus"
+              className="gap-1 text-xs sm:gap-2 sm:text-sm"
+            >
+              <LayoutList className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">メニュー管理</span>
+              <span className="sm:hidden">メニュー</span>
             </TabsTrigger>
-            <TabsTrigger value="exercises" className="gap-2">
-              <Dumbbell className="h-4 w-4" />
-              種目管理
+            <TabsTrigger
+              value="exercises"
+              className="gap-1 text-xs sm:gap-2 sm:text-sm"
+            >
+              <Dumbbell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">種目管理</span>
+              <span className="sm:hidden">種目</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="weight"
+              className="gap-1 text-xs sm:gap-2 sm:text-sm"
+            >
+              <Scale className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">体重管理</span>
+              <span className="sm:hidden">体重</span>
             </TabsTrigger>
           </TabsList>
 
@@ -271,6 +318,89 @@ export function SettingsClient({
               )}
             </div>
           </TabsContent>
+
+          {/* Weight Management Tab */}
+          <TabsContent value="weight" className="space-y-4">
+            {/* Weight Input Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <Scale className="h-4 w-4 text-primary" />
+                  体重を記録
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="70.0"
+                      value={weightInput}
+                      onChange={(e) => setWeightInput(e.target.value)}
+                      className="pr-8"
+                      min="0"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                      kg
+                    </span>
+                  </div>
+                  <Button
+                    onClick={handleSaveWeightRecord}
+                    disabled={!weightInput || parseFloat(weightInput) <= 0}
+                  >
+                    記録
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Weight Records History */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-foreground">記録履歴</h3>
+              {weightRecords.length > 0 ? (
+                <div className="space-y-2">
+                  {weightRecords.map((record) => (
+                    <Card key={record.id} className="overflow-hidden">
+                      <CardContent className="flex items-center justify-between p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                            <Scale className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {record.weight.toFixed(1)} kg
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(record.recordedAt, "yyyy年M月d日 HH:mm", {
+                                locale: ja,
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteWeightRecord(record.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      まだ体重記録がありません
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -330,14 +460,14 @@ function ExerciseEditDialog({
   const [youtubeUrl, setYoutubeUrl] = useState("");
 
   // Reset form when exercise changes
-  useState(() => {
+  useEffect(() => {
     if (exercise) {
       setName(exercise.name);
       setSelectedBodyParts(exercise.bodyParts.map((bp) => bp.id));
       setFormNote(exercise.formNote || "");
       setYoutubeUrl(exercise.youtubeUrl || "");
     }
-  });
+  }, [exercise]);
 
   const handleSave = () => {
     if (!name.trim()) return;
@@ -488,12 +618,12 @@ function MenuEditDialog({
   >([]);
 
   // Reset form when menu changes
-  useState(() => {
+  useEffect(() => {
     if (menu) {
       setName(menu.name);
       setSelectedExercises(menu.exercises);
     }
-  });
+  }, [menu]);
 
   const handleSave = () => {
     if (!name.trim()) return;

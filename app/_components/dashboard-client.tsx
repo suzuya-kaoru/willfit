@@ -1,13 +1,11 @@
 "use client";
 
-import { ChevronRight, Info, Play, Scale } from "lucide-react";
+import { ChevronRight, Info, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import type { WorkoutMenuWithExercises, WorkoutSession } from "@/lib/types";
 
 interface DashboardClientProps {
@@ -34,18 +32,10 @@ export function DashboardClient({
   weekDayStatuses,
 }: DashboardClientProps) {
   const router = useRouter();
-  const [weight, setWeight] = useState("");
 
   const handleStartWorkout = () => {
     if (todayMenu) {
       router.push(`/workout/${todayMenu.id}`);
-    }
-  };
-
-  const handleWeightSubmit = () => {
-    if (weight) {
-      // In real app, save to database
-      setWeight("");
     }
   };
 
@@ -157,36 +147,6 @@ export function DashboardClient({
                 </p>
                 <p className="text-xs text-muted-foreground">完了</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Weight Record */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base font-medium">
-              <Scale className="h-4 w-4 text-primary" />
-              クイック体重記録
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  type="number"
-                  step="0.1"
-                  placeholder="71.5"
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
-                  className="pr-8"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  kg
-                </span>
-              </div>
-              <Button onClick={handleWeightSubmit} disabled={!weight}>
-                記録
-              </Button>
             </div>
           </CardContent>
         </Card>
