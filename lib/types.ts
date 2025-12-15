@@ -38,7 +38,7 @@ export interface SoftDeletable extends BaseEntity {
  * ユーザー
  * @table users
  */
-export interface User extends BaseEntity {
+export interface User extends SoftDeletable {
   email: string;
   name: string;
   avatarUrl?: string;
@@ -158,7 +158,7 @@ export interface WeightRecord extends BaseEntity {
  * 週間スケジュール
  * @table week_schedules
  */
-export interface WeekSchedule extends BaseEntity {
+export interface WeekSchedule extends SoftDeletable {
   userId: number; // FK → users.id
   dayOfWeek: number; // 曜日（0=日曜, 1=月曜, ..., 6=土曜）
   menuId: number; // FK → workout_menus.id
