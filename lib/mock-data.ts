@@ -44,7 +44,7 @@ function mockDate(daysAgo = 0): Date {
 
 export const mockBodyParts: BodyPart[] = [
   {
-    id: "bp-001",
+    id: 1,
     name: "胸",
     nameEn: "chest",
     displayOrder: 1,
@@ -52,7 +52,7 @@ export const mockBodyParts: BodyPart[] = [
     updatedAt: mockDate(365),
   },
   {
-    id: "bp-002",
+    id: 2,
     name: "背中",
     nameEn: "back",
     displayOrder: 2,
@@ -60,7 +60,7 @@ export const mockBodyParts: BodyPart[] = [
     updatedAt: mockDate(365),
   },
   {
-    id: "bp-003",
+    id: 3,
     name: "肩",
     nameEn: "shoulder",
     displayOrder: 3,
@@ -68,7 +68,7 @@ export const mockBodyParts: BodyPart[] = [
     updatedAt: mockDate(365),
   },
   {
-    id: "bp-004",
+    id: 4,
     name: "二頭筋",
     nameEn: "biceps",
     displayOrder: 4,
@@ -76,7 +76,7 @@ export const mockBodyParts: BodyPart[] = [
     updatedAt: mockDate(365),
   },
   {
-    id: "bp-005",
+    id: 5,
     name: "三頭筋",
     nameEn: "triceps",
     displayOrder: 5,
@@ -84,7 +84,7 @@ export const mockBodyParts: BodyPart[] = [
     updatedAt: mockDate(365),
   },
   {
-    id: "bp-006",
+    id: 6,
     name: "脚",
     nameEn: "legs",
     displayOrder: 6,
@@ -92,7 +92,7 @@ export const mockBodyParts: BodyPart[] = [
     updatedAt: mockDate(365),
   },
   {
-    id: "bp-007",
+    id: 7,
     name: "大臀筋",
     nameEn: "glutes",
     displayOrder: 7,
@@ -100,7 +100,7 @@ export const mockBodyParts: BodyPart[] = [
     updatedAt: mockDate(365),
   },
   {
-    id: "bp-008",
+    id: 8,
     name: "腹筋",
     nameEn: "abs",
     displayOrder: 8,
@@ -113,11 +113,11 @@ export const mockBodyParts: BodyPart[] = [
 // 種目
 // =============================================================================
 
-const MOCK_USER_ID = "user-001";
+const MOCK_USER_ID = 1;
 
 export const mockExercises: Exercise[] = [
   {
-    id: "ex-001",
+    id: 1,
     userId: MOCK_USER_ID,
     name: "ベンチプレス",
     formNote: "肩甲骨を寄せ、手首を真っ直ぐに保つ。足は床にしっかりつける。",
@@ -126,7 +126,7 @@ export const mockExercises: Exercise[] = [
     updatedAt: mockDate(100),
   },
   {
-    id: "ex-002",
+    id: 2,
     userId: MOCK_USER_ID,
     name: "ラットプルダウン",
     formNote: "胸を張り、肘を体の横に引く。反動を使わない。",
@@ -135,7 +135,7 @@ export const mockExercises: Exercise[] = [
     updatedAt: mockDate(100),
   },
   {
-    id: "ex-003",
+    id: 3,
     userId: MOCK_USER_ID,
     name: "スクワット",
     formNote: "膝がつま先より前に出ないように。背中は真っ直ぐ。",
@@ -144,7 +144,7 @@ export const mockExercises: Exercise[] = [
     updatedAt: mockDate(100),
   },
   {
-    id: "ex-004",
+    id: 4,
     userId: MOCK_USER_ID,
     name: "ショルダープレス",
     formNote: "肘は体の少し前方に。首を縮めない。",
@@ -152,7 +152,7 @@ export const mockExercises: Exercise[] = [
     updatedAt: mockDate(100),
   },
   {
-    id: "ex-005",
+    id: 5,
     userId: MOCK_USER_ID,
     name: "デッドリフト",
     formNote: "腰を丸めない。バーは体に近い位置をキープ。",
@@ -160,7 +160,7 @@ export const mockExercises: Exercise[] = [
     updatedAt: mockDate(100),
   },
   {
-    id: "ex-006",
+    id: 6,
     userId: MOCK_USER_ID,
     name: "ダンベルカール",
     formNote: "肘は固定。反動を使わずコントロール。",
@@ -172,22 +172,22 @@ export const mockExercises: Exercise[] = [
 // 種目-部位 中間テーブル
 export const mockExerciseBodyParts: ExerciseBodyPart[] = [
   // ベンチプレス → 胸, 三頭筋
-  { exerciseId: "ex-001", bodyPartId: "bp-001" },
-  { exerciseId: "ex-001", bodyPartId: "bp-005" },
+  { exerciseId: 1, bodyPartId: 1 },
+  { exerciseId: 1, bodyPartId: 5 },
   // ラットプルダウン → 背中, 二頭筋
-  { exerciseId: "ex-002", bodyPartId: "bp-002" },
-  { exerciseId: "ex-002", bodyPartId: "bp-004" },
+  { exerciseId: 2, bodyPartId: 2 },
+  { exerciseId: 2, bodyPartId: 4 },
   // スクワット → 脚, 大臀筋
-  { exerciseId: "ex-003", bodyPartId: "bp-006" },
-  { exerciseId: "ex-003", bodyPartId: "bp-007" },
+  { exerciseId: 3, bodyPartId: 6 },
+  { exerciseId: 3, bodyPartId: 7 },
   // ショルダープレス → 肩
-  { exerciseId: "ex-004", bodyPartId: "bp-003" },
+  { exerciseId: 4, bodyPartId: 3 },
   // デッドリフト → 背中, 脚, 大臀筋
-  { exerciseId: "ex-005", bodyPartId: "bp-002" },
-  { exerciseId: "ex-005", bodyPartId: "bp-006" },
-  { exerciseId: "ex-005", bodyPartId: "bp-007" },
+  { exerciseId: 5, bodyPartId: 2 },
+  { exerciseId: 5, bodyPartId: 6 },
+  { exerciseId: 5, bodyPartId: 7 },
   // ダンベルカール → 二頭筋
-  { exerciseId: "ex-006", bodyPartId: "bp-004" },
+  { exerciseId: 6, bodyPartId: 4 },
 ];
 
 // =============================================================================
@@ -196,21 +196,21 @@ export const mockExerciseBodyParts: ExerciseBodyPart[] = [
 
 export const mockMenus: WorkoutMenu[] = [
   {
-    id: "menu-001",
+    id: 1,
     userId: MOCK_USER_ID,
     name: "Day1 胸・背中",
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
   {
-    id: "menu-002",
+    id: 2,
     userId: MOCK_USER_ID,
     name: "Day2 脚・肩",
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
   {
-    id: "menu-003",
+    id: 3,
     userId: MOCK_USER_ID,
     name: "Day3 背中・腕",
     createdAt: mockDate(90),
@@ -222,51 +222,51 @@ export const mockMenus: WorkoutMenu[] = [
 export const mockMenuExercises: MenuExercise[] = [
   // Day1 胸・背中 → ベンチプレス, ラットプルダウン
   {
-    id: "me-001",
-    menuId: "menu-001",
-    exerciseId: "ex-001",
+    id: 1,
+    menuId: 1,
+    exerciseId: 1,
     displayOrder: 1,
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
   {
-    id: "me-002",
-    menuId: "menu-001",
-    exerciseId: "ex-002",
+    id: 2,
+    menuId: 1,
+    exerciseId: 2,
     displayOrder: 2,
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
   // Day2 脚・肩 → スクワット, ショルダープレス
   {
-    id: "me-003",
-    menuId: "menu-002",
-    exerciseId: "ex-003",
+    id: 3,
+    menuId: 2,
+    exerciseId: 3,
     displayOrder: 1,
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
   {
-    id: "me-004",
-    menuId: "menu-002",
-    exerciseId: "ex-004",
+    id: 4,
+    menuId: 2,
+    exerciseId: 4,
     displayOrder: 2,
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
   // Day3 背中・腕 → デッドリフト, ダンベルカール
   {
-    id: "me-005",
-    menuId: "menu-003",
-    exerciseId: "ex-005",
+    id: 5,
+    menuId: 3,
+    exerciseId: 5,
     displayOrder: 1,
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
   {
-    id: "me-006",
-    menuId: "menu-003",
-    exerciseId: "ex-006",
+    id: 6,
+    menuId: 3,
+    exerciseId: 6,
     displayOrder: 2,
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
@@ -279,9 +279,9 @@ export const mockMenuExercises: MenuExercise[] = [
 
 export const mockSessions: WorkoutSession[] = [
   {
-    id: "session-001",
+    id: 1,
     userId: MOCK_USER_ID,
-    menuId: "menu-001",
+    menuId: 1,
     startedAt: new Date("2024-12-01T10:00:00"),
     endedAt: new Date("2024-12-01T11:30:00"),
     condition: 8,
@@ -291,9 +291,9 @@ export const mockSessions: WorkoutSession[] = [
     updatedAt: new Date("2024-12-01T11:30:00"),
   },
   {
-    id: "session-002",
+    id: 2,
     userId: MOCK_USER_ID,
-    menuId: "menu-002",
+    menuId: 2,
     startedAt: new Date("2024-11-29T09:00:00"),
     endedAt: new Date("2024-11-29T10:15:00"),
     condition: 7,
@@ -305,11 +305,15 @@ export const mockSessions: WorkoutSession[] = [
 ];
 
 // セット
+// exerciseLogIdは、セッションIDと種目の順序から生成される数値ID
+// session-001 (id: 1) の1番目の種目 → exerciseLogId: 1
+// session-001 (id: 1) の2番目の種目 → exerciseLogId: 2
+// session-002 (id: 2) の1番目の種目 → exerciseLogId: 3
 export const mockSets: WorkoutSet[] = [
-  // session-001, ベンチプレス
+  // session-001, ベンチプレス (exerciseLogId: 1)
   {
-    id: "set-001",
-    exerciseLogId: "log-001",
+    id: 1,
+    exerciseLogId: 1,
     setNumber: 1,
     weight: 60,
     reps: 10,
@@ -318,8 +322,8 @@ export const mockSets: WorkoutSet[] = [
     updatedAt: new Date("2024-12-01T10:15:00"),
   },
   {
-    id: "set-002",
-    exerciseLogId: "log-001",
+    id: 2,
+    exerciseLogId: 1,
     setNumber: 2,
     weight: 60,
     reps: 10,
@@ -328,8 +332,8 @@ export const mockSets: WorkoutSet[] = [
     updatedAt: new Date("2024-12-01T10:20:00"),
   },
   {
-    id: "set-003",
-    exerciseLogId: "log-001",
+    id: 3,
+    exerciseLogId: 1,
     setNumber: 3,
     weight: 60,
     reps: 8,
@@ -337,10 +341,10 @@ export const mockSets: WorkoutSet[] = [
     createdAt: new Date("2024-12-01T10:25:00"),
     updatedAt: new Date("2024-12-01T10:25:00"),
   },
-  // session-001, ラットプルダウン
+  // session-001, ラットプルダウン (exerciseLogId: 2)
   {
-    id: "set-004",
-    exerciseLogId: "log-002",
+    id: 4,
+    exerciseLogId: 2,
     setNumber: 1,
     weight: 50,
     reps: 12,
@@ -349,8 +353,8 @@ export const mockSets: WorkoutSet[] = [
     updatedAt: new Date("2024-12-01T10:40:00"),
   },
   {
-    id: "set-005",
-    exerciseLogId: "log-002",
+    id: 5,
+    exerciseLogId: 2,
     setNumber: 2,
     weight: 50,
     reps: 10,
@@ -358,10 +362,10 @@ export const mockSets: WorkoutSet[] = [
     createdAt: new Date("2024-12-01T10:45:00"),
     updatedAt: new Date("2024-12-01T10:45:00"),
   },
-  // session-002, スクワット
+  // session-002, スクワット (exerciseLogId: 3)
   {
-    id: "set-006",
-    exerciseLogId: "log-003",
+    id: 6,
+    exerciseLogId: 3,
     setNumber: 1,
     weight: 80,
     reps: 8,
@@ -370,8 +374,8 @@ export const mockSets: WorkoutSet[] = [
     updatedAt: new Date("2024-11-29T09:15:00"),
   },
   {
-    id: "set-007",
-    exerciseLogId: "log-003",
+    id: 7,
+    exerciseLogId: 3,
     setNumber: 2,
     weight: 80,
     reps: 8,
@@ -387,7 +391,7 @@ export const mockSets: WorkoutSet[] = [
 
 export const mockWeightRecords: WeightRecord[] = [
   {
-    id: "wr-001",
+    id: 1,
     userId: MOCK_USER_ID,
     recordedAt: new Date("2024-11-01T08:00:00"),
     weight: 72.5,
@@ -395,7 +399,7 @@ export const mockWeightRecords: WeightRecord[] = [
     updatedAt: new Date("2024-11-01T08:00:00"),
   },
   {
-    id: "wr-002",
+    id: 2,
     userId: MOCK_USER_ID,
     recordedAt: new Date("2024-11-08T08:00:00"),
     weight: 72.3,
@@ -403,7 +407,7 @@ export const mockWeightRecords: WeightRecord[] = [
     updatedAt: new Date("2024-11-08T08:00:00"),
   },
   {
-    id: "wr-003",
+    id: 3,
     userId: MOCK_USER_ID,
     recordedAt: new Date("2024-11-15T08:00:00"),
     weight: 72.0,
@@ -411,7 +415,7 @@ export const mockWeightRecords: WeightRecord[] = [
     updatedAt: new Date("2024-11-15T08:00:00"),
   },
   {
-    id: "wr-004",
+    id: 4,
     userId: MOCK_USER_ID,
     recordedAt: new Date("2024-11-22T08:00:00"),
     weight: 71.8,
@@ -419,7 +423,7 @@ export const mockWeightRecords: WeightRecord[] = [
     updatedAt: new Date("2024-11-22T08:00:00"),
   },
   {
-    id: "wr-005",
+    id: 5,
     userId: MOCK_USER_ID,
     recordedAt: new Date("2024-11-29T08:00:00"),
     weight: 71.5,
@@ -427,7 +431,7 @@ export const mockWeightRecords: WeightRecord[] = [
     updatedAt: new Date("2024-11-29T08:00:00"),
   },
   {
-    id: "wr-006",
+    id: 6,
     userId: MOCK_USER_ID,
     recordedAt: new Date("2024-12-01T08:00:00"),
     weight: 71.3,
@@ -442,34 +446,34 @@ export const mockWeightRecords: WeightRecord[] = [
 
 export const mockWeekSchedule: WeekSchedule[] = [
   {
-    id: "ws-001",
+    id: 1,
     userId: MOCK_USER_ID,
     dayOfWeek: 0, // 日曜
-    menuId: "menu-001",
+    menuId: 1,
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
   {
-    id: "ws-002",
+    id: 2,
     userId: MOCK_USER_ID,
     dayOfWeek: 1, // 月曜
-    menuId: "menu-002",
+    menuId: 2,
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
   {
-    id: "ws-003",
+    id: 3,
     userId: MOCK_USER_ID,
     dayOfWeek: 3, // 水曜
-    menuId: "menu-003",
+    menuId: 3,
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
   {
-    id: "ws-004",
+    id: 4,
     userId: MOCK_USER_ID,
     dayOfWeek: 5, // 金曜
-    menuId: "menu-001",
+    menuId: 1,
     createdAt: mockDate(90),
     updatedAt: mockDate(90),
   },
@@ -483,7 +487,7 @@ export const mockWeekSchedule: WeekSchedule[] = [
  * 種目に部位情報を付与
  */
 export function getExerciseWithBodyParts(
-  exerciseId: string,
+  exerciseId: number,
 ): ExerciseWithBodyParts | undefined {
   const exercise = mockExercises.find((e) => e.id === exerciseId);
   if (!exercise) return undefined;
@@ -510,13 +514,17 @@ export function getAllExercisesWithBodyParts(): ExerciseWithBodyParts[] {
  * メニューに種目リストを付与
  */
 export function getMenuWithExercises(
-  menuId: string,
+  menuId: number | string,
 ): WorkoutMenuWithExercises | undefined {
-  const menu = mockMenus.find((m) => m.id === menuId);
+  // URLパラメータは文字列で来る可能性があるため、数値に変換
+  const menuIdNum = typeof menuId === "string" ? parseInt(menuId, 10) : menuId;
+  if (Number.isNaN(menuIdNum)) return undefined;
+
+  const menu = mockMenus.find((m) => m.id === menuIdNum);
   if (!menu) return undefined;
 
   const menuExercises = mockMenuExercises
-    .filter((me) => me.menuId === menuId)
+    .filter((me) => me.menuId === menuIdNum)
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
   const exercises = menuExercises
@@ -539,9 +547,14 @@ export function getAllMenusWithExercises(): WorkoutMenuWithExercises[] {
  * セッションに詳細情報を付与
  */
 export function getSessionWithDetails(
-  sessionId: string,
+  sessionId: number | string,
 ): WorkoutSessionWithDetails | undefined {
-  const session = mockSessions.find((s) => s.id === sessionId);
+  // URLパラメータは文字列で来る可能性があるため、数値に変換
+  const sessionIdNum =
+    typeof sessionId === "string" ? parseInt(sessionId, 10) : sessionId;
+  if (Number.isNaN(sessionIdNum)) return undefined;
+
+  const session = mockSessions.find((s) => s.id === sessionIdNum);
   if (!session) return undefined;
 
   const menu = mockMenus.find((m) => m.id === session.menuId);
@@ -555,16 +568,34 @@ export function getSessionWithDetails(
     .filter((me) => me.menuId === session.menuId)
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
-  for (const me of menuExercises) {
+  // exerciseLogIdの計算: セッションごとに連番を割り当て
+  // session-001 (id: 1) の1番目の種目 → exerciseLogId: 1
+  // session-001 (id: 1) の2番目の種目 → exerciseLogId: 2
+  // session-002 (id: 2) の1番目の種目 → exerciseLogId: 3
+  let exerciseLogIdCounter = 1;
+  for (let i = 0; i < session.id; i++) {
+    const prevSession = mockSessions[i];
+    if (prevSession) {
+      const prevMenuExercises = mockMenuExercises.filter(
+        (me) => me.menuId === prevSession.menuId,
+      );
+      exerciseLogIdCounter += prevMenuExercises.length;
+    }
+  }
+
+  for (let i = 0; i < menuExercises.length; i++) {
+    const me = menuExercises[i];
     const exercise = getExerciseWithBodyParts(me.exerciseId);
     if (!exercise) continue;
 
     // このセッション・種目のセットを取得
-    const logId = `log-${sessionId}-${me.exerciseId}`;
-    const sets = mockSets.filter((s) => s.exerciseLogId.startsWith("log-"));
+    const currentExerciseLogId = exerciseLogIdCounter + i;
+    const sets = mockSets.filter(
+      (s) => s.exerciseLogId === currentExerciseLogId,
+    );
 
     exerciseLogs.push({
-      id: logId,
+      id: currentExerciseLogId,
       sessionId: session.id,
       exerciseId: me.exerciseId,
       exercise,

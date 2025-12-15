@@ -2,7 +2,7 @@
  * FitLog - 型定義
  *
  * 設計方針:
- * - 全エンティティで UUID (string) を使用
+ * - 全エンティティで数値ID (BIGINT UNSIGNED AUTO_INCREMENT) を使用
  * - 全ユーザーデータに userId を付与
  * - 全エンティティに createdAt, updatedAt を付与
  * - 重要データは deletedAt で論理削除
@@ -18,7 +18,7 @@
  * 全エンティティの基底型
  */
 export interface BaseEntity {
-  id: string; // UUID
+  id: number; // BIGINT UNSIGNED AUTO_INCREMENT (MySQL)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,7 +63,7 @@ export interface BodyPart extends BaseEntity {
  * @table exercises
  */
 export interface Exercise extends SoftDeletable {
-  userId: string; // FK → users.id
+  userId: number; // FK → users.id
   name: string; // 種目名 例: "ベンチプレス"
   formNote?: string; // フォームのポイント
   youtubeUrl?: string; // 参考動画URL
@@ -74,8 +74,8 @@ export interface Exercise extends SoftDeletable {
  * @table exercise_body_parts
  */
 export interface ExerciseBodyPart {
-  exerciseId: string; // FK → exercises.id
-  bodyPartId: string; // FK → body_parts.id
+  exerciseId: number; // FK → exercises.id
+  bodyPartId: number; // FK → body_parts.id
 }
 
 // =============================================================================
@@ -87,7 +87,7 @@ export interface ExerciseBodyPart {
  * @table workout_menus
  */
 export interface WorkoutMenu extends SoftDeletable {
-  userId: string; // FK → users.id
+  userId: number; // FK → users.id
   name: string; // メニュー名 例: "Day1 胸・背中"
 }
 
@@ -96,8 +96,8 @@ export interface WorkoutMenu extends SoftDeletable {
  * @table menu_exercises
  */
 export interface MenuExercise extends BaseEntity {
-  menuId: string; // FK → workout_menus.id
-  exerciseId: string; // FK → exercises.id
+  menuId: number; // FK → workout_menus.id
+  exerciseId: number; // FK → exercises.id
   displayOrder: number; // 表示順序（1, 2, 3...）
 }
 
@@ -110,8 +110,8 @@ export interface MenuExercise extends BaseEntity {
  * @table workout_sessions
  */
 export interface WorkoutSession extends BaseEntity {
-  userId: string; // FK → users.id
-  menuId: string; // FK → workout_menus.id
+  userId: number; // FK → users.id
+  menuId: number; // FK → workout_menus.id
   startedAt: Date; // 開始日時
   endedAt?: Date; // 終了日時
   condition: number; // 体調（1-10）
@@ -124,8 +124,8 @@ export interface WorkoutSession extends BaseEntity {
  * @table exercise_logs
  */
 export interface ExerciseLog extends BaseEntity {
-  sessionId: string; // FK → workout_sessions.id
-  exerciseId: string; // FK → exercises.id
+  sessionId: number; // FK → workout_sessions.id
+  exerciseId: number; // FK → exercises.id
 }
 
 /**
@@ -133,7 +133,7 @@ export interface ExerciseLog extends BaseEntity {
  * @table workout_sets
  */
 export interface WorkoutSet extends BaseEntity {
-  exerciseLogId: string; // FK → exercise_logs.id
+  exerciseLogId: number; // FK → exercise_logs.id
   setNumber: number; // セット番号（1, 2, 3...）
   weight: number; // 重量（kg）- 小数点1桁
   reps: number; // 回数
@@ -149,7 +149,7 @@ export interface WorkoutSet extends BaseEntity {
  * @table weight_records
  */
 export interface WeightRecord extends BaseEntity {
-  userId: string; // FK → users.id
+  userId: number; // FK → users.id
   recordedAt: Date; // 記録日時
   weight: number; // 体重（kg）- 小数点1桁
 }
@@ -159,9 +159,9 @@ export interface WeightRecord extends BaseEntity {
  * @table week_schedules
  */
 export interface WeekSchedule extends BaseEntity {
-  userId: string; // FK → users.id
+  userId: number; // FK → users.id
   dayOfWeek: number; // 曜日（0=日曜, 1=月曜, ..., 6=土曜）
-  menuId: string; // FK → workout_menus.id
+  menuId: number; // FK → workout_menus.id
 }
 
 // =============================================================================
@@ -203,7 +203,7 @@ export interface ExerciseLogWithDetails extends ExerciseLog {
  * 前回記録（動的計算用）
  */
 export interface PreviousRecord {
-  sessionId: string;
+  sessionId: number;
   date: Date;
   sets: {
     weight: number;
