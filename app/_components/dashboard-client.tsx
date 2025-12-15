@@ -44,6 +44,44 @@ export function DashboardClient({
       <AppHeader />
 
       <main className="mx-auto max-w-md space-y-4 p-4">
+        {/* Weekly Progress */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium">今週の進捗</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex gap-1.5">
+                {weekDayStatuses.map((status) => (
+                  <div
+                    key={status.dateString}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                      status.isCompleted
+                        ? "bg-primary text-primary-foreground"
+                        : status.hasSchedule
+                          ? status.isToday
+                            ? "bg-primary/20 text-primary ring-2 ring-primary"
+                            : "bg-secondary text-secondary-foreground"
+                          : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {
+                      ["日", "月", "火", "水", "木", "金", "土"][
+                        status.dayOfWeekIndex
+                      ]
+                    }
+                  </div>
+                ))}
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-foreground">
+                  {weeklyCompleted}/{weeklyGoal}
+                </p>
+                <p className="text-xs text-muted-foreground">完了</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         {/* Today's Plan Card */}
         <Card className="overflow-hidden border-primary/20">
           <CardHeader className="bg-primary/5 pb-3">
@@ -109,45 +147,6 @@ export function DashboardClient({
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Weekly Progress */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium">今週の進捗</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex gap-1.5">
-                {weekDayStatuses.map((status) => (
-                  <div
-                    key={status.dateString}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                      status.isCompleted
-                        ? "bg-primary text-primary-foreground"
-                        : status.hasSchedule
-                          ? status.isToday
-                            ? "bg-primary/20 text-primary ring-2 ring-primary"
-                            : "bg-secondary text-secondary-foreground"
-                          : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {
-                      ["日", "月", "火", "水", "木", "金", "土"][
-                        status.dayOfWeekIndex
-                      ]
-                    }
-                  </div>
-                ))}
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-foreground">
-                  {weeklyCompleted}/{weeklyGoal}
-                </p>
-                <p className="text-xs text-muted-foreground">完了</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </main>
