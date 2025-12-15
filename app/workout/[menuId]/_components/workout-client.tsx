@@ -477,16 +477,16 @@ function FormInfoDialog({ exercise }: { exercise: ExerciseWithBodyParts }) {
               </p>
             </div>
           )}
-          {exercise.youtubeUrl && (
+          {exercise.videoUrl && (
             <div>
               <h4 className="mb-2 text-sm font-medium">参考動画</h4>
               <a
-                href={exercise.youtubeUrl}
+                href={exercise.videoUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-primary hover:underline"
               >
-                YouTubeで見る
+                動画を見る
               </a>
             </div>
           )}

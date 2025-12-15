@@ -457,7 +457,7 @@ function ExerciseEditDialog({
   const [name, setName] = useState("");
   const [selectedBodyParts, setSelectedBodyParts] = useState<number[]>([]);
   const [formNote, setFormNote] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
 
   // Reset form when exercise changes
   useEffect(() => {
@@ -465,7 +465,7 @@ function ExerciseEditDialog({
       setName(exercise.name);
       setSelectedBodyParts(exercise.bodyParts.map((bp) => bp.id));
       setFormNote(exercise.formNote || "");
-      setYoutubeUrl(exercise.youtubeUrl || "");
+      setVideoUrl(exercise.videoUrl || "");
     }
   }, [exercise]);
 
@@ -482,7 +482,7 @@ function ExerciseEditDialog({
       name: name.trim(),
       bodyParts,
       formNote: formNote.trim() || undefined,
-      youtubeUrl: youtubeUrl.trim() || undefined,
+      videoUrl: videoUrl.trim() || undefined,
       createdAt: exercise?.createdAt || new Date(),
       updatedAt: new Date(),
     });
@@ -550,17 +550,14 @@ function ExerciseEditDialog({
           </div>
 
           <div className="space-y-2">
-            <label
-              htmlFor="exercise-youtube-url"
-              className="text-sm font-medium"
-            >
-              YouTube URL
+            <label htmlFor="exercise-video-url" className="text-sm font-medium">
+              動画URL
             </label>
             <Input
-              id="exercise-youtube-url"
-              value={youtubeUrl}
-              onChange={(e) => setYoutubeUrl(e.target.value)}
-              placeholder="https://youtube.com/watch?v=..."
+              id="exercise-video-url"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://example.com/video..."
             />
           </div>
         </div>

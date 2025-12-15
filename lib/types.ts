@@ -66,7 +66,7 @@ export interface Exercise extends SoftDeletable {
   userId: number; // FK → users.id
   name: string; // 種目名 例: "ベンチプレス"
   formNote?: string; // フォームのポイント
-  youtubeUrl?: string; // 参考動画URL
+  videoUrl?: string; // 参考動画URL（汎用）
 }
 
 /**
