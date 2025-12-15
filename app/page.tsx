@@ -13,7 +13,7 @@ export default function DashboardPage() {
 
   // 現在の日付を取得（サーバー側で実行されるため、一貫性が保証される）
   const today = new Date();
-  const dayOfWeek = getDay(today);
+  const todayDateString = today.toISOString().split("T")[0];
 
   // 週の開始日と終了日を計算
   const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // 月曜日開始
@@ -23,16 +23,56 @@ export default function DashboardPage() {
     end: weekEnd,
   });
 
-  // 今日のスケジュールを取得
-  const todaySchedule = mockWeekSchedule.find((s) => s.dayOfWeek === dayOfWeek);
-  const todayMenu = todaySchedule
-    ? (getMenuWithExercises(todaySchedule.menuId) ?? null)
-    : null;
+  // 前後1日（昨日・今日・明日）のスケジュールを構築
+  const dailySchedules = [-1, 0, 1].map((offset) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + offset);
+    const dateKey = date.toISOString().split("T")[0];
+    const dayOfWeek = getDay(date);
 
-  // 前回のセッションメモを取得
-  const previousSession = todayMenu
-    ? (mockSessions.find((s) => s.menuId === todayMenu.id) ?? null)
-    : null;
+    // その日のスケジュール（作成日時の昇順）
+    const daySchedulesRaw = mockWeekSchedule
+      .filter((s) => s.dayOfWeek === dayOfWeek)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    // その日すでに実施済みのメニューを判定
+    const daySessions = mockSessions.filter(
+      (s) => s.startedAt.toISOString().split("T")[0] === dateKey,
+    );
+    const completedMenuIds = new Set(daySessions.map((s) => s.menuId));
+
+    // 「まだ実施していない」スケジュールのみを残す
+    const remainingSchedules = daySchedulesRaw.filter(
+      (s) => !completedMenuIds.has(s.menuId),
+    );
+
+    const schedules = remainingSchedules
+      .map((schedule) => {
+        const menu = getMenuWithExercises(schedule.menuId);
+        if (!menu) return null;
+
+        const previousSession =
+          mockSessions.find((session) => session.menuId === menu.id) ?? null;
+
+        return {
+          scheduleId: schedule.id,
+          menuId: menu.id,
+          menuName: menu.name,
+          exercises: menu.exercises,
+          previousNote: previousSession?.note ?? null,
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+
+    const label = offset === -1 ? "昨日" : offset === 0 ? "今日" : "明日";
+
+    return {
+      dateKey,
+      label,
+      isToday: dateKey === todayDateString,
+      schedules,
+    };
+  });
 
   // 今週のセッション数を計算
   const sessionsThisWeek = mockSessions.filter((s) => {
@@ -52,7 +92,7 @@ export default function DashboardPage() {
     const isCompleted = mockSessions.some(
       (s) => s.startedAt.toISOString().split("T")[0] === dayDateString,
     );
-    const isToday = dayDateString === today.toISOString().split("T")[0];
+    const isToday = dayDateString === todayDateString;
 
     return {
       dateString: dayDateString,
@@ -76,8 +116,7 @@ export default function DashboardPage() {
   return (
     <DashboardClient
       todayFormatted={todayFormatted}
-      todayMenu={todayMenu}
-      previousSession={previousSession}
+      dailySchedules={dailySchedules}
       weeklyCompleted={weeklyCompleted}
       weeklyGoal={weeklyGoal}
       weekDayStatuses={weekDayStatuses}

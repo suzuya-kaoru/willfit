@@ -2,16 +2,32 @@
 
 import { ChevronRight, Info, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
+import * as React from "react";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { WorkoutMenuWithExercises, WorkoutSession } from "@/lib/types";
+import type { ExerciseWithBodyParts } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+type TodayScheduleViewModel = {
+  scheduleId: number;
+  menuId: number;
+  menuName: string;
+  exercises: ExerciseWithBodyParts[];
+  previousNote: string | null;
+};
+
+type DailySchedulesViewModel = {
+  dateKey: string;
+  label: string;
+  isToday: boolean;
+  schedules: TodayScheduleViewModel[];
+};
 
 interface DashboardClientProps {
   todayFormatted: string;
-  todayMenu: WorkoutMenuWithExercises | null;
-  previousSession: WorkoutSession | null;
+  dailySchedules: DailySchedulesViewModel[];
   weeklyCompleted: number;
   weeklyGoal: number;
   weekDayStatuses: Array<{
@@ -25,18 +41,63 @@ interface DashboardClientProps {
 
 export function DashboardClient({
   todayFormatted,
-  todayMenu,
-  previousSession,
+  dailySchedules,
   weeklyCompleted,
   weeklyGoal,
   weekDayStatuses,
 }: DashboardClientProps) {
   const router = useRouter();
 
-  const handleStartWorkout = () => {
-    if (todayMenu) {
-      router.push(`/workout/${todayMenu.id}`);
+  const defaultDateKey =
+    dailySchedules.find((d) => d.isToday)?.dateKey ??
+    dailySchedules[0]?.dateKey ??
+    "";
+
+  const [activeDateKey, setActiveDateKey] =
+    React.useState<string>(defaultDateKey);
+
+  const activeIndex = Math.max(
+    0,
+    dailySchedules.findIndex((d) => d.dateKey === activeDateKey),
+  );
+
+  const [touchStartX, setTouchStartX] = React.useState<number | null>(null);
+
+  const moveDay = (direction: "prev" | "next") => {
+    if (!dailySchedules.length) return;
+    const currentIndex = dailySchedules.findIndex(
+      (d) => d.dateKey === activeDateKey,
+    );
+    if (currentIndex === -1) return;
+
+    if (direction === "prev" && currentIndex > 0) {
+      setActiveDateKey(dailySchedules[currentIndex - 1]?.dateKey);
     }
+    if (direction === "next" && currentIndex < dailySchedules.length - 1) {
+      setActiveDateKey(dailySchedules[currentIndex + 1]?.dateKey);
+    }
+  };
+
+  const handleTouchStart: React.TouchEventHandler<HTMLDivElement> = (event) => {
+    const firstTouch = event.touches[0];
+    setTouchStartX(firstTouch.clientX);
+  };
+
+  const handleTouchEnd: React.TouchEventHandler<HTMLDivElement> = (event) => {
+    if (touchStartX === null) return;
+    const touchEndX = event.changedTouches[0]?.clientX ?? touchStartX;
+    const deltaX = touchEndX - touchStartX;
+
+    const threshold = 50; // スワイプ判定のしきい値(px)
+    if (deltaX > threshold) {
+      // 右にスワイプ → 前日へ
+      moveDay("prev");
+    } else if (deltaX < -threshold) {
+      // 左にスワイプ → 翌日へ
+      moveDay("next");
+    }
+
+    setTouchStartX(null);
   };
 
   return (
@@ -82,7 +143,7 @@ export function DashboardClient({
             </div>
           </CardContent>
         </Card>
-        {/* Today's Plan Card */}
+        {/* Today's / Previous / Next Plan Card */}
         <Card className="overflow-hidden border-primary/20">
           <CardHeader className="bg-primary/5 pb-3">
             <div className="flex items-center justify-between">
@@ -94,59 +155,124 @@ export function DashboardClient({
               </span>
             </div>
           </CardHeader>
-          <CardContent className="pt-4">
-            {todayMenu ? (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-xl font-bold text-foreground">
-                    {todayMenu.name}
-                  </h3>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {todayMenu.exercises.map((ex) => (
-                      <span
-                        key={ex.id}
-                        className="rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
-                      >
-                        {ex.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {previousSession?.note && (
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Info className="h-3.5 w-3.5" />
-                      前回のメモ
-                    </div>
-                    <p className="text-sm text-foreground">
-                      {previousSession.note}
-                    </p>
-                  </div>
-                )}
-
-                <Button
-                  onClick={handleStartWorkout}
-                  className="w-full gap-2"
-                  size="lg"
-                >
-                  <Play className="h-5 w-5" />
-                  トレーニングを開始する
-                </Button>
+          <CardContent
+            className="space-y-4 pt-4"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* 日タブ（昨日・今日・明日） */}
+            <div className="-mx-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 px-2">
+                {dailySchedules.map((day) => (
+                  <button
+                    key={day.dateKey}
+                    type="button"
+                    onClick={() => setActiveDateKey(day.dateKey)}
+                    className={cn(
+                      "whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                      day.dateKey === activeDateKey
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {day.label}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <div className="py-6 text-center">
-                <p className="text-muted-foreground">今日は休息日です</p>
-                <Button
-                  variant="outline"
-                  className="mt-4 bg-transparent"
-                  onClick={() => router.push("/settings")}
-                >
-                  メニューを選択して開始
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
+            </div>
+
+            {/* 日ごとの内容（カルーセル） */}
+            <div className="relative overflow-hidden">
+              <div
+                className="flex transition-transform duration-300 ease-out"
+                style={{
+                  transform: `translateX(-${activeIndex * 100}%)`,
+                }}
+              >
+                {dailySchedules.map((day) => (
+                  <div key={day.dateKey} className="w-full shrink-0 space-y-4">
+                    {day.schedules.length > 0 ? (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            この日のスケジュール
+                          </p>
+                          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+                            残り {day.schedules.length} 件
+                          </span>
+                        </div>
+
+                        <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
+                          {day.schedules.map((schedule) => (
+                            <div
+                              key={schedule.scheduleId}
+                              className="rounded-lg border border-border bg-card p-3 shadow-sm"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <h3 className="text-sm font-semibold text-foreground">
+                                    {schedule.menuName}
+                                  </h3>
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {schedule.exercises.map((ex) => (
+                                      <span
+                                        key={ex.id}
+                                        className="rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
+                                      >
+                                        {ex.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {schedule.previousNote && (
+                                <div className="mt-3 rounded-md bg-muted/60 p-2">
+                                  <div className="mb-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                    <Info className="h-3 w-3" />
+                                    前回のメモ
+                                  </div>
+                                  <p className="text-xs text-foreground">
+                                    {schedule.previousNote}
+                                  </p>
+                                </div>
+                              )}
+
+                              <Button
+                                onClick={() => {
+                                  router.push(`/workout/${schedule.menuId}`);
+                                }}
+                                className="mt-3 w-full gap-2"
+                                size="sm"
+                              >
+                                <Play className="h-4 w-4" />
+                                このメニューでトレーニング開始
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="py-6 text-center">
+                        <p className="text-sm text-muted-foreground">
+                          この日のメニューはすべて完了しました。
+                        </p>
+                        {day.isToday && (
+                          <Button
+                            variant="outline"
+                            className="mt-4 bg-transparent"
+                            onClick={() => router.push("/settings")}
+                          >
+                            メニューを選択して開始
+                            <ChevronRight className="ml-1 h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       </main>
