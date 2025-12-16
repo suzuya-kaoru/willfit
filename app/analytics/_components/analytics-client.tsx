@@ -58,7 +58,7 @@ export interface AnalyticsClientProps {
     recordedAt: Date;
     weight: number;
   }>;
-  allExerciseData: ExerciseDataPoint[];
+  exerciseDataByExerciseId: Record<number, ExerciseDataPoint[]>;
   personalBests: PersonalBest[];
 }
 
@@ -69,7 +69,7 @@ export interface AnalyticsClientProps {
 export function AnalyticsClient({
   allExercises,
   allWeightRecords,
-  allExerciseData,
+  exerciseDataByExerciseId,
   personalBests,
 }: AnalyticsClientProps) {
   const [activeTab, setActiveTab] = useState<"body" | "exercise">("body");
@@ -100,11 +100,10 @@ export function AnalyticsClient({
   }, [weightPeriod, allWeightRecords]);
 
   // Filter exercise data by selected exercise (クライアント側でフィルタリング)
-  // Note: 現在の実装では全セッションのデータを表示しているが、
-  // 将来的に種目ごとのフィルタリングを実装する場合はここで行う
   const exerciseData = useMemo(() => {
-    return allExerciseData;
-  }, [allExerciseData]);
+    if (!selectedExercise) return [];
+    return exerciseDataByExerciseId[selectedExercise] ?? [];
+  }, [selectedExercise, exerciseDataByExerciseId]);
 
   const currentExercise = allExercises.find((e) => e.id === selectedExercise);
 

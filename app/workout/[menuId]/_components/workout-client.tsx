@@ -406,7 +406,7 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
             <DialogTitle>トレーニングを終了しますか？</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            入力したデータは保存されます。
+            入力したデータは保存されません（開発中）。
           </p>
           <div className="flex gap-2 pt-4">
             <Button

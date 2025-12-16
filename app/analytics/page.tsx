@@ -101,41 +101,37 @@ function getAllExercises(): ExerciseWithBodyParts[] {
 
 /**
  * 種目別の成長データを計算
- * セッションごとに最大重量、推定1RM、総ボリュームを計算
+ * 指定された種目のセッションごとに最大重量、推定1RM、総ボリュームを計算
  *
  * TODO: DB移行時は、DB側で集計クエリを実行することを検討
- * （例: GROUP BY session_id, MAX(weight), SUM(weight * reps) など）
+ * （例: GROUP BY session_id, exercise_id, MAX(weight), SUM(weight * reps) など）
  */
 function calculateExerciseData(
   sessions: typeof mockSessions,
   sets: typeof mockSets,
+  exerciseId: number,
 ): ExerciseDataPoint[] {
   const sessionData = sessions
     .map((session) => {
-      // このセッションに紐づく exercise_record_id を算出し、それに紐づくセットのみを取得
-      const menuExercises = mockMenuExercises
-        .filter((me: MenuExercise) => me.menuId === session.menuId)
-        .sort(
-          (a: MenuExercise, b: MenuExercise) => a.displayOrder - b.displayOrder,
-        );
-      const recordIdsForSession = menuExercises
-        .map((me: MenuExercise) =>
-          getExerciseRecordId(session.id, me.exerciseId),
-        )
-        .filter((id): id is number => id !== null);
+      // 指定された種目のexercise_record_idを算出
+      const recordId = getExerciseRecordId(session.id, exerciseId);
+      if (recordId === null) return null;
 
-      const sessionSets = sets.filter((set) =>
-        recordIdsForSession.includes(set.exerciseRecordId),
+      // このexercise_record_idに紐づくセットのみを取得
+      const exerciseSets = sets.filter(
+        (set) => set.exerciseRecordId === recordId,
       );
 
-      if (sessionSets.length === 0) return null;
+      if (exerciseSets.length === 0) return null;
 
-      const maxWeight = Math.max(...sessionSets.map((s) => s.weight));
+      const maxWeight = Math.max(...exerciseSets.map((s) => s.weight));
       const maxReps = Math.max(
-        ...sessionSets.filter((s) => s.weight === maxWeight).map((s) => s.reps),
+        ...exerciseSets
+          .filter((s) => s.weight === maxWeight)
+          .map((s) => s.reps),
       );
       const estimated1RM = maxWeight * (1 + maxReps / 30); // Epley formula
-      const totalVolume = sessionSets.reduce(
+      const totalVolume = exerciseSets.reduce(
         (sum, s) => sum + s.weight * s.reps,
         0,
       );
@@ -214,7 +210,13 @@ export default async function AnalyticsPage() {
   const exercises = getAllExercises();
 
   // 計算処理（サーバー側で実行）
-  const exerciseData = calculateExerciseData(sessions, sets);
+  // 各種目ごとの成長データを計算（クライアント側で種目選択時にフィルタリング）
+  // Note: Next.jsはMapをシリアライズできないため、オブジェクトに変換
+  const exerciseDataByExerciseId: Record<number, ExerciseDataPoint[]> = {};
+  for (const exercise of exercises) {
+    const data = calculateExerciseData(sessions, sets, exercise.id);
+    exerciseDataByExerciseId[exercise.id] = data;
+  }
   const personalBests = calculatePersonalBests(exercises, sessions, sets);
 
   // クライアント側に渡すデータを準備
@@ -229,7 +231,7 @@ export default async function AnalyticsPage() {
     <AnalyticsClient
       allExercises={exercises}
       allWeightRecords={allWeightRecords}
-      allExerciseData={exerciseData}
+      exerciseDataByExerciseId={exerciseDataByExerciseId}
       personalBests={personalBests}
     />
   );

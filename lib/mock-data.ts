@@ -573,14 +573,13 @@ export function getSessionWithDetails(
   // session-001 (id: 1) の2番目の種目 → exerciseRecordId: 2
   // session-002 (id: 2) の1番目の種目 → exerciseRecordId: 3
   let exerciseRecordIdCounter = 1;
-  for (let i = 0; i < session.id; i++) {
-    const prevSession = mockSessions[i];
-    if (prevSession) {
-      const prevMenuExercises = mockMenuExercises.filter(
-        (me) => me.menuId === prevSession.menuId,
-      );
-      exerciseRecordIdCounter += prevMenuExercises.length;
-    }
+  // session.idより小さいIDのセッションのみをカウント（自分自身は除外）
+  const prevSessions = mockSessions.filter((s) => s.id < session.id);
+  for (const prevSession of prevSessions) {
+    const prevMenuExercises = mockMenuExercises.filter(
+      (me) => me.menuId === prevSession.menuId,
+    );
+    exerciseRecordIdCounter += prevMenuExercises.length;
   }
 
   for (let i = 0; i < menuExercises.length; i++) {

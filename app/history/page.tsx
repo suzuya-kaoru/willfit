@@ -1,11 +1,12 @@
 import {
   getMenuWithExercises,
+  mockMenuExercises,
   mockMenus,
   mockSessions,
   mockSets,
   mockWeekSchedule,
 } from "@/lib/mock-data";
-import type { WorkoutSession } from "@/lib/types";
+import type { MenuExercise, WorkoutSession } from "@/lib/types";
 import {
   type CalendarDay,
   HistoryClient,
@@ -40,7 +41,6 @@ function getSessionsByDateRange(year: number, month: number): WorkoutSession[] {
 
 /**
  * 全セットを取得（将来的に DB アクセス層に置き換える）
- * セットとセッションの関連付けは日付ベースで行う
  * TODO: DB移行時は、この関数を DB アクセス層に置き換える
  */
 function getAllSets() {
@@ -48,7 +48,41 @@ function getAllSets() {
 }
 
 /**
+ * セッションIDと種目IDから exercise_record_id を算出
+ * - mockデータのIDはセッション順 × メニュー内の並び順で連番
+ * - DB移行時は exercise_records をJOINして取得する想定
+ */
+function getExerciseRecordId(sessionId: number, exerciseId: number) {
+  const session = mockSessions.find((s) => s.id === sessionId);
+  if (!session) return null;
+
+  // セッションIDより前のセッションに含まれる種目数を合計
+  const countBefore = mockSessions
+    .filter((s) => s.id < sessionId)
+    .reduce((acc: number, s) => {
+      const exercisesInMenu = mockMenuExercises.filter(
+        (me: MenuExercise) => me.menuId === s.menuId,
+      );
+      return acc + exercisesInMenu.length;
+    }, 0);
+
+  // 現在のセッションのメニュー内での順序を取得
+  const menuExercises = mockMenuExercises
+    .filter((me: MenuExercise) => me.menuId === session.menuId)
+    .sort(
+      (a: MenuExercise, b: MenuExercise) => a.displayOrder - b.displayOrder,
+    );
+  const exerciseOrder = menuExercises.findIndex(
+    (me) => me.exerciseId === exerciseId,
+  );
+  if (exerciseOrder === -1) return null;
+
+  return countBefore + exerciseOrder + 1;
+}
+
+/**
  * セッションの統計情報を計算
+ * sessionIdベースでexercise_record_idを算出し、それに紐づくセットを集計
  * この関数は DB 移行後もサーバー側で実行される
  */
 function calculateSessionStats(
@@ -59,11 +93,20 @@ function calculateSessionStats(
   setCount: number;
   exerciseCount: number;
 } {
-  const sessionDate = session.startedAt.toISOString().split("T")[0];
-  const sessionSets = allSets.filter((set) => {
-    const setDate = set.createdAt.toISOString().split("T")[0];
-    return setDate === sessionDate;
-  });
+  // このセッションに紐づく exercise_record_id を算出
+  const menuExercises = mockMenuExercises
+    .filter((me: MenuExercise) => me.menuId === session.menuId)
+    .sort(
+      (a: MenuExercise, b: MenuExercise) => a.displayOrder - b.displayOrder,
+    );
+  const recordIdsForSession = menuExercises
+    .map((me: MenuExercise) => getExerciseRecordId(session.id, me.exerciseId))
+    .filter((id): id is number => id !== null);
+
+  // このセッションに紐づくセットのみを取得
+  const sessionSets = allSets.filter((set) =>
+    recordIdsForSession.includes(set.exerciseRecordId),
+  );
 
   const volume = sessionSets.reduce((total, set) => {
     return total + set.weight * set.reps;
@@ -112,10 +155,13 @@ function generateCalendarDays(
   const days: CalendarDay[] = [];
 
   // セッションを日付文字列でマッピング（高速検索用）
-  const sessionsByDate = new Map<string, WorkoutSessionWithStats>();
+  // 同日に複数セッションがある場合を考慮して配列で保持
+  const sessionsByDate = new Map<string, WorkoutSessionWithStats[]>();
   for (const session of sessions) {
     const dateStr = new Date(session.startedAt).toISOString().split("T")[0];
-    sessionsByDate.set(dateStr, session);
+    const existing = sessionsByDate.get(dateStr) ?? [];
+    existing.push(session);
+    sessionsByDate.set(dateStr, existing);
   }
 
   // 空セル（月初めのパディング）
@@ -135,7 +181,9 @@ function generateCalendarDays(
     const dateString = date.toISOString().split("T")[0];
     const dayOfWeek = date.getDay();
     const isScheduled = mockWeekSchedule.some((s) => s.dayOfWeek === dayOfWeek);
-    const session = sessionsByDate.get(dateString) ?? null;
+    // 同日に複数セッションがある場合は最初の1つを表示（将来は複数対応可能）
+    const sessionsForDate = sessionsByDate.get(dateString) ?? [];
+    const session = sessionsForDate.length > 0 ? sessionsForDate[0] : null;
 
     days.push({
       day,
