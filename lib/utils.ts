@@ -11,6 +11,9 @@ export function cn(...inputs: ClassValue[]) {
  * @param maxAge 有効期限（秒）
  */
 export function setCookie(name: string, value: string, maxAge: number): void {
+  // サーバー側実行を防ぐ（SSRでエラーになるのを回避）
+  if (typeof document === "undefined") return;
+
   // 値と名前をエンコードして XSS を防ぐ
   const encodedName = encodeURIComponent(name);
   const encodedValue = encodeURIComponent(value);
