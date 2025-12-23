@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 
 declare global {
   var __prisma: PrismaClient | undefined;
+  var __adapter: PrismaMariaDb | undefined;
 }
 
 function getDatabaseUrl(): string {
@@ -40,11 +41,26 @@ function buildMariaDbConfig() {
     password,
     database,
     port,
+    // 接続プール設定（個人開発向けの適切な値）
+    connectionLimit: 5, // 小規模なので5で十分
+    connectTimeout: 10000,
+    acquireTimeout: 10000,
+    idleTimeout: 60000,
   };
 }
 
+function createAdapter(): PrismaMariaDb {
+  return new PrismaMariaDb(buildMariaDbConfig());
+}
+
 function createPrismaClient(): PrismaClient {
-  const adapter = new PrismaMariaDb(buildMariaDbConfig());
+  // アダプターをグローバルに保持（接続プール枯渇を防ぐ）
+  const adapter = globalThis.__adapter ?? createAdapter();
+  
+  if (process.env.NODE_ENV !== "production") {
+    globalThis.__adapter = adapter;
+  }
+
   return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
