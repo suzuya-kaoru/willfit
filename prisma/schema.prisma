@@ -23,8 +23,8 @@ model User {
   email            String               @unique(map: "idx_users_email") @db.VarChar(255)
   name             String               @db.VarChar(100)
   avatarUrl        String?              @map("avatar_url") @db.VarChar(500)
-  createdAt        DateTime             @map("created_at")
-  updatedAt        DateTime             @map("updated_at")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
   deletedAt        DateTime?            @map("deleted_at")
   exercises        Exercise[]
   workoutMenus     WorkoutMenu[]
@@ -43,8 +43,8 @@ model BodyPart {
   name          String             @db.VarChar(50)
   nameEn        String             @map("name_en") @db.VarChar(50)
   displayOrder  Int                @map("display_order") @db.UnsignedInt
-  createdAt     DateTime           @map("created_at")
-  updatedAt     DateTime           @map("updated_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
   exercises     ExerciseBodyPart[]
 
   @@index([displayOrder], map: "idx_body_parts_display_order")
@@ -57,8 +57,8 @@ model Exercise {
   name           String             @db.VarChar(100)
   formNote       String?            @map("form_note") @db.Text
   videoUrl       String?            @map("video_url") @db.VarChar(500)
-  createdAt      DateTime           @map("created_at")
-  updatedAt      DateTime           @map("updated_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
   deletedAt      DateTime?          @map("deleted_at")
   user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   bodyParts      ExerciseBodyPart[]
@@ -86,8 +86,8 @@ model WorkoutMenu {
   id            BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
   userId        BigInt          @map("user_id") @db.UnsignedBigInt
   name          String          @db.VarChar(100)
-  createdAt     DateTime        @map("created_at")
-  updatedAt     DateTime        @map("updated_at")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
   deletedAt     DateTime?       @map("deleted_at")
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   menuExercises MenuExercise[]
@@ -104,8 +104,8 @@ model MenuExercise {
   menuId       BigInt       @map("menu_id") @db.UnsignedBigInt
   exerciseId   BigInt       @map("exercise_id") @db.UnsignedBigInt
   displayOrder Int          @map("display_order") @db.UnsignedInt
-  createdAt    DateTime     @map("created_at")
-  updatedAt    DateTime     @map("updated_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
   menu         WorkoutMenu  @relation(fields: [menuId], references: [id], onDelete: Cascade)
   exercise     Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
@@ -124,8 +124,8 @@ model WorkoutSession {
   condition  Int          @map("condition_score") @db.UnsignedTinyInt
   fatigue    Int          @db.UnsignedTinyInt
   note       String       @db.Text
-  createdAt  DateTime     @map("created_at")
-  updatedAt  DateTime     @map("updated_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   menu       WorkoutMenu  @relation(fields: [menuId], references: [id], onDelete: Restrict)
   exerciseRecords ExerciseRecord[]
@@ -140,8 +140,8 @@ model ExerciseRecord {
   id          BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
   sessionId   BigInt       @map("session_id") @db.UnsignedBigInt
   exerciseId  BigInt       @map("exercise_id") @db.UnsignedBigInt
-  createdAt   DateTime     @map("created_at")
-  updatedAt   DateTime     @map("updated_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
   session     WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exercise    Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
   workoutSets WorkoutSet[]
@@ -158,8 +158,8 @@ model WorkoutSet {
   weight          Decimal      @db.Decimal(5, 1)
   reps            Int          @db.UnsignedInt
   completed       Boolean      @db.TinyInt
-  createdAt       DateTime     @map("created_at")
-  updatedAt       DateTime     @map("updated_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
   exerciseRecord  ExerciseRecord @relation(fields: [exerciseRecordId], references: [id], onDelete: Cascade)
 
   @@index([exerciseRecordId], map: "idx_workout_set_records_exercise_record_id")
@@ -172,8 +172,8 @@ model WeightRecord {
   userId     BigInt     @map("user_id") @db.UnsignedBigInt
   recordedAt DateTime   @map("recorded_at")
   weight     Decimal    @db.Decimal(5, 1)
-  createdAt  DateTime   @map("created_at")
-  updatedAt  DateTime   @map("updated_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "idx_weight_records_user_id")
@@ -186,8 +186,8 @@ model WeekSchedule {
   userId          BigInt              @map("user_id") @db.UnsignedBigInt
   dayOfWeek       Int                 @map("day_of_week") @db.UnsignedTinyInt
   menuId          BigInt              @map("menu_id") @db.UnsignedBigInt
-  createdAt       DateTime            @map("created_at")
-  updatedAt       DateTime            @map("updated_at")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
   deletedAt       DateTime?           @map("deleted_at")
   user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   menu            WorkoutMenu         @relation(fields: [menuId], references: [id], onDelete: Restrict)
@@ -208,8 +208,8 @@ model ScheduleCheckRecord {
   scheduledDate  DateTime          @map("scheduled_date") @db.Date
   status         ScheduleCheckStatus
   checkedAt      DateTime          @map("checked_at")
-  createdAt      DateTime          @map("created_at")
-  updatedAt      DateTime          @map("updated_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   weekSchedule   WeekSchedule       @relation(fields: [weekScheduleId], references: [id], onDelete: Cascade)
 
@@ -234,8 +234,8 @@ model ScheduleReminder {
   nextFireAt     DateTime         @map("next_fire_at")
   lastFiredAt    DateTime?        @map("last_fired_at")
   isEnabled      Boolean          @map("is_enabled") @db.TinyInt
-  createdAt      DateTime         @map("created_at")
-  updatedAt      DateTime         @map("updated_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   weekSchedule   WeekSchedule     @relation(fields: [weekScheduleId], references: [id], onDelete: Cascade)
 
