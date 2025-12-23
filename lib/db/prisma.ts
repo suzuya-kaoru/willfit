@@ -1,76 +1,66 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "@prisma/client";
 
+/**
+ * Prisma + MariaDBアダプターのシングルトン管理
+ *
+ * 設計方針:
+ * - 開発・本番ともにシングルトンで接続プールを再利用
+ * - 接続プール枯渇を防ぐため、グローバル変数で管理
+ * - シンプルさを優先
+ */
+
 declare global {
+  // eslint-disable-next-line no-var
   var __prisma: PrismaClient | undefined;
-  var __adapter: PrismaMariaDb | undefined;
 }
 
-function getDatabaseUrl(): string {
-  const url = process.env.PRISMA_DATABASE_URL;
-  if (!url) {
+function parseDatabaseUrl(): {
+  host: string;
+  user: string;
+  password: string;
+  database: string;
+  port: number;
+} {
+  const rawUrl = process.env.PRISMA_DATABASE_URL;
+  if (!rawUrl) {
     throw new Error("PRISMA_DATABASE_URL is not set.");
   }
-  return url;
-}
 
-function buildMariaDbConfig() {
-  const url = new URL(getDatabaseUrl());
-  const host = url.hostname;
-  const user = decodeURIComponent(url.username);
-  const password = decodeURIComponent(url.password);
-  const database = url.pathname.replace(/^\//, "");
-  const port = url.port ? Number(url.port) : undefined;
-
-  if (!host) {
-    throw new Error("Database host is not set.");
-  }
-  if (!user) {
-    throw new Error("Database user is not set.");
-  }
-  if (!database) {
-    throw new Error("Database name is not set.");
-  }
-  if (url.port && Number.isNaN(port)) {
-    throw new Error("Database port is invalid.");
-  }
+  const url = new URL(rawUrl);
 
   return {
-    host,
-    user,
-    password,
-    database,
-    port,
-    // 接続プール設定（個人開発向けの適切な値）
-    connectionLimit: 5, // 小規模なので5で十分
-    connectTimeout: 10000,
-    acquireTimeout: 10000,
-    idleTimeout: 60000,
+    host: url.hostname || "localhost",
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    database: url.pathname.replace(/^\//, ""),
+    port: url.port ? Number(url.port) : 3306,
   };
 }
 
-function createAdapter(): PrismaMariaDb {
-  return new PrismaMariaDb(buildMariaDbConfig());
-}
-
 function createPrismaClient(): PrismaClient {
-  // アダプターをグローバルに保持（接続プール枯渇を防ぐ）
-  const adapter = globalThis.__adapter ?? createAdapter();
-  
-  if (process.env.NODE_ENV !== "production") {
-    globalThis.__adapter = adapter;
-  }
+  const config = parseDatabaseUrl();
+
+  const adapter = new PrismaMariaDb({
+    ...config,
+    connectionLimit: 5,
+    connectTimeout: 10000,
+    acquireTimeout: 10000,
+    idleTimeout: 60000,
+    // MySQL 8のcaching_sha2_password認証対応
+    allowPublicKeyRetrieval: true,
+  });
 
   return new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+    log:
+      process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 }
 
-const prisma = globalThis.__prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis.__prisma = prisma;
+// シングルトン: 既存インスタンスがあれば再利用、なければ作成
+if (!globalThis.__prisma) {
+  globalThis.__prisma = createPrismaClient();
 }
 
-export { prisma };
+export const prisma = globalThis.__prisma;
