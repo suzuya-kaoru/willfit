@@ -1,12 +1,12 @@
 import {
-  getMenuWithExercises,
-  mockMenuExercises,
-  mockMenus,
-  mockSessions,
-  mockSets,
-  mockWeekSchedule,
-} from "@/lib/mock-data";
-import type { MenuExercise, WorkoutSession } from "@/lib/types";
+  getExerciseRecordsBySessionIds,
+  getMenusByIds,
+  getWeekSchedules,
+  getWorkoutSessionsByDateRange,
+  getWorkoutSetsByExerciseRecordIds,
+} from "@/lib/db/queries";
+import { toDateKey } from "@/lib/date-key";
+import type { ExerciseLog, WorkoutSession, WorkoutSet } from "@/lib/types";
 import {
   type CalendarDay,
   HistoryClient,
@@ -18,66 +18,46 @@ import {
  * Server Component: データ取得と計算（サーバー側で実行）
  * ============================================================================
  *
- * 将来的に DB に切り替える際は、以下の関数を DB アクセス層に置き換える：
- * - getSessionsByDateRange() → DB クエリ
- * - getSetsBySessionIds() → DB クエリ
- * - getMenusByIds() → DB クエリ
- * - calculateSessionStats() → サーバー側の計算ロジック（変更なし）
+ * DBアクセス層を使用して、セッション・セット・メニュー情報を取得する。
+ * 集計ロジックはサーバー側に保持し、UIは表示専用にする。
  */
 
 /**
  * 指定された年月のセッションを取得
- * TODO: DB移行時は、この関数を DB アクセス層に置き換える
  */
-function getSessionsByDateRange(year: number, month: number): WorkoutSession[] {
+async function getSessionsByDateRange(
+  userId: number,
+  year: number,
+  month: number,
+): Promise<WorkoutSession[]> {
   const startDate = new Date(year, month, 1);
   const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-  return mockSessions.filter((session) => {
-    const sessionDate = new Date(session.startedAt);
-    return sessionDate >= startDate && sessionDate <= endDate;
-  });
+  return getWorkoutSessionsByDateRange(userId, startDate, endDate);
 }
 
-/**
- * 全セットを取得（将来的に DB アクセス層に置き換える）
- * TODO: DB移行時は、この関数を DB アクセス層に置き換える
- */
-function getAllSets() {
-  return mockSets;
+function buildExerciseRecordsBySessionId(
+  records: ExerciseLog[],
+): Map<number, ExerciseLog[]> {
+  const map = new Map<number, ExerciseLog[]>();
+  for (const record of records) {
+    const list = map.get(record.sessionId) ?? [];
+    list.push(record);
+    map.set(record.sessionId, list);
+  }
+  return map;
 }
 
-/**
- * セッションIDと種目IDから exercise_record_id を算出
- * - mockデータのIDはセッション順 × メニュー内の並び順で連番
- * - DB移行時は exercise_records をJOINして取得する想定
- */
-function getExerciseRecordId(sessionId: number, exerciseId: number) {
-  const session = mockSessions.find((s) => s.id === sessionId);
-  if (!session) return null;
-
-  // セッションIDより前のセッションに含まれる種目数を合計
-  const countBefore = mockSessions
-    .filter((s) => s.id < sessionId)
-    .reduce((acc: number, s) => {
-      const exercisesInMenu = mockMenuExercises.filter(
-        (me: MenuExercise) => me.menuId === s.menuId,
-      );
-      return acc + exercisesInMenu.length;
-    }, 0);
-
-  // 現在のセッションのメニュー内での順序を取得
-  const menuExercises = mockMenuExercises
-    .filter((me: MenuExercise) => me.menuId === session.menuId)
-    .sort(
-      (a: MenuExercise, b: MenuExercise) => a.displayOrder - b.displayOrder,
-    );
-  const exerciseOrder = menuExercises.findIndex(
-    (me) => me.exerciseId === exerciseId,
-  );
-  if (exerciseOrder === -1) return null;
-
-  return countBefore + exerciseOrder + 1;
+function buildSetsByExerciseRecordId(
+  sets: WorkoutSet[],
+): Map<number, WorkoutSet[]> {
+  const map = new Map<number, WorkoutSet[]>();
+  for (const set of sets) {
+    const list = map.get(set.exerciseRecordId) ?? [];
+    list.push(set);
+    map.set(set.exerciseRecordId, list);
+  }
+  return map;
 }
 
 /**
@@ -87,25 +67,17 @@ function getExerciseRecordId(sessionId: number, exerciseId: number) {
  */
 function calculateSessionStats(
   session: WorkoutSession,
-  allSets: typeof mockSets,
+  exerciseRecordsBySessionId: Map<number, ExerciseLog[]>,
+  setsByExerciseRecordId: Map<number, WorkoutSet[]>,
 ): {
   volume: number;
   setCount: number;
   exerciseCount: number;
 } {
-  // このセッションに紐づく exercise_record_id を算出
-  const menuExercises = mockMenuExercises
-    .filter((me: MenuExercise) => me.menuId === session.menuId)
-    .sort(
-      (a: MenuExercise, b: MenuExercise) => a.displayOrder - b.displayOrder,
-    );
-  const recordIdsForSession = menuExercises
-    .map((me: MenuExercise) => getExerciseRecordId(session.id, me.exerciseId))
-    .filter((id): id is number => id !== null);
-
-  // このセッションに紐づくセットのみを取得
-  const sessionSets = allSets.filter((set) =>
-    recordIdsForSession.includes(set.exerciseRecordId),
+  const records = exerciseRecordsBySessionId.get(session.id) ?? [];
+  const recordIds = records.map((record) => record.id);
+  const sessionSets = recordIds.flatMap(
+    (recordId) => setsByExerciseRecordId.get(recordId) ?? [],
   );
 
   const volume = sessionSets.reduce((total, set) => {
@@ -113,10 +85,7 @@ function calculateSessionStats(
   }, 0);
 
   const setCount = sessionSets.length;
-
-  // メニューから種目数を取得
-  const menu = getMenuWithExercises(session.menuId);
-  const exerciseCount = menu?.exercises.length ?? 0;
+  const exerciseCount = records.length;
 
   return { volume, setCount, exerciseCount };
 }
@@ -126,10 +95,16 @@ function calculateSessionStats(
  */
 function enrichSessionWithStats(
   session: WorkoutSession,
-  allSets: typeof mockSets,
+  menusById: Map<number, { name: string }>,
+  exerciseRecordsBySessionId: Map<number, ExerciseLog[]>,
+  setsByExerciseRecordId: Map<number, WorkoutSet[]>,
 ): WorkoutSessionWithStats {
-  const menu = mockMenus.find((m) => m.id === session.menuId);
-  const stats = calculateSessionStats(session, allSets);
+  const menu = menusById.get(session.menuId);
+  const stats = calculateSessionStats(
+    session,
+    exerciseRecordsBySessionId,
+    setsByExerciseRecordId,
+  );
 
   return {
     ...session,
@@ -145,6 +120,7 @@ function generateCalendarDays(
   year: number,
   month: number,
   sessions: WorkoutSessionWithStats[],
+  weekSchedules: { dayOfWeek: number }[],
   todayDateString: string,
 ): CalendarDay[] {
   const firstDay = new Date(year, month, 1);
@@ -158,7 +134,7 @@ function generateCalendarDays(
   // 同日に複数セッションがある場合を考慮して配列で保持
   const sessionsByDate = new Map<string, WorkoutSessionWithStats[]>();
   for (const session of sessions) {
-    const dateStr = new Date(session.startedAt).toISOString().split("T")[0];
+    const dateStr = toDateKey(session.startedAt);
     const existing = sessionsByDate.get(dateStr) ?? [];
     existing.push(session);
     sessionsByDate.set(dateStr, existing);
@@ -178,9 +154,9 @@ function generateCalendarDays(
   // 実際の日付
   for (let day = 1; day <= totalDays; day++) {
     const date = new Date(year, month, day);
-    const dateString = date.toISOString().split("T")[0];
+    const dateString = toDateKey(date);
     const dayOfWeek = date.getDay();
-    const isScheduled = mockWeekSchedule.some((s) => s.dayOfWeek === dayOfWeek);
+    const isScheduled = weekSchedules.some((s) => s.dayOfWeek === dayOfWeek);
     // 同日に複数セッションがある場合は最初の1つを表示（将来は複数対応可能）
     const sessionsForDate = sessionsByDate.get(dateString) ?? [];
     const session = sessionsForDate.length > 0 ? sessionsForDate[0] : null;
@@ -212,6 +188,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   // URL パラメータから年月を取得（デフォルトは現在の年月）
   // ============================================================================
   const params = await searchParams;
+  const userId = 1;
   const today = new Date();
   const year = params.year ? parseInt(params.year, 10) : today.getFullYear();
   const month = params.month
@@ -229,7 +206,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
         month={validMonth}
         calendarDays={[]}
         sessionsList={[]}
-        todayDateString={today.toISOString().split("T")[0]}
+        todayDateString={toDateKey(today)}
       />
     );
   }
@@ -237,14 +214,34 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   // ============================================================================
   // データ取得（将来的に DB アクセス層に置き換え）
   // ============================================================================
-  const sessionsInMonth = getSessionsByDateRange(year, month);
-  const allSets = getAllSets(); // セットとセッションの関連付けは日付ベースで行う
+  const [sessionsInMonth, weekSchedules] = await Promise.all([
+    getSessionsByDateRange(userId, year, month),
+    getWeekSchedules(userId),
+  ]);
+  const sessionIds = sessionsInMonth.map((session) => session.id);
+  const exerciseRecords = await getExerciseRecordsBySessionIds(sessionIds);
+  const exerciseRecordIds = exerciseRecords.map((record) => record.id);
+  const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
+  const menus = await getMenusByIds(
+    userId,
+    [...new Set(sessionsInMonth.map((session) => session.menuId))],
+  );
+  const menusById = new Map(menus.map((menu) => [menu.id, menu]));
+  const exerciseRecordsBySessionId =
+    buildExerciseRecordsBySessionId(exerciseRecords);
+  const setsByExerciseRecordId = buildSetsByExerciseRecordId(sets);
 
   // ============================================================================
   // データ計算（サーバー側で実行）
   // ============================================================================
   const sessionsWithStats: WorkoutSessionWithStats[] = sessionsInMonth.map(
-    (session) => enrichSessionWithStats(session, allSets),
+    (session) =>
+      enrichSessionWithStats(
+        session,
+        menusById,
+        exerciseRecordsBySessionId,
+        setsByExerciseRecordId,
+      ),
   );
 
   // セッション一覧（新しい順にソート）
@@ -253,11 +250,12 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   );
 
   // カレンダーの日付情報を生成
-  const todayDateString = today.toISOString().split("T")[0];
+  const todayDateString = toDateKey(today);
   const calendarDays = generateCalendarDays(
     year,
     month,
     sessionsWithStats,
+    weekSchedules,
     todayDateString,
   );
 

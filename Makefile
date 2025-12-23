@@ -4,6 +4,7 @@ init:
 	rm -rf package-lock.json
 	docker compose build
 	docker compose run --rm node npm install
+	docker compose run --rm node npx prisma generate
 	@make up
 
 up:

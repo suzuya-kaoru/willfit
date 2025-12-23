@@ -164,6 +164,45 @@ export interface WeekSchedule extends SoftDeletable {
   menuId: number; // FK → workout_menus.id
 }
 
+/**
+ * スケジュールチェック状態
+ */
+export type ScheduleCheckStatus = "completed" | "skipped";
+
+/**
+ * スケジュールの実行チェック（DBでは schedule_check_records）
+ */
+export interface ScheduleCheckRecord extends BaseEntity {
+  userId: number; // FK → users.id
+  weekScheduleId: number; // FK → week_schedules.id
+  scheduledDate: Date; // 対象日（YYYY-MM-DD）
+  status: ScheduleCheckStatus;
+  checkedAt: Date; // チェック日時
+}
+
+/**
+ * リマインド頻度
+ */
+export type ReminderFrequency = "daily" | "weekly" | "monthly";
+
+/**
+ * スケジュールリマインダー（DBでは schedule_reminders）
+ */
+export interface ScheduleReminder extends BaseEntity {
+  userId: number; // FK → users.id
+  weekScheduleId: number; // FK → week_schedules.id
+  frequency: ReminderFrequency;
+  timeOfDay: string; // "HH:mm"
+  dayOfWeek?: number; // 0-6（weekly時のみ）
+  dayOfMonth?: number; // 1-31（monthly時のみ）
+  startDate: Date;
+  endDate?: Date;
+  timezone: string; // 例: "Asia/Tokyo"
+  nextFireAt: Date;
+  lastFiredAt?: Date;
+  isEnabled: boolean;
+}
+
 // =============================================================================
 // フロントエンド用派生型（API レスポンス / 表示用）
 // =============================================================================

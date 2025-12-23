@@ -1,8 +1,9 @@
 import {
-  getAllExercisesWithBodyParts,
-  getAllMenusWithExercises,
-  mockWeightRecords,
-} from "@/lib/mock-data";
+  getBodyParts,
+  getExercisesWithBodyParts,
+  getMenusWithExercises,
+  getWeightRecords,
+} from "@/lib/db/queries";
 import { SettingsClient } from "./_components/settings-client";
 
 /**
@@ -10,48 +11,45 @@ import { SettingsClient } from "./_components/settings-client";
  * Server Component: データ取得（サーバー側で実行）
  * ============================================================================
  *
- * 将来的に DB に切り替える際は、以下の関数を DB アクセス層に置き換える：
- * - getAllExercisesWithBodyParts() → DB クエリ
- * - getAllMenusWithExercises() → DB クエリ
- * - getWeightRecords() → DB クエリ
+ * DBアクセス層から必要なデータを取得してクライアントへ渡す。
  */
 
 /**
  * 全種目を取得
- * TODO: DB移行時は、この関数を DB アクセス層に置き換える
  */
-function getExercises() {
-  return getAllExercisesWithBodyParts();
+async function getExercises(userId: number) {
+  return getExercisesWithBodyParts(userId);
 }
 
 /**
  * 全メニューを取得
- * TODO: DB移行時は、この関数を DB アクセス層に置き換える
  */
-function getMenus() {
-  return getAllMenusWithExercises();
+async function getMenus(userId: number) {
+  return getMenusWithExercises(userId);
 }
 
 /**
  * 体重記録を取得（新しい順）
- * TODO: DB移行時は、この関数を DB アクセス層に置き換える
  */
-function getWeightRecords() {
-  return [...mockWeightRecords].sort(
-    (a, b) => b.recordedAt.getTime() - a.recordedAt.getTime(),
-  );
+async function getWeightRecordsByUser(userId: number) {
+  return getWeightRecords(userId);
 }
 
-export default function SettingsPage() {
-  const exercises = getExercises();
-  const menus = getMenus();
-  const weightRecords = getWeightRecords();
+export default async function SettingsPage() {
+  const userId = 1;
+  const [exercises, menus, weightRecords, bodyParts] = await Promise.all([
+    getExercises(userId),
+    getMenus(userId),
+    getWeightRecordsByUser(userId),
+    getBodyParts(),
+  ]);
 
   return (
     <SettingsClient
       initialExercises={exercises}
       initialMenus={menus}
       initialWeightRecords={weightRecords}
+      initialBodyParts={bodyParts}
     />
   );
 }

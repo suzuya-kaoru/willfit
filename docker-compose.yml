@@ -40,7 +40,10 @@ services:
     tty: true
     environment:
       NODE_ENV: development
+      PRISMA_DATABASE_URL: mysql://docker:docker@db:3306/willfit
     restart: always
+    depends_on:
+      - db
 
   mailhog:
     image: axllent/mailpit
@@ -56,12 +59,14 @@ services:
 
   db:
     image: mysql:8
+    ports:
+      - 3306:3306
     environment:
-      MYSQL_ROOT_PASSWORD: pass
-      MYSQL_DATABASE: my-fitness-app
-      MYSQL_USER: docker_user
-      MYSQL_PASSWORD: docker_pass
-      TZ: 'Asia/Tokyo'
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: willfit
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: docker
+      TZ: "Asia/Tokyo"
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - ./docker/mysql/dump:/docker-entrypoint-initdb.d

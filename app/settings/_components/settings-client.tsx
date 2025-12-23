@@ -31,9 +31,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { mockBodyParts } from "@/lib/mock-data";
 import type {
   ExerciseWithBodyParts,
+  BodyPart,
   WeightRecord,
   WorkoutMenuWithExercises,
 } from "@/lib/types";
@@ -42,18 +42,21 @@ export interface SettingsClientProps {
   initialExercises: ExerciseWithBodyParts[];
   initialMenus: WorkoutMenuWithExercises[];
   initialWeightRecords: WeightRecord[];
+  initialBodyParts: BodyPart[];
 }
 
 export function SettingsClient({
   initialExercises,
   initialMenus,
   initialWeightRecords,
+  initialBodyParts,
 }: SettingsClientProps) {
   const [exercises, setExercises] =
     useState<ExerciseWithBodyParts[]>(initialExercises);
   const [menus, setMenus] = useState<WorkoutMenuWithExercises[]>(initialMenus);
   const [weightRecords, setWeightRecords] =
     useState<WeightRecord[]>(initialWeightRecords);
+  const bodyParts = initialBodyParts;
   const [searchQuery, setSearchQuery] = useState("");
   const [editingExercise, setEditingExercise] =
     useState<ExerciseWithBodyParts | null>(null);
@@ -409,6 +412,7 @@ export function SettingsClient({
         exercise={editingExercise}
         isOpen={!!editingExercise || isAddingExercise}
         isNew={isAddingExercise}
+        bodyParts={bodyParts}
         onClose={() => {
           setEditingExercise(null);
           setIsAddingExercise(false);
@@ -441,6 +445,7 @@ interface ExerciseEditDialogProps {
   exercise: ExerciseWithBodyParts | null;
   isOpen: boolean;
   isNew: boolean;
+  bodyParts: BodyPart[];
   onClose: () => void;
   onSave: (exercise: ExerciseWithBodyParts) => void;
   onDelete: (id: number) => void;
@@ -450,6 +455,7 @@ function ExerciseEditDialog({
   exercise,
   isOpen,
   isNew,
+  bodyParts,
   onClose,
   onSave,
   onDelete,
@@ -472,7 +478,7 @@ function ExerciseEditDialog({
   const handleSave = () => {
     if (!name.trim()) return;
 
-    const bodyParts = mockBodyParts.filter((bp) =>
+    const selectedParts = bodyParts.filter((bp) =>
       selectedBodyParts.includes(bp.id),
     );
 
@@ -480,7 +486,7 @@ function ExerciseEditDialog({
       id: exercise?.id || 0, // 新規作成時は0（実際のDBではAUTO_INCREMENT）
       userId: exercise?.userId || 1, // 数値ID
       name: name.trim(),
-      bodyParts,
+      bodyParts: selectedParts,
       formNote: formNote.trim() || undefined,
       videoUrl: videoUrl.trim() || undefined,
       createdAt: exercise?.createdAt || new Date(),
@@ -519,7 +525,7 @@ function ExerciseEditDialog({
           <div className="space-y-2">
             <div className="text-sm font-medium">対象部位</div>
             <div className="flex flex-wrap gap-2">
-              {mockBodyParts.map((part) => (
+              {bodyParts.map((part) => (
                 <button
                   key={part.id}
                   type="button"
