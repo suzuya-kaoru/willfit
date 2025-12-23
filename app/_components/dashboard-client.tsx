@@ -1,6 +1,16 @@
 "use client";
 
-import { Bell, Check, ChevronRight, Info, Play } from "lucide-react";
+import {
+  Bell,
+  Check,
+  ChevronRight,
+  Flame,
+  Info,
+  Play,
+  Target,
+  Trophy,
+  Zap,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { AppHeader } from "@/components/app-header";
@@ -294,90 +304,117 @@ export function DashboardClient({
     setTouchStartX(null);
   };
 
+  // 完了率を計算（100%達成時のトロフィー表示用）
+  const progressPercent =
+    weeklyGoal > 0 ? Math.round((weeklyCompleted / weeklyGoal) * 100) : 0;
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <AppHeader />
 
+      {/* Main content - 他ページと同じmax-w-md */}
       <main className="mx-auto max-w-md space-y-4 p-4">
-        {/* Weekly Progress */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium">今週の進捗</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex gap-1.5">
-                {weekDayStatuses.map((status) => (
-                  <div
-                    key={status.dateString}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                      status.isCompleted
-                        ? "bg-primary text-primary-foreground"
-                        : status.hasSchedule
-                          ? status.isToday
-                            ? "bg-primary/20 text-primary ring-2 ring-primary"
-                            : "bg-secondary text-secondary-foreground"
-                          : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {dayLabels[status.dayOfWeekIndex]}
-                  </div>
-                ))}
+        {/* Weekly Progress Card */}
+        <Card className="overflow-hidden border-0 bg-gradient-to-br from-card to-primary/5 shadow-lg">
+          <CardContent className="p-4">
+            {/* Header */}
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
+                  <Target className="h-4 w-4 text-primary" />
+                </div>
+                <span className="font-semibold text-foreground">今週の進捗</span>
               </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-foreground">
-                  {weeklyCompleted}/{weeklyGoal}
-                </p>
-                <p className="text-xs text-muted-foreground">完了</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        {/* Today's / Previous / Next Plan Card */}
-        <Card className="overflow-hidden border-primary/20">
-          <CardHeader className="bg-primary/5 pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-medium">
-                今日の予定
-              </CardTitle>
-              <span className="text-xs text-muted-foreground">
-                {todayFormatted}
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent
-            className="space-y-4 pt-4"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
-            {/* 日タブ（昨日・今日・明日） */}
-            <div className="-mx-2 overflow-x-auto pb-1">
-              <div className="flex gap-2 px-2">
-                {dailySchedules.map((day) => (
-                  <button
-                    key={day.dateKey}
-                    type="button"
-                    onClick={() => setActiveDateKey(day.dateKey)}
-                    className={cn(
-                      "whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                      day.dateKey === activeDateKey
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {day.label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                {progressPercent === 100 && (
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                )}
+                <div className="flex items-baseline gap-0.5">
+                  <span className="text-2xl font-bold text-primary">
+                    {weeklyCompleted}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    /{weeklyGoal}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* 日ごとの内容（カルーセル） */}
+            {/* Weekly Days - grid-cols-7 で均等配置 */}
+            <div className="grid grid-cols-7 gap-2">
+              {weekDayStatuses.map((status) => (
+                <div
+                  key={status.dateString}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-xl text-xs font-semibold transition-all",
+                      status.isCompleted
+                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
+                        : status.isToday
+                          ? "bg-primary/20 text-primary ring-2 ring-primary"
+                          : status.hasSchedule
+                            ? "bg-muted text-muted-foreground"
+                            : "bg-muted/50 text-muted-foreground/50",
+                    )}
+                  >
+                    {status.isCompleted ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      dayLabels[status.dayOfWeekIndex]
+                    )}
+                  </div>
+                  {status.isToday && (
+                    <div className="h-1 w-1 rounded-full bg-primary" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Today's Schedule Card */}
+        <Card className="overflow-hidden border-0 shadow-lg">
+          {/* Header with gradient */}
+          <div className="flex items-center justify-between bg-gradient-to-r from-primary/10 to-transparent px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />
+              <span className="font-semibold text-foreground">
+                {todayFormatted}
+              </span>
+            </div>
+            {/* Day tabs */}
+            <div className="flex gap-1 rounded-full bg-muted/50 p-1">
+              {dailySchedules.map((day) => (
+                <button
+                  key={day.dateKey}
+                  type="button"
+                  onClick={() => setActiveDateKey(day.dateKey)}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                    day.dateKey === activeDateKey
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {day.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Content */}
+          <CardContent
+            className="p-4"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Carousel */}
             <div className="relative overflow-hidden">
               <div
                 className="flex transition-transform duration-300 ease-out"
-                style={{
-                  transform: `translateX(-${activeIndex * 100}%)`,
-                }}
+                style={{ transform: `translateX(-${activeIndex * 100}%)` }}
               >
                 {dailySchedules.map((day) => {
                   const visibleSchedules = day.schedules.filter(
@@ -391,79 +428,86 @@ export function DashboardClient({
                     <div key={day.dateKey} className="w-full shrink-0 space-y-4">
                       {visibleSchedules.length > 0 ? (
                         <>
+                          {/* Count badge */}
                           <div className="flex items-center justify-between">
-                            <p className="text-xs text-muted-foreground">
-                              この日のスケジュール
-                            </p>
-                            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
-                              残り {visibleSchedules.length} 件
+                            <span className="text-sm text-muted-foreground">
+                              {day.isToday ? "今日" : day.label}のスケジュール
                             </span>
+                            <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1">
+                              <Flame className="h-3 w-3 text-primary" />
+                              <span className="text-xs font-medium text-primary">
+                                {visibleSchedules.length}件
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
+                          {/* Schedule cards */}
+                          <div className="space-y-3">
                             {visibleSchedules.map((schedule) => (
                               <div
                                 key={schedule.scheduleId}
-                                className="rounded-lg border border-border bg-card p-3 shadow-sm"
+                                className="rounded-2xl border border-border/50 bg-gradient-to-br from-card to-muted/30 p-4 shadow-sm"
                               >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <h3 className="text-sm font-semibold text-foreground">
-                                      {schedule.menuName}
-                                    </h3>
-                                    <div className="mt-2 flex flex-wrap gap-1.5">
-                                      {schedule.exercises.map((ex) => (
-                                        <span
-                                          key={ex.id}
-                                          className="rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
-                                        >
-                                          {ex.name}
-                                        </span>
-                                      ))}
-                                    </div>
-                                    {schedule.reminder && (
-                                      <p className="mt-2 text-xs text-muted-foreground">
-                                        リマインド:{" "}
-                                        {schedule.reminder.isEnabled
-                                          ? formatReminderSummary(
-                                              schedule.reminder,
-                                            )
-                                          : "停止中"}
-                                      </p>
-                                    )}
-                                  </div>
+                                {/* Menu name */}
+                                <h3 className="text-base font-bold text-foreground">
+                                  {schedule.menuName}
+                                </h3>
+
+                                {/* Exercise tags */}
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  {schedule.exercises.map((ex) => (
+                                    <span
+                                      key={ex.id}
+                                      className="rounded-lg bg-secondary/80 px-2.5 py-1 text-xs font-medium text-secondary-foreground"
+                                    >
+                                      {ex.name}
+                                    </span>
+                                  ))}
                                 </div>
 
+                                {/* Reminder info */}
+                                {schedule.reminder && (
+                                  <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Bell className="h-3 w-3" />
+                                    {schedule.reminder.isEnabled
+                                      ? formatReminderSummary(schedule.reminder)
+                                      : "リマインド停止中"}
+                                  </p>
+                                )}
+
+                                {/* Previous note */}
                                 {schedule.previousNote && (
-                                  <div className="mt-3 rounded-md bg-muted/60 p-2">
-                                    <div className="mb-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                  <div className="mt-3 rounded-xl bg-muted/50 p-3">
+                                    <div className="mb-1 flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
                                       <Info className="h-3 w-3" />
                                       前回のメモ
                                     </div>
-                                    <p className="text-xs text-foreground">
+                                    <p className="text-xs text-foreground/80">
                                       {schedule.previousNote}
                                     </p>
                                   </div>
                                 )}
 
+                                {/* Start button */}
                                 <Button
-                                  onClick={() => {
-                                    router.push(`/workout/${schedule.menuId}`);
-                                  }}
-                                  className="mt-3 w-full gap-2"
-                                  size="sm"
+                                  onClick={() =>
+                                    router.push(`/workout/${schedule.menuId}`)
+                                  }
+                                  className="mt-4 w-full gap-2 rounded-xl font-semibold shadow-lg shadow-primary/20"
+                                  size="lg"
                                 >
                                   <Play className="h-4 w-4" />
-                                  このメニューでトレーニング開始
+                                  トレーニング開始
                                 </Button>
 
-                                <div className="mt-2 flex flex-wrap gap-2">
+                                {/* Action buttons */}
+                                <div className="mt-3 flex gap-2">
                                   {day.isToday && (
                                     <Button
                                       type="button"
                                       variant="outline"
                                       size="sm"
-                                      className="flex-1 gap-1"
+                                      className="flex-1 gap-1.5 rounded-xl"
                                       disabled={isPending}
                                       onClick={() =>
                                         handleCheckSchedule(
@@ -480,18 +524,17 @@ export function DashboardClient({
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    className={`gap-1 ${
-                                      day.isToday ? "flex-1" : "w-full"
-                                    }`}
+                                    className={cn(
+                                      "gap-1.5 rounded-xl",
+                                      day.isToday ? "flex-1" : "w-full",
+                                    )}
                                     disabled={isPending}
                                     onClick={() =>
                                       openReminderDialog(schedule, day)
                                     }
                                   >
                                     <Bell className="h-4 w-4" />
-                                    {schedule.reminder
-                                      ? "リマインド編集"
-                                      : "リマインド設定"}
+                                    {schedule.reminder ? "リマインド編集" : "リマインド設定"}
                                   </Button>
                                 </div>
                               </div>
@@ -499,18 +542,29 @@ export function DashboardClient({
                           </div>
                         </>
                       ) : (
-                        <div className="py-6 text-center">
-                          <p className="text-sm text-muted-foreground">
-                            この日のメニューはすべて完了しました。
+                        /* Empty state */
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
+                            <Check className="h-8 w-8 text-primary" />
+                          </div>
+                          <p className="font-semibold text-foreground">
+                            {day.isToday
+                              ? "今日のメニューは完了！"
+                              : "予定はありません"}
+                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {day.isToday
+                              ? "素晴らしい！お疲れ様でした"
+                              : "ゆっくり休みましょう"}
                           </p>
                           {day.isToday && (
                             <Button
                               variant="outline"
-                              className="mt-4 bg-transparent"
+                              className="mt-5 gap-2 rounded-xl border-primary/30 text-primary hover:bg-primary/5"
                               onClick={() => router.push("/settings")}
                             >
-                              メニューを選択して開始
-                              <ChevronRight className="ml-1 h-4 w-4" />
+                              別のメニューを選択
+                              <ChevronRight className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
