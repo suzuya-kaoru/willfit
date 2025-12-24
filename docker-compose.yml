@@ -54,7 +54,7 @@ services:
     image: adminer
     restart: on-failure
     environment:
-      ADMINER_DESIGN: rmsoft
+      ADMINER_DESIGN: adminer-dark
       ADMINER_DEFAULT_SERVER: host.docker.internal:3306
 
   db:
