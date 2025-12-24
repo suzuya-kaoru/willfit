@@ -1,11 +1,12 @@
+import { toDateKey } from "@/lib/date-key";
 import {
   getExerciseRecordsBySessionIds,
   getExercisesWithBodyParts,
+  getWeightRecords,
   getWorkoutSessions,
   getWorkoutSetsByExerciseRecordIds,
-  getWeightRecords,
 } from "@/lib/db/queries";
-import { toDateKey } from "@/lib/date-key";
+import { formatDateTime } from "@/lib/timezone";
 import type {
   ExerciseLog,
   ExerciseWithBodyParts,
@@ -44,9 +45,7 @@ function calculateExerciseData(
 ): ExerciseDataPoint[] {
   const sessionData = sessions
     .map((session) => {
-      const record = exerciseRecordKeyMap.get(
-        `${session.id}:${exerciseId}`,
-      );
+      const record = exerciseRecordKeyMap.get(`${session.id}:${exerciseId}`);
       if (!record) return null;
 
       const exerciseSets = setsByExerciseRecordId.get(record.id) ?? [];
@@ -66,10 +65,7 @@ function calculateExerciseData(
       );
 
       return {
-        date: new Date(session.startedAt).toLocaleDateString("ja-JP", {
-          month: "short",
-          day: "numeric",
-        }),
+        date: formatDateTime(session.startedAt, "M/d"),
         weight: maxWeight,
         "1rm": Math.round(estimated1RM * 10) / 10,
         volume: totalVolume,
@@ -154,7 +150,10 @@ export default async function AnalyticsPage() {
   }
   const exerciseRecordKeyMap = new Map<string, ExerciseLog>();
   for (const record of exerciseRecords) {
-    exerciseRecordKeyMap.set(`${record.sessionId}:${record.exerciseId}`, record);
+    exerciseRecordKeyMap.set(
+      `${record.sessionId}:${record.exerciseId}`,
+      record,
+    );
   }
   const sessionDateById = new Map(
     sessions.map((session) => [session.id, session.startedAt]),

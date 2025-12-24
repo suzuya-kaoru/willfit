@@ -14,6 +14,7 @@ import { BottomNavigation } from "@/components/bottom-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDateTime, formatTime } from "@/lib/timezone";
 import type { WorkoutSession } from "@/lib/types";
 
 const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -233,20 +234,9 @@ export function HistoryClient({
                           </span>
                         </div>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(
-                            selectedSession.startedAt,
-                          ).toLocaleTimeString("ja-JP", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}{" "}
-                          -{" "}
+                          {formatTime(selectedSession.startedAt)} -{" "}
                           {selectedSession.endedAt
-                            ? new Date(
-                                selectedSession.endedAt,
-                              ).toLocaleTimeString("ja-JP", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
+                            ? formatTime(selectedSession.endedAt)
                             : "-"}
                         </span>
                       </div>
@@ -316,14 +306,7 @@ export function HistoryClient({
                         <div>
                           <h3 className="font-medium">{session.menuName}</h3>
                           <p className="text-sm text-muted-foreground">
-                            {new Date(session.startedAt).toLocaleDateString(
-                              "ja-JP",
-                              {
-                                month: "long",
-                                day: "numeric",
-                                weekday: "short",
-                              },
-                            )}
+                            {formatDateTime(session.startedAt, "M月d日")}
                           </p>
                         </div>
                       </div>

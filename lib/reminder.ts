@@ -40,7 +40,9 @@ export function calcNextReminderAt(
 
   if (rule.frequency === "weekly") {
     const targetDow =
-      typeof rule.dayOfWeek === "number" ? rule.dayOfWeek : getDay(rule.startDate);
+      typeof rule.dayOfWeek === "number"
+        ? rule.dayOfWeek
+        : getDay(rule.startDate);
     const diff = (targetDow - getDay(candidate) + 7) % 7;
     candidate = addDays(candidate, diff);
     if (candidate <= now || candidate < rule.startDate) {
@@ -50,7 +52,9 @@ export function calcNextReminderAt(
 
   if (rule.frequency === "monthly") {
     const targetDom =
-      typeof rule.dayOfMonth === "number" ? rule.dayOfMonth : getDate(rule.startDate);
+      typeof rule.dayOfMonth === "number"
+        ? rule.dayOfMonth
+        : getDate(rule.startDate);
     const lastDay = getDate(lastDayOfMonth(candidate));
     const clamped = Math.min(targetDom, lastDay);
     candidate = set(candidate, { date: clamped });
@@ -59,7 +63,10 @@ export function calcNextReminderAt(
       const nextMonth = addMonths(candidate, 1);
       const nextLastDay = getDate(lastDayOfMonth(nextMonth));
       const nextClamped = Math.min(targetDom, nextLastDay);
-      candidate = withTime(set(nextMonth, { date: nextClamped }), rule.timeOfDay);
+      candidate = withTime(
+        set(nextMonth, { date: nextClamped }),
+        rule.timeOfDay,
+      );
     }
   }
 

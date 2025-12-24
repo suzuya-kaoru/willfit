@@ -16,6 +16,7 @@ import {
   getWorkoutSessionsByDateRange,
   getWorkoutSessionsByMenuIds,
 } from "@/lib/db/queries";
+import { formatDateTimeJa } from "@/lib/timezone";
 import { DashboardClient } from "./_components/dashboard-client";
 
 export default async function DashboardPage() {
@@ -23,7 +24,7 @@ export default async function DashboardPage() {
   // Server Component: 日付計算とデータ取得（サーバー側で実行）
   // ============================================================================
 
-  // 現在の日付を取得（サーバー側で実行されるため、一貫性が保証される）
+  // 現在の日付を取得（Asia/Tokyo）
   const userId = 1;
   const today = new Date();
   const todayDateKey = toDateKey(today);
@@ -53,7 +54,9 @@ export default async function DashboardPage() {
   const weekSchedules = await getWeekSchedules(userId);
   const menus = await getMenusWithExercises(userId);
   const menusById = new Map(menus.map((menu) => [menu.id, menu]));
-  const menuIds = [...new Set(weekSchedules.map((schedule) => schedule.menuId))];
+  const menuIds = [
+    ...new Set(weekSchedules.map((schedule) => schedule.menuId)),
+  ];
   const dailySessionStart = startOfDay(addDays(today, -1));
   const dailySessionEnd = endOfDay(addDays(today, 1));
   const dailySessions = await getWorkoutSessionsByDateRange(
@@ -121,8 +124,7 @@ export default async function DashboardPage() {
         const menu = menusById.get(schedule.menuId);
         if (!menu) return null;
 
-        const previousSession =
-          sessionsByMenuId.get(menu.id)?.[0] ?? null;
+        const previousSession = sessionsByMenuId.get(menu.id)?.[0] ?? null;
         const reminder = remindersByScheduleId.get(schedule.id);
         const reminderView = reminder
           ? {
@@ -161,7 +163,10 @@ export default async function DashboardPage() {
   // 今週のセッション数を計算
   const weeklyGoal = weekSchedules.length;
   const weekDateKeys = weekDays.map((dayDate) => toDateKey(dayDate));
-  const scheduleChecksThisWeek = await getScheduleCheckMap(userId, weekDateKeys);
+  const scheduleChecksThisWeek = await getScheduleCheckMap(
+    userId,
+    weekDateKeys,
+  );
 
   const completedScheduleKeys = new Set<string>();
   for (const session of weeklySessions) {
@@ -210,12 +215,8 @@ export default async function DashboardPage() {
     };
   });
 
-  // 日付フォーマット（サーバー側で実行）
-  const todayFormatted = today.toLocaleDateString("ja-JP", {
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  });
+  // 日付フォーマット（Asia/Tokyo）
+  const todayFormatted = formatDateTimeJa(today).split(" ")[0]; // "2024年12月24日"
 
   // ============================================================================
   // Client Component に props として渡す

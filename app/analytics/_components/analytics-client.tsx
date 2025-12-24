@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDateTime } from "@/lib/timezone";
 import type { ExerciseWithBodyParts } from "@/lib/types";
 
 // =============================================================================
@@ -91,10 +92,7 @@ export function AnalyticsClient({
     return allWeightRecords
       .filter((r) => new Date(r.recordedAt) >= cutoffDate)
       .map((r) => ({
-        date: new Date(r.recordedAt).toLocaleDateString("ja-JP", {
-          month: "short",
-          day: "numeric",
-        }),
+        date: formatDateTime(r.recordedAt, "M/d"),
         weight: r.weight,
       }));
   }, [weightPeriod, allWeightRecords]);
@@ -417,10 +415,7 @@ export function AnalyticsClient({
                           {pb.weight} kg
                         </span>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(pb.date).toLocaleDateString("ja-JP", {
-                            month: "short",
-                            day: "numeric",
-                          })}
+                          {formatDateTime(pb.date, "M/d")}
                         </p>
                       </div>
                     </div>

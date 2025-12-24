@@ -1,7 +1,4 @@
 "use client";
-
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
 import {
   ArrowDown,
   ArrowUp,
@@ -31,9 +28,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDateTimeJa } from "@/lib/timezone";
 import type {
-  ExerciseWithBodyParts,
   BodyPart,
+  ExerciseWithBodyParts,
   WeightRecord,
   WorkoutMenuWithExercises,
 } from "@/lib/types";
@@ -375,9 +373,7 @@ export function SettingsClient({
                               {record.weight.toFixed(1)} kg
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {format(record.recordedAt, "yyyy年M月d日 HH:mm", {
-                                locale: ja,
-                              })}
+                              {formatDateTimeJa(record.recordedAt)}
                             </p>
                           </div>
                         </div>

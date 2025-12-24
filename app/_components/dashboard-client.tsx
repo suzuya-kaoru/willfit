@@ -13,6 +13,11 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import {
+  deleteScheduleReminderAction,
+  saveScheduleReminderAction,
+} from "@/app/_actions/reminder-actions";
+import { checkScheduleAction } from "@/app/_actions/schedule-actions";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { Button } from "@/components/ui/button";
@@ -34,11 +39,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { checkScheduleAction } from "@/app/_actions/schedule-actions";
-import {
-  deleteScheduleReminderAction,
-  saveScheduleReminderAction,
-} from "@/app/_actions/reminder-actions";
 import type { ExerciseWithBodyParts } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -323,7 +323,9 @@ export function DashboardClient({
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
                   <Target className="h-4 w-4 text-primary" />
                 </div>
-                <span className="font-semibold text-foreground">今週の進捗</span>
+                <span className="font-semibold text-foreground">
+                  今週の進捗
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 {progressPercent === 100 && (
@@ -425,7 +427,10 @@ export function DashboardClient({
                   );
 
                   return (
-                    <div key={day.dateKey} className="w-full shrink-0 space-y-4">
+                    <div
+                      key={day.dateKey}
+                      className="w-full shrink-0 space-y-4"
+                    >
                       {visibleSchedules.length > 0 ? (
                         <>
                           {/* Count badge */}
@@ -534,7 +539,9 @@ export function DashboardClient({
                                     }
                                   >
                                     <Bell className="h-4 w-4" />
-                                    {schedule.reminder ? "リマインド編集" : "リマインド設定"}
+                                    {schedule.reminder
+                                      ? "リマインド編集"
+                                      : "リマインド設定"}
                                   </Button>
                                 </div>
                               </div>

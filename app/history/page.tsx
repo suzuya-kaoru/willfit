@@ -1,3 +1,4 @@
+import { toDateKey } from "@/lib/date-key";
 import {
   getExerciseRecordsBySessionIds,
   getMenusByIds,
@@ -5,7 +6,7 @@ import {
   getWorkoutSessionsByDateRange,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
-import { toDateKey } from "@/lib/date-key";
+import { getMonthEnd, getMonthStart } from "@/lib/timezone";
 import type { ExerciseLog, WorkoutSession, WorkoutSet } from "@/lib/types";
 import {
   type CalendarDay,
@@ -23,15 +24,15 @@ import {
  */
 
 /**
- * 指定された年月のセッションを取得
+ * 指定された年月のセッションを取得（Asia/Tokyo）
  */
 async function getSessionsByDateRange(
   userId: number,
   year: number,
   month: number,
 ): Promise<WorkoutSession[]> {
-  const startDate = new Date(year, month, 1);
-  const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
+  const startDate = getMonthStart(year, month);
+  const endDate = getMonthEnd(year, month);
 
   return getWorkoutSessionsByDateRange(userId, startDate, endDate);
 }
@@ -222,10 +223,9 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const exerciseRecords = await getExerciseRecordsBySessionIds(sessionIds);
   const exerciseRecordIds = exerciseRecords.map((record) => record.id);
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
-  const menus = await getMenusByIds(
-    userId,
-    [...new Set(sessionsInMonth.map((session) => session.menuId))],
-  );
+  const menus = await getMenusByIds(userId, [
+    ...new Set(sessionsInMonth.map((session) => session.menuId)),
+  ]);
   const menusById = new Map(menus.map((menu) => [menu.id, menu]));
   const exerciseRecordsBySessionId =
     buildExerciseRecordsBySessionId(exerciseRecords);
