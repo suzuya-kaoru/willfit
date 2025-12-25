@@ -315,7 +315,7 @@ export function DashboardClient({
       {/* Main content - 他ページと同じmax-w-md */}
       <main className="mx-auto max-w-md space-y-4 p-4">
         {/* Weekly Progress Card */}
-        <Card className="overflow-hidden border-0 bg-gradient-to-br from-card to-primary/5 shadow-lg">
+        <Card className="overflow-hidden border-0 bg-linear-to-br from-card to-primary/5 shadow-lg">
           <CardContent className="p-4">
             {/* Header */}
             <div className="mb-4 flex items-center justify-between">
@@ -379,7 +379,7 @@ export function DashboardClient({
         {/* Today's Schedule Card */}
         <Card className="overflow-hidden border-0 shadow-lg">
           {/* Header with gradient */}
-          <div className="flex items-center justify-between bg-gradient-to-r from-primary/10 to-transparent px-4 py-3">
+          <div className="flex items-center justify-between bg-linear-to-r from-primary/10 to-transparent px-4 py-3">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-primary" />
               <span className="font-semibold text-foreground">
@@ -451,7 +451,7 @@ export function DashboardClient({
                             {visibleSchedules.map((schedule) => (
                               <div
                                 key={schedule.scheduleId}
-                                className="rounded-2xl border border-border/50 bg-gradient-to-br from-card to-muted/30 p-4 shadow-sm"
+                                className="rounded-2xl border border-border/50 bg-linear-to-br from-card to-muted/30 p-4 shadow-sm"
                               >
                                 {/* Menu name */}
                                 <h3 className="text-base font-bold text-foreground">
@@ -551,7 +551,7 @@ export function DashboardClient({
                       ) : (
                         /* Empty state */
                         <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
+                          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/5">
                             <Check className="h-8 w-8 text-primary" />
                           </div>
                           <p className="font-semibold text-foreground">
