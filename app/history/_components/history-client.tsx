@@ -14,6 +14,7 @@ import { BottomNavigation } from "@/components/bottom-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toDateKey } from "@/lib/date-key";
 import { formatDateTime, formatTime } from "@/lib/timezone";
 import type { WorkoutSession } from "@/lib/types";
 
@@ -94,7 +95,7 @@ export function HistoryClient({
   // 選択されたセッションを取得
   const selectedSession = selectedDate
     ? (() => {
-        const selectedDateString = selectedDate.toISOString().split("T")[0];
+        const selectedDateString = toDateKey(selectedDate);
         return (
           calendarDays.find((day) => day.dateString === selectedDateString)
             ?.session ?? null
