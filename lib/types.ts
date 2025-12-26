@@ -1,5 +1,5 @@
 /**
- * FitLog - 型定義
+ * WillFit - 型定義
  *
  * 設計方針:
  * - 全エンティティで数値ID (BIGINT UNSIGNED AUTO_INCREMENT) を使用
@@ -123,7 +123,7 @@ export interface WorkoutSession extends BaseEntity {
  * 種目ごとの記録
  * @table exercise_records
  */
-export interface ExerciseLog extends BaseEntity {
+export interface ExerciseRecord extends BaseEntity {
   sessionId: number; // FK → workout_records.id
   exerciseId: number; // FK → exercises.id
 }
@@ -222,17 +222,17 @@ export interface WorkoutMenuWithExercises extends WorkoutMenu {
 }
 
 /**
- * セッション（メニュー・ログ付き）
+ * セッション（メニュー・記録付き）
  */
 export interface WorkoutSessionWithDetails extends WorkoutSession {
   menu: WorkoutMenu;
-  exerciseLogs: ExerciseLogWithDetails[];
+  exerciseRecords: ExerciseRecordWithDetails[];
 }
 
 /**
- * 種目ログ（種目情報・セット付き）
+ * 種目記録（種目情報・セット付き）
  */
-export interface ExerciseLogWithDetails extends ExerciseLog {
+export interface ExerciseRecordWithDetails extends ExerciseRecord {
   exercise: ExerciseWithBodyParts;
   sets: WorkoutSet[];
   previousRecord?: PreviousRecord;

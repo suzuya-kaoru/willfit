@@ -8,7 +8,7 @@ import {
 } from "@/lib/db/queries";
 import { formatDateTime } from "@/lib/timezone";
 import type {
-  ExerciseLog,
+  ExerciseRecord,
   ExerciseWithBodyParts,
   WorkoutSession,
   WorkoutSet,
@@ -39,7 +39,7 @@ import {
  */
 function calculateExerciseData(
   sessions: WorkoutSession[],
-  exerciseRecordKeyMap: Map<string, ExerciseLog>,
+  exerciseRecordKeyMap: Map<string, ExerciseRecord>,
   setsByExerciseRecordId: Map<number, WorkoutSet[]>,
   exerciseId: number,
 ): ExerciseDataPoint[] {
@@ -84,7 +84,7 @@ function calculateExerciseData(
  */
 function calculatePersonalBests(
   exercises: ExerciseWithBodyParts[],
-  exerciseRecords: ExerciseLog[],
+  exerciseRecords: ExerciseRecord[],
   setsByExerciseRecordId: Map<number, WorkoutSet[]>,
   sessionDateById: Map<number, Date>,
 ): PersonalBest[] {
@@ -148,7 +148,7 @@ export default async function AnalyticsPage() {
     list.push(set);
     setsByExerciseRecordId.set(set.exerciseRecordId, list);
   }
-  const exerciseRecordKeyMap = new Map<string, ExerciseLog>();
+  const exerciseRecordKeyMap = new Map<string, ExerciseRecord>();
   for (const record of exerciseRecords) {
     exerciseRecordKeyMap.set(
       `${record.sessionId}:${record.exerciseId}`,

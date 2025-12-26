@@ -3,7 +3,7 @@ import { toDateKey } from "@/lib/date-key";
 import type {
   BodyPart,
   Exercise,
-  ExerciseLog,
+  ExerciseRecord,
   ExerciseWithBodyParts,
   MenuExercise,
   ScheduleReminder,
@@ -207,7 +207,7 @@ function mapExerciseRecord(row: {
   exerciseId: bigint;
   createdAt: Date;
   updatedAt: Date;
-}): ExerciseLog {
+}): ExerciseRecord {
   return {
     id: toSafeNumber(row.id, "exercise_records.id"),
     sessionId: toSafeNumber(row.sessionId, "exercise_records.session_id"),
@@ -518,7 +518,7 @@ export async function getWorkoutSessions(
 
 export async function getExerciseRecordsBySessionIds(
   sessionIds: number[],
-): Promise<ExerciseLog[]> {
+): Promise<ExerciseRecord[]> {
   if (sessionIds.length === 0) return [];
   const rows = await prisma.exerciseRecord.findMany({
     where: { sessionId: { in: toBigIntArray(sessionIds, "sessionIds") } },

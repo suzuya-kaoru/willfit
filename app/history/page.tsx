@@ -7,7 +7,7 @@ import {
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
 import { getMonthEnd, getMonthStart } from "@/lib/timezone";
-import type { ExerciseLog, WorkoutSession, WorkoutSet } from "@/lib/types";
+import type { ExerciseRecord, WorkoutSession, WorkoutSet } from "@/lib/types";
 import {
   type CalendarDay,
   HistoryClient,
@@ -38,9 +38,9 @@ async function getSessionsByDateRange(
 }
 
 function buildExerciseRecordsBySessionId(
-  records: ExerciseLog[],
-): Map<number, ExerciseLog[]> {
-  const map = new Map<number, ExerciseLog[]>();
+  records: ExerciseRecord[],
+): Map<number, ExerciseRecord[]> {
+  const map = new Map<number, ExerciseRecord[]>();
   for (const record of records) {
     const list = map.get(record.sessionId) ?? [];
     list.push(record);
@@ -68,7 +68,7 @@ function buildSetsByExerciseRecordId(
  */
 function calculateSessionStats(
   session: WorkoutSession,
-  exerciseRecordsBySessionId: Map<number, ExerciseLog[]>,
+  exerciseRecordsBySessionId: Map<number, ExerciseRecord[]>,
   setsByExerciseRecordId: Map<number, WorkoutSet[]>,
 ): {
   volume: number;
@@ -97,7 +97,7 @@ function calculateSessionStats(
 function enrichSessionWithStats(
   session: WorkoutSession,
   menusById: Map<number, { name: string }>,
-  exerciseRecordsBySessionId: Map<number, ExerciseLog[]>,
+  exerciseRecordsBySessionId: Map<number, ExerciseRecord[]>,
   setsByExerciseRecordId: Map<number, WorkoutSet[]>,
 ): WorkoutSessionWithStats {
   const menu = menusById.get(session.menuId);

@@ -48,8 +48,8 @@ interface LocalSet {
   completed: boolean;
 }
 
-// ローカル用の種目ログ型
-interface LocalExerciseLog {
+// ローカル用の種目記録型
+interface LocalExerciseRecord {
   exerciseId: number;
   exercise: ExerciseWithBodyParts;
   sets: LocalSet[];
@@ -71,7 +71,7 @@ export interface WorkoutClientProps {
 export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
   const router = useRouter();
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [exerciseLogs, setExerciseLogs] = useState<LocalExerciseLog[]>([]);
+  const [exerciseRecords, setExerciseRecords] = useState<LocalExerciseRecord[]>([]);
   const [condition, setCondition] = useState(7);
   const [fatigue, setFatigue] = useState(5);
   const [note, setNote] = useState("");
@@ -79,7 +79,7 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
 
   // Initialize exercise logs
   useEffect(() => {
-    const logs: LocalExerciseLog[] = menu.exercises.map((exercise) => {
+    const records: LocalExerciseRecord[] = menu.exercises.map((exercise) => {
       const previousRecord = previousRecords.get(exercise.id);
 
       return {
@@ -111,7 +111,7 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
         previousRecord,
       };
     });
-    setExerciseLogs(logs);
+    setExerciseRecords(records);
   }, [menu, previousRecords]);
 
   // Timer
@@ -138,12 +138,12 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
     field: keyof LocalSet,
     value: number | boolean,
   ) => {
-    setExerciseLogs((prev) =>
-      prev.map((log) => {
-        if (log.exerciseId !== exerciseId) return log;
+    setExerciseRecords((prev) =>
+      prev.map((record) => {
+        if (record.exerciseId !== exerciseId) return record;
         return {
-          ...log,
-          sets: log.sets.map((set) => {
+          ...record,
+          sets: record.sets.map((set) => {
             if (set.id !== setId) return set;
             return { ...set, [field]: value };
           }),
@@ -153,14 +153,14 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
   };
 
   const addSet = (exerciseId: number) => {
-    setExerciseLogs((prev) =>
-      prev.map((log) => {
-        if (log.exerciseId !== exerciseId) return log;
-        const newSetNumber = log.sets.length + 1;
+    setExerciseRecords((prev) =>
+      prev.map((record) => {
+        if (record.exerciseId !== exerciseId) return record;
+        const newSetNumber = record.sets.length + 1;
         return {
-          ...log,
+          ...record,
           sets: [
-            ...log.sets,
+            ...record.sets,
             {
               id: `${exerciseId}-${newSetNumber}`,
               setNumber: newSetNumber,
@@ -176,7 +176,7 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
 
   const handleSave = () => {
     // TODO: DB移行時は、ここでAPI呼び出しを行う
-    // 例: await saveWorkoutSession({ menuId, exerciseLogs, condition, fatigue, note, elapsedTime })
+    // 例: await saveWorkoutSession({ menuId, exerciseRecords, condition, fatigue, note, elapsedTime })
     router.push("/");
   };
 
@@ -217,27 +217,27 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
         {/* Exercise List */}
         <Accordion
           type="multiple"
-          defaultValue={exerciseLogs.map((l) => l.exerciseId.toString())}
+          defaultValue={exerciseRecords.map((r) => r.exerciseId.toString())}
           className="space-y-3"
         >
-          {exerciseLogs.map((log) => (
+          {exerciseRecords.map((record) => (
             <AccordionItem
-              key={log.exerciseId}
-              value={log.exerciseId.toString()}
+              key={record.exerciseId}
+              value={record.exerciseId.toString()}
               className="rounded-lg border border-border bg-card overflow-hidden"
             >
               <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-secondary/30">
                 <div className="flex flex-1 items-center justify-between pr-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{log.exercise.name}</span>
-                    <FormInfoDialog exercise={log.exercise} />
+                    <span className="font-medium">{record.exercise.name}</span>
+                    <FormInfoDialog exercise={record.exercise} />
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
-                      {log.sets.filter((s) => s.completed).length}/
-                      {log.sets.length}
+                      {record.sets.filter((s) => s.completed).length}/
+                      {record.sets.length}
                     </span>
-                    {log.sets.every((s) => s.completed) && (
+                    {record.sets.every((s) => s.completed) && (
                       <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary">
                         <Check className="h-3 w-3 text-primary-foreground" />
                       </div>
@@ -246,9 +246,9 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
-                {log.previousRecord && (
+                {record.previousRecord && (
                   <p className="mb-3 text-xs text-muted-foreground">
-                    前回: {log.previousRecord}
+                    前回: {record.previousRecord}
                   </p>
                 )}
 
@@ -261,7 +261,7 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
                     <div className="col-span-2 text-center">Done</div>
                   </div>
 
-                  {log.sets.map((set) => (
+                  {record.sets.map((set) => (
                     <div
                       key={set.id}
                       className={`grid grid-cols-12 gap-2 items-center rounded-lg p-2 transition-colors ${
@@ -278,7 +278,7 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
                           value={set.weight || ""}
                           onChange={(e) =>
                             updateSet(
-                              log.exerciseId,
+                              record.exerciseId,
                               set.id,
                               "weight",
                               Number.parseFloat(e.target.value) || 0,
@@ -294,7 +294,7 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
                           value={set.reps || ""}
                           onChange={(e) =>
                             updateSet(
-                              log.exerciseId,
+                              record.exerciseId,
                               set.id,
                               "reps",
                               Number.parseInt(e.target.value, 10) || 0,
@@ -309,7 +309,7 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
                           checked={set.completed}
                           onCheckedChange={(checked) =>
                             updateSet(
-                              log.exerciseId,
+                              record.exerciseId,
                               set.id,
                               "completed",
                               !!checked,
@@ -326,7 +326,7 @@ export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
                   variant="ghost"
                   size="sm"
                   className="mt-3 w-full"
-                  onClick={() => addSet(log.exerciseId)}
+                  onClick={() => addSet(record.exerciseId)}
                 >
                   <Plus className="mr-1 h-4 w-4" />
                   セット追加
