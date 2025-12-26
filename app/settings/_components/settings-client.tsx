@@ -149,7 +149,7 @@ export function SettingsClient({
     <div className="min-h-screen bg-background pb-20">
       <AppHeader title="設定" />
 
-      <main className="mx-auto max-w-md p-4">
+      <main className="mx-auto max-w-md px-4 pt-2 pb-4">
         <Tabs defaultValue="menus" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger

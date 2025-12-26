@@ -112,7 +112,7 @@ export function AnalyticsClient({
     <div className="min-h-screen bg-background pb-20">
       <AppHeader title="分析" />
 
-      <main className="mx-auto max-w-md p-4">
+      <main className="mx-auto max-w-md px-4 pt-2 pb-4">
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as "body" | "exercise")}
