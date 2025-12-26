@@ -71,7 +71,9 @@ export interface WorkoutClientProps {
 export function WorkoutClient({ menu, previousRecords }: WorkoutClientProps) {
   const router = useRouter();
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [exerciseRecords, setExerciseRecords] = useState<LocalExerciseRecord[]>([]);
+  const [exerciseRecords, setExerciseRecords] = useState<LocalExerciseRecord[]>(
+    [],
+  );
   const [condition, setCondition] = useState(7);
   const [fatigue, setFatigue] = useState(5);
   const [note, setNote] = useState("");
