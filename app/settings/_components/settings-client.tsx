@@ -12,7 +12,9 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createMenuAction } from "@/app/_actions/menu-actions";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +65,19 @@ export function SettingsClient({
   const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [isAddingMenu, setIsAddingMenu] = useState(false);
   const [weightInput, setWeightInput] = useState("");
+  const router = useRouter();
+
+  useEffect(() => {
+    setMenus(initialMenus);
+  }, [initialMenus]);
+
+  useEffect(() => {
+    setExercises(initialExercises);
+  }, [initialExercises]);
+
+  useEffect(() => {
+    setWeightRecords(initialWeightRecords);
+  }, [initialWeightRecords]);
 
   // Filter exercises by search query
   const filteredExercises = exercises.filter(
@@ -98,16 +113,13 @@ export function SettingsClient({
   };
 
   // Menu CRUD
-  const handleSaveMenu = (menu: WorkoutMenuWithExercises) => {
+  const handleSaveMenu = async (menu: WorkoutMenuWithExercises) => {
     if (isAddingMenu) {
-      const newMenu: WorkoutMenuWithExercises = {
-        ...menu,
-        id: Date.now(), // 数値ID（実際のDBではAUTO_INCREMENT）
-        userId: 1, // 数値ID
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setMenus([...menus, newMenu]);
+      await createMenuAction({
+        name: menu.name,
+        exerciseIds: menu.exercises.map((ex) => ex.id),
+      });
+      router.refresh();
       setIsAddingMenu(false);
     } else {
       setMenus(
@@ -634,6 +646,7 @@ function MenuEditDialog({
       createdAt: menu?.createdAt || new Date(),
       updatedAt: new Date(),
     });
+    onClose(); // 保存後にダイアログを閉じる
   };
 
   const toggleExercise = (exercise: ExerciseWithBodyParts) => {
