@@ -84,7 +84,6 @@ model ExerciseBodyPart {
   bodyPart   BodyPart @relation(fields: [bodyPartId], references: [id], onDelete: Restrict)
 
   @@id([exerciseId, bodyPartId])
-  @@index([exerciseId], map: "idx_exercise_body_parts_exercise_id")
   @@index([bodyPartId], map: "idx_exercise_body_parts_body_part_id")
   @@map("exercise_body_parts")
 }
