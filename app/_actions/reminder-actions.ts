@@ -9,6 +9,22 @@ import {
 } from "@/lib/db/queries";
 import { calcNextReminderAt } from "@/lib/reminder";
 
+// リマインダー保存の入力型
+export interface SaveScheduleReminderInput {
+  scheduleId: number;
+  frequency: "daily" | "weekly" | "monthly";
+  timeOfDay: string;
+  startDateKey: string;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+  isEnabled?: boolean;
+}
+
+// リマインダー削除の入力型
+export interface DeleteScheduleReminderInput {
+  scheduleId: number;
+}
+
 const reminderSchema = z
   .object({
     scheduleId: z.number().int().positive(),
@@ -36,15 +52,9 @@ const reminderSchema = z
     }
   });
 
-export async function saveScheduleReminderAction(input: {
-  scheduleId: number;
-  frequency: "daily" | "weekly" | "monthly";
-  timeOfDay: string;
-  startDateKey: string;
-  dayOfWeek?: number;
-  dayOfMonth?: number;
-  isEnabled?: boolean;
-}) {
+export async function saveScheduleReminderAction(
+  input: SaveScheduleReminderInput,
+) {
   const data = reminderSchema.parse(input);
   const userId = 1; // TODO: auth
   const startDate = parseDateKey(data.startDateKey);
@@ -75,9 +85,9 @@ export async function saveScheduleReminderAction(input: {
   revalidatePath("/settings");
 }
 
-export async function deleteScheduleReminderAction(input: {
-  scheduleId: number;
-}) {
+export async function deleteScheduleReminderAction(
+  input: DeleteScheduleReminderInput,
+) {
   const { scheduleId } = z
     .object({ scheduleId: z.number().int().positive() })
     .parse(input);

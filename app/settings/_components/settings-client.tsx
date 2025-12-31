@@ -1,7 +1,6 @@
 "use client";
+
 import {
-  ArrowDown,
-  ArrowUp,
   ChevronRight,
   Dumbbell,
   LayoutList,
@@ -10,10 +9,9 @@ import {
   Scale,
   Search,
   Trash2,
-  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   type CreateExerciseInput,
   createExerciseAction,
@@ -21,22 +19,20 @@ import {
   type UpdateExerciseInput,
   updateExerciseAction,
 } from "@/app/_actions/exercise-actions";
-import { createMenuAction } from "@/app/_actions/menu-actions";
+import {
+  type CreateMenuInput,
+  createMenuAction,
+  deleteMenuAction,
+  type UpdateMenuInput,
+  updateMenuAction,
+} from "@/app/_actions/menu-actions";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { formatDateTimeJa } from "@/lib/timezone";
 import type {
   BodyPart,
@@ -44,6 +40,7 @@ import type {
   WeightRecord,
   WorkoutMenuWithExercises,
 } from "@/lib/types";
+import { ExerciseEditDialog, MenuEditDialog } from "./dialogs";
 
 export interface SettingsClientProps {
   initialExercises: ExerciseWithBodyParts[];
@@ -58,12 +55,12 @@ export function SettingsClient({
   initialWeightRecords,
   initialBodyParts,
 }: SettingsClientProps) {
-  const [exercises, setExercises] =
-    useState<ExerciseWithBodyParts[]>(initialExercises);
-  const [menus, setMenus] = useState<WorkoutMenuWithExercises[]>(initialMenus);
-  const [weightRecords, setWeightRecords] =
-    useState<WeightRecord[]>(initialWeightRecords);
+  // propsを直接使用（冗長なuseState+useEffectを削除）
+  const exercises = initialExercises;
+  const menus = initialMenus;
+  const weightRecords = initialWeightRecords;
   const bodyParts = initialBodyParts;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [editingExercise, setEditingExercise] =
     useState<ExerciseWithBodyParts | null>(null);
@@ -73,18 +70,6 @@ export function SettingsClient({
   const [isAddingMenu, setIsAddingMenu] = useState(false);
   const [weightInput, setWeightInput] = useState("");
   const router = useRouter();
-
-  useEffect(() => {
-    setMenus(initialMenus);
-  }, [initialMenus]);
-
-  useEffect(() => {
-    setExercises(initialExercises);
-  }, [initialExercises]);
-
-  useEffect(() => {
-    setWeightRecords(initialWeightRecords);
-  }, [initialWeightRecords]);
 
   // Filter exercises by search query
   const filteredExercises = exercises.filter(
@@ -114,48 +99,36 @@ export function SettingsClient({
   };
 
   // Menu CRUD
-  const handleSaveMenu = async (menu: WorkoutMenuWithExercises) => {
+  const handleSaveMenu = async (input: CreateMenuInput | UpdateMenuInput) => {
     if (isAddingMenu) {
-      await createMenuAction({
-        name: menu.name,
-        exerciseIds: menu.exercises.map((ex) => ex.id),
-      });
+      await createMenuAction(input);
       router.refresh();
       setIsAddingMenu(false);
-    } else {
-      setMenus(
-        menus.map((m) =>
-          m.id === menu.id ? { ...menu, updatedAt: new Date() } : m,
-        ),
-      );
+    } else if ("id" in input) {
+      await updateMenuAction(input);
+      router.refresh();
       setEditingMenu(null);
     }
   };
 
-  const handleDeleteMenu = (id: number) => {
-    setMenus(menus.filter((m) => m.id !== id));
+  const handleDeleteMenu = async (id: number) => {
+    await deleteMenuAction(id);
+    router.refresh();
   };
 
-  // Weight Record CRUD
+  // Weight Record CRUD（TODO: DB永続化対応）
   const handleSaveWeightRecord = () => {
     const weight = parseFloat(weightInput);
     if (Number.isNaN(weight) || weight <= 0) return;
 
-    const newRecord: WeightRecord = {
-      id: Date.now(), // 数値ID（実際のDBではAUTO_INCREMENT）
-      userId: 1, // 数値ID
-      recordedAt: new Date(),
-      weight,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    setWeightRecords([newRecord, ...weightRecords]);
+    // TODO: Server Actionに置き換え
+    console.log("Weight record to save:", weight);
     setWeightInput("");
   };
 
   const handleDeleteWeightRecord = (id: number) => {
-    setWeightRecords(weightRecords.filter((r) => r.id !== id));
+    // TODO: Server Actionに置き換え
+    console.log("Weight record to delete:", id);
   };
 
   return (
@@ -197,14 +170,7 @@ export function SettingsClient({
               className="w-full gap-2"
               onClick={() => {
                 setIsAddingMenu(true);
-                setEditingMenu({
-                  id: 0, // 新規作成時は0（実際のDBではAUTO_INCREMENT）
-                  userId: 1, // 数値ID
-                  name: "",
-                  exercises: [],
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                });
+                setEditingMenu(null);
               }}
             >
               <Plus className="h-4 w-4" />
@@ -279,14 +245,7 @@ export function SettingsClient({
               className="w-full gap-2"
               onClick={() => {
                 setIsAddingExercise(true);
-                setEditingExercise({
-                  id: 0, // 新規作成時は0（実際のDBではAUTO_INCREMENT）
-                  userId: 1, // 数値ID
-                  name: "",
-                  bodyParts: [],
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                });
+                setEditingExercise(null);
               }}
             >
               <Plus className="h-4 w-4" />
@@ -446,351 +405,5 @@ export function SettingsClient({
 
       <BottomNavigation />
     </div>
-  );
-}
-
-// ダイアログからの入力型（新規: id なし、更新: id あり）
-type ExerciseDialogInput = CreateExerciseInput | UpdateExerciseInput;
-
-// Exercise Edit Dialog Component
-interface ExerciseEditDialogProps {
-  exercise: ExerciseWithBodyParts | null;
-  isOpen: boolean;
-  isNew: boolean;
-  bodyParts: BodyPart[];
-  onClose: () => void;
-  onSave: (input: ExerciseDialogInput) => Promise<void>;
-  onDelete: (id: number) => Promise<void>;
-}
-
-function ExerciseEditDialog({
-  exercise,
-  isOpen,
-  isNew,
-  bodyParts,
-  onClose,
-  onSave,
-  onDelete,
-}: ExerciseEditDialogProps) {
-  const [name, setName] = useState("");
-  const [selectedBodyParts, setSelectedBodyParts] = useState<number[]>([]);
-  const [formNote, setFormNote] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
-
-  // Reset form when exercise changes
-  useEffect(() => {
-    if (exercise) {
-      setName(exercise.name);
-      setSelectedBodyParts(exercise.bodyParts.map((bp) => bp.id));
-      setFormNote(exercise.formNote || "");
-      setVideoUrl(exercise.videoUrl || "");
-    }
-  }, [exercise]);
-
-  const handleSave = async () => {
-    if (!name.trim()) return;
-
-    const baseInput = {
-      name: name.trim(),
-      bodyPartIds: selectedBodyParts,
-      formNote: formNote.trim() || undefined,
-      videoUrl: videoUrl.trim() || undefined,
-    };
-
-    // 更新時は id を含める
-    if (exercise?.id) {
-      await onSave({ ...baseInput, id: exercise.id });
-    } else {
-      await onSave(baseInput);
-    }
-    onClose();
-  };
-
-  const toggleBodyPart = (partId: number) => {
-    setSelectedBodyParts((prev) =>
-      prev.includes(partId)
-        ? prev.filter((p) => p !== partId)
-        : [...prev, partId],
-    );
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] rounded-xl sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{isNew ? "新規種目追加" : "種目を編集"}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label htmlFor="exercise-name" className="text-sm font-medium">
-              種目名
-            </label>
-            <Input
-              id="exercise-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="ベンチプレス"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="text-sm font-medium">対象部位</div>
-            <div className="flex flex-wrap gap-2">
-              {bodyParts.map((part) => (
-                <button
-                  key={part.id}
-                  type="button"
-                  onClick={() => toggleBodyPart(part.id)}
-                  className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
-                    selectedBodyParts.includes(part.id)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  }`}
-                >
-                  {part.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="exercise-form-note" className="text-sm font-medium">
-              フォームメモ
-            </label>
-            <Textarea
-              id="exercise-form-note"
-              value={formNote}
-              onChange={(e) => setFormNote(e.target.value)}
-              placeholder="フォームのポイントや注意点..."
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="exercise-video-url" className="text-sm font-medium">
-              動画URL
-            </label>
-            <Input
-              id="exercise-video-url"
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="https://example.com/video..."
-            />
-          </div>
-        </div>
-
-        <DialogFooter className="flex gap-2">
-          {!isNew && (
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (exercise?.id) {
-                  await onDelete(exercise.id);
-                  onClose();
-                }
-              }}
-            >
-              削除
-            </Button>
-          )}
-          <div className="flex-1" />
-          <Button variant="outline" onClick={onClose}>
-            キャンセル
-          </Button>
-          <Button onClick={handleSave} disabled={!name.trim()}>
-            保存
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Menu Edit Dialog Component
-interface MenuEditDialogProps {
-  menu: WorkoutMenuWithExercises | null;
-  isOpen: boolean;
-  isNew: boolean;
-  exercises: ExerciseWithBodyParts[];
-  onClose: () => void;
-  onSave: (menu: WorkoutMenuWithExercises) => void;
-  onDelete: (id: number) => void;
-}
-
-function MenuEditDialog({
-  menu,
-  isOpen,
-  isNew,
-  exercises,
-  onClose,
-  onSave,
-  onDelete,
-}: MenuEditDialogProps) {
-  const [name, setName] = useState("");
-  const [selectedExercises, setSelectedExercises] = useState<
-    ExerciseWithBodyParts[]
-  >([]);
-
-  // Reset form when menu changes
-  useEffect(() => {
-    if (menu) {
-      setName(menu.name);
-      setSelectedExercises(menu.exercises);
-    }
-  }, [menu]);
-
-  const handleSave = () => {
-    if (!name.trim()) return;
-    onSave({
-      id: menu?.id || 0, // 新規作成時は0（実際のDBではAUTO_INCREMENT）
-      userId: menu?.userId || 1, // 数値ID
-      name: name.trim(),
-      exercises: selectedExercises,
-      createdAt: menu?.createdAt || new Date(),
-      updatedAt: new Date(),
-    });
-    onClose(); // 保存後にダイアログを閉じる
-  };
-
-  const toggleExercise = (exercise: ExerciseWithBodyParts) => {
-    setSelectedExercises((prev) =>
-      prev.some((e) => e.id === exercise.id)
-        ? prev.filter((e) => e.id !== exercise.id)
-        : [...prev, exercise],
-    );
-  };
-
-  const moveExercise = (index: number, direction: "up" | "down") => {
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= selectedExercises.length) return;
-
-    const newExercises = [...selectedExercises];
-    [newExercises[index], newExercises[targetIndex]] = [
-      newExercises[targetIndex],
-      newExercises[index],
-    ];
-    setSelectedExercises(newExercises);
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto rounded-xl sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {isNew ? "新規メニュー作成" : "メニューを編集"}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label htmlFor="menu-name" className="text-sm font-medium">
-              メニュー名
-            </label>
-            <Input
-              id="menu-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Day1 胸・背中"
-            />
-          </div>
-
-          {/* Selected Exercises with Reorder */}
-          {selectedExercises.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium">選択した種目（順番）</div>
-              <div className="space-y-1">
-                {selectedExercises.map((ex, index) => (
-                  <div
-                    key={ex.id}
-                    className="flex items-center gap-2 rounded-lg bg-primary/10 p-2"
-                  >
-                    <span className="w-6 text-center text-sm font-medium text-primary">
-                      {index + 1}
-                    </span>
-                    <span className="flex-1 text-sm">{ex.name}</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => moveExercise(index, "up")}
-                        disabled={index === 0}
-                        className="rounded p-1 hover:bg-secondary disabled:opacity-30"
-                      >
-                        <ArrowUp className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveExercise(index, "down")}
-                        disabled={index === selectedExercises.length - 1}
-                        className="rounded p-1 hover:bg-secondary disabled:opacity-30"
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => toggleExercise(ex)}
-                        className="rounded p-1 hover:bg-destructive/20"
-                      >
-                        <X className="h-4 w-4 text-destructive" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Exercise Selection */}
-          <div className="space-y-2">
-            <div className="text-sm font-medium">種目を追加</div>
-            <div className="max-h-[200px] space-y-1 overflow-y-auto rounded-lg border border-border p-2">
-              {exercises
-                .filter((ex) => !selectedExercises.some((s) => s.id === ex.id))
-                .map((exercise) => (
-                  <button
-                    key={exercise.id}
-                    type="button"
-                    onClick={() => toggleExercise(exercise)}
-                    className="flex w-full items-center justify-between rounded-lg p-2 text-left hover:bg-secondary/50"
-                  >
-                    <span className="text-sm">{exercise.name}</span>
-                    <Plus className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                ))}
-              {exercises.filter(
-                (ex) => !selectedExercises.some((s) => s.id === ex.id),
-              ).length === 0 && (
-                <p className="py-2 text-center text-sm text-muted-foreground">
-                  すべての種目が選択済みです
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="flex gap-2">
-          {!isNew && (
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (menu?.id) {
-                  onDelete(menu.id);
-                  onClose();
-                }
-              }}
-            >
-              削除
-            </Button>
-          )}
-          <div className="flex-1" />
-          <Button variant="outline" onClick={onClose}>
-            キャンセル
-          </Button>
-          <Button onClick={handleSave} disabled={!name.trim()}>
-            保存
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

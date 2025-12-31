@@ -1,9 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 
-// 種目作成の入力型
+// =============================================================================
+// 入力型定義
+// =============================================================================
+
 export interface CreateExerciseInput {
   name: string;
   bodyPartIds: number[];
@@ -11,22 +15,43 @@ export interface CreateExerciseInput {
   videoUrl?: string;
 }
 
-// 種目更新の入力型
 export interface UpdateExerciseInput extends CreateExerciseInput {
   id: number;
 }
 
+// =============================================================================
+// バリデーションスキーマ
+// =============================================================================
+
+const exerciseBaseSchema = z.object({
+  name: z.string().min(1, "種目名は必須です").max(100, "種目名は100文字以内"),
+  bodyPartIds: z.array(z.number().int().positive()).min(1, "部位を1つ以上選択"),
+  formNote: z.string().max(1000).optional(),
+  videoUrl: z.string().url("有効なURLを入力").optional().or(z.literal("")),
+});
+
+const createExerciseSchema = exerciseBaseSchema;
+
+const updateExerciseSchema = exerciseBaseSchema.extend({
+  id: z.number().int().positive("IDは正の整数"),
+});
+
+// =============================================================================
+// Server Actions
+// =============================================================================
+
 export async function createExerciseAction(input: CreateExerciseInput) {
-  const userId = 1;
+  const data = createExerciseSchema.parse(input);
+  const userId = 1; // TODO: 認証実装後に動的取得
 
   const exercise = await prisma.exercise.create({
     data: {
       userId: BigInt(userId),
-      name: input.name,
-      formNote: input.formNote || null,
-      videoUrl: input.videoUrl || null,
+      name: data.name,
+      formNote: data.formNote || null,
+      videoUrl: data.videoUrl || null,
       bodyParts: {
-        create: input.bodyPartIds.map((bodyPartId) => ({
+        create: data.bodyPartIds.map((bodyPartId) => ({
           bodyPartId: BigInt(bodyPartId),
         })),
       },
@@ -38,24 +63,23 @@ export async function createExerciseAction(input: CreateExerciseInput) {
 }
 
 export async function updateExerciseAction(input: UpdateExerciseInput) {
-  const userId = 1;
-  const exerciseId = BigInt(input.id);
+  const data = updateExerciseSchema.parse(input);
+  const userId = 1; // TODO: 認証実装後に動的取得
+  const exerciseId = BigInt(data.id);
 
   await prisma.$transaction(async (tx) => {
-    // 既存のbodyParts関連を削除
     await tx.exerciseBodyPart.deleteMany({
       where: { exerciseId },
     });
 
-    // 種目を更新（bodyPartsも再作成）
     await tx.exercise.update({
       where: { id: exerciseId, userId: BigInt(userId) },
       data: {
-        name: input.name,
-        formNote: input.formNote || null,
-        videoUrl: input.videoUrl || null,
+        name: data.name,
+        formNote: data.formNote || null,
+        videoUrl: data.videoUrl || null,
         bodyParts: {
-          create: input.bodyPartIds.map((bodyPartId) => ({
+          create: data.bodyPartIds.map((bodyPartId) => ({
             bodyPartId: BigInt(bodyPartId),
           })),
         },
@@ -68,10 +92,11 @@ export async function updateExerciseAction(input: UpdateExerciseInput) {
 }
 
 export async function deleteExerciseAction(id: number) {
-  const userId = 1;
+  const validId = z.number().int().positive().parse(id);
+  const userId = 1; // TODO: 認証実装後に動的取得
 
   await prisma.exercise.update({
-    where: { id: BigInt(id), userId: BigInt(userId) },
+    where: { id: BigInt(validId), userId: BigInt(userId) },
     data: { deletedAt: new Date() },
   });
 
