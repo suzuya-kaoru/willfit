@@ -6,7 +6,7 @@
 
 import { differenceInDays, getDay } from "date-fns";
 
-import { toDateKey } from "./date-key";
+import { parseDateKey, toDateKey } from "./date-key";
 import type {
   CalculatedSchedule,
   DailySchedule,
@@ -76,7 +76,10 @@ export function isScheduledDate(routine: ScheduleRoutine, date: Date): boolean {
     routine.intervalDays != null &&
     routine.startDate != null
   ) {
-    const diffDays = differenceInDays(date, routine.startDate);
+    // 日付の違いによる誤差を防ぐため、一度文字列（yyyy-MM-dd）に正規化してから比較
+    const targetDate = parseDateKey(toDateKey(date));
+    const startDate = parseDateKey(toDateKey(routine.startDate));
+    const diffDays = differenceInDays(targetDate, startDate);
     return diffDays >= 0 && diffDays % routine.intervalDays === 0;
   }
 
