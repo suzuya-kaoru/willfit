@@ -14,6 +14,13 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  type CreateExerciseInput,
+  createExerciseAction,
+  deleteExerciseAction,
+  type UpdateExerciseInput,
+  updateExerciseAction,
+} from "@/app/_actions/exercise-actions";
 import { createMenuAction } from "@/app/_actions/menu-actions";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
@@ -87,29 +94,23 @@ export function SettingsClient({
   );
 
   // Exercise CRUD
-  const handleSaveExercise = (exercise: ExerciseWithBodyParts) => {
+  const handleSaveExercise = async (
+    input: CreateExerciseInput | UpdateExerciseInput,
+  ) => {
     if (isAddingExercise) {
-      const newExercise: ExerciseWithBodyParts = {
-        ...exercise,
-        id: Date.now(), // 数値ID（実際のDBではAUTO_INCREMENT）
-        userId: 1, // 数値ID
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setExercises([...exercises, newExercise]);
+      await createExerciseAction(input);
+      router.refresh();
       setIsAddingExercise(false);
-    } else {
-      setExercises(
-        exercises.map((ex) =>
-          ex.id === exercise.id ? { ...exercise, updatedAt: new Date() } : ex,
-        ),
-      );
+    } else if ("id" in input) {
+      await updateExerciseAction(input);
+      router.refresh();
       setEditingExercise(null);
     }
   };
 
-  const handleDeleteExercise = (id: number) => {
-    setExercises(exercises.filter((ex) => ex.id !== id));
+  const handleDeleteExercise = async (id: number) => {
+    await deleteExerciseAction(id);
+    router.refresh();
   };
 
   // Menu CRUD
@@ -448,6 +449,9 @@ export function SettingsClient({
   );
 }
 
+// ダイアログからの入力型（新規: id なし、更新: id あり）
+type ExerciseDialogInput = CreateExerciseInput | UpdateExerciseInput;
+
 // Exercise Edit Dialog Component
 interface ExerciseEditDialogProps {
   exercise: ExerciseWithBodyParts | null;
@@ -455,8 +459,8 @@ interface ExerciseEditDialogProps {
   isNew: boolean;
   bodyParts: BodyPart[];
   onClose: () => void;
-  onSave: (exercise: ExerciseWithBodyParts) => void;
-  onDelete: (id: number) => void;
+  onSave: (input: ExerciseDialogInput) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
 }
 
 function ExerciseEditDialog({
@@ -483,23 +487,23 @@ function ExerciseEditDialog({
     }
   }, [exercise]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
 
-    const selectedParts = bodyParts.filter((bp) =>
-      selectedBodyParts.includes(bp.id),
-    );
-
-    onSave({
-      id: exercise?.id || 0, // 新規作成時は0（実際のDBではAUTO_INCREMENT）
-      userId: exercise?.userId || 1, // 数値ID
+    const baseInput = {
       name: name.trim(),
-      bodyParts: selectedParts,
+      bodyPartIds: selectedBodyParts,
       formNote: formNote.trim() || undefined,
       videoUrl: videoUrl.trim() || undefined,
-      createdAt: exercise?.createdAt || new Date(),
-      updatedAt: new Date(),
-    });
+    };
+
+    // 更新時は id を含める
+    if (exercise?.id) {
+      await onSave({ ...baseInput, id: exercise.id });
+    } else {
+      await onSave(baseInput);
+    }
+    onClose();
   };
 
   const toggleBodyPart = (partId: number) => {
@@ -580,9 +584,9 @@ function ExerciseEditDialog({
           {!isNew && (
             <Button
               variant="destructive"
-              onClick={() => {
+              onClick={async () => {
                 if (exercise?.id) {
-                  onDelete(exercise.id);
+                  await onDelete(exercise.id);
                   onClose();
                 }
               }}
