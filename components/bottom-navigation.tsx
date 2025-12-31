@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "ホーム", icon: Home },
-  { href: "/history", label: "履歴", icon: Calendar },
+  { href: "/schedule", label: "スケジュール", icon: Calendar },
   { href: "/analytics", label: "分析", icon: BarChart3 },
   { href: "/settings", label: "設定", icon: Settings },
 ];

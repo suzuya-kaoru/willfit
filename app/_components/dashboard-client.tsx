@@ -3,17 +3,12 @@
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
-  deleteScheduleReminderAction,
-  saveScheduleReminderAction,
-} from "@/app/_actions/reminder-actions";
-import { checkScheduleAction } from "@/app/_actions/schedule-actions";
+  completeScheduleAction,
+  skipScheduleAction,
+} from "@/app/_actions/daily-schedule-actions";
 import { DailySchedule } from "@/app/_components/dashboard/daily-schedule";
-import { ReminderDialog } from "@/app/_components/dashboard/reminder-dialog";
 import type {
   DailySchedulesViewModel,
-  ReminderFormState,
-  ReminderTarget,
-  TodayScheduleViewModel,
   WeekDayStatus,
 } from "@/app/_components/dashboard/types";
 import { WeeklyProgress } from "@/app/_components/dashboard/weekly-progress";
@@ -49,8 +44,6 @@ export function DashboardClient({
   const [optimisticHidden, setOptimisticHidden] = React.useState<Set<string>>(
     () => new Set(),
   );
-  const [reminderTarget, setReminderTarget] =
-    React.useState<ReminderTarget | null>(null);
 
   // Effects
   React.useEffect(() => {
@@ -61,13 +54,13 @@ export function DashboardClient({
   }, [dailySchedules, activeDateKey]);
 
   // Handlers
-  const handleCheckSchedule = (scheduleId: number, dateKey: string) => {
-    const key = `${dateKey}:${scheduleId}`;
+  const handleCompleteSchedule = (routineId: number, dateKey: string) => {
+    const key = `${dateKey}:${routineId}`;
     setOptimisticHidden((prev) => new Set(prev).add(key));
 
     startTransition(async () => {
       try {
-        await checkScheduleAction({ scheduleId, dateKey });
+        await completeScheduleAction({ routineId, dateKey });
         router.refresh();
       } catch {
         setOptimisticHidden((prev) => {
@@ -79,57 +72,21 @@ export function DashboardClient({
     });
   };
 
-  const handleOpenReminder = (
-    schedule: TodayScheduleViewModel,
-    day: DailySchedulesViewModel,
-  ) => {
-    setReminderTarget({
-      scheduleId: schedule.scheduleId,
-      menuName: schedule.menuName,
-      dateKey: day.dateKey,
-      dayOfWeek: day.dayOfWeek,
-      reminder: schedule.reminder,
-    });
-  };
+  const handleSkipSchedule = (routineId: number, dateKey: string) => {
+    const key = `${dateKey}:${routineId}`;
+    setOptimisticHidden((prev) => new Set(prev).add(key));
 
-  const handleSaveReminder = (
-    target: ReminderTarget,
-    form: ReminderFormState,
-  ) => {
     startTransition(async () => {
-      const dayOfWeekValue = Number(form.dayOfWeek);
-      const dayOfMonthValue = Number(form.dayOfMonth);
-      await saveScheduleReminderAction({
-        scheduleId: target.scheduleId,
-        frequency: form.frequency,
-        timeOfDay: form.timeOfDay,
-        startDateKey: form.startDateKey,
-        dayOfWeek:
-          form.frequency === "weekly"
-            ? Number.isNaN(dayOfWeekValue)
-              ? undefined
-              : dayOfWeekValue
-            : undefined,
-        dayOfMonth:
-          form.frequency === "monthly"
-            ? dayOfMonthValue >= 1
-              ? dayOfMonthValue
-              : undefined
-            : undefined,
-        isEnabled: form.isEnabled,
-      });
-      setReminderTarget(null);
-      router.refresh();
-    });
-  };
-
-  const handleDeleteReminder = (target: ReminderTarget) => {
-    startTransition(async () => {
-      await deleteScheduleReminderAction({
-        scheduleId: target.scheduleId,
-      });
-      setReminderTarget(null);
-      router.refresh();
+      try {
+        await skipScheduleAction({ routineId, dateKey });
+        router.refresh();
+      } catch {
+        setOptimisticHidden((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }
     });
   };
 
@@ -153,18 +110,10 @@ export function DashboardClient({
           onActiveDateChange={setActiveDateKey}
           hiddenIds={optimisticHidden}
           isPending={isPending}
-          onCheckSchedule={handleCheckSchedule}
-          onEditReminder={handleOpenReminder}
+          onComplete={handleCompleteSchedule}
+          onSkip={handleSkipSchedule}
         />
       </main>
-
-      <ReminderDialog
-        target={reminderTarget}
-        onOpenChange={(open) => !open && setReminderTarget(null)}
-        onSave={handleSaveReminder}
-        onDelete={handleDeleteReminder}
-        isPending={isPending}
-      />
 
       <BottomNavigation />
     </div>

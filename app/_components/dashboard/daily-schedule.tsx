@@ -8,21 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { ScheduleCard } from "./schedule-card";
-import type { DailySchedulesViewModel, TodayScheduleViewModel } from "./types";
+import type { DailySchedulesViewModel } from "./types";
 
 interface DailyScheduleProps {
   todayFormatted: string;
   dailySchedules: DailySchedulesViewModel[];
   activeDateKey: string;
   onActiveDateChange: (dateKey: string) => void;
-  // hiddenIds は `${dateKey}:${scheduleId}` の形式
+  // hiddenIds は `${dateKey}:${routineId}` の形式
   hiddenIds: Set<string>;
   isPending: boolean;
-  onCheckSchedule: (scheduleId: number, dateKey: string) => void;
-  onEditReminder: (
-    schedule: TodayScheduleViewModel,
-    day: DailySchedulesViewModel,
-  ) => void;
+  onComplete: (routineId: number, dateKey: string) => void;
+  onSkip: (routineId: number, dateKey: string) => void;
 }
 
 export function DailySchedule({
@@ -32,8 +29,8 @@ export function DailySchedule({
   onActiveDateChange,
   hiddenIds,
   isPending,
-  onCheckSchedule,
-  onEditReminder,
+  onComplete,
+  onSkip,
 }: DailyScheduleProps) {
   const router = useRouter();
   const [touchStartX, setTouchStartX] = React.useState<number | null>(null);
@@ -125,7 +122,7 @@ export function DailySchedule({
             {dailySchedules.map((day) => {
               const visibleSchedules = day.schedules.filter(
                 (schedule) =>
-                  !hiddenIds.has(`${day.dateKey}:${schedule.scheduleId}`),
+                  !hiddenIds.has(`${day.dateKey}:${schedule.routineId}`),
               );
 
               return (
@@ -149,12 +146,12 @@ export function DailySchedule({
                       <div className="space-y-3">
                         {visibleSchedules.map((schedule) => (
                           <ScheduleCard
-                            key={schedule.scheduleId}
+                            key={schedule.routineId}
                             schedule={schedule}
                             day={day}
                             isPending={isPending}
-                            onCheck={onCheckSchedule}
-                            onEditReminder={onEditReminder}
+                            onComplete={onComplete}
+                            onSkip={onSkip}
                           />
                         ))}
                       </div>
@@ -179,9 +176,9 @@ export function DailySchedule({
                         <Button
                           variant="outline"
                           className="mt-5 gap-2 rounded-xl border-primary/30 text-primary hover:bg-primary/5"
-                          onClick={() => router.push("/settings")}
+                          onClick={() => router.push("/schedule")}
                         >
-                          別のメニューを選択
+                          スケジュールを確認
                           <ChevronRight className="h-4 w-4" />
                         </Button>
                       )}

@@ -15,7 +15,7 @@
 |------|------|------|
 | ダッシュボード | `/` | 今日の予定、週間進捗 |
 | トレーニング実行 | `/workout/[menuId]` | セット入力、タイマー |
-| 履歴 | `/history` | カレンダー、リスト表示 |
+| スケジュール | `/schedule` | カレンダー、リスト表示 |
 | 分析 | `/analytics` | 体重推移、種目別成長 |
 | 設定 | `/settings` | メニュー・種目・体重管理 |
 
@@ -114,7 +114,7 @@ willfit/
 │   ├── _components/       # ページ固有の Client Component
 │   ├── api/               # API Routes
 │   ├── analytics/         # 分析画面
-│   ├── history/           # 履歴画面
+│   ├── schedule/          # スケジュール画面
 │   ├── settings/          # 設定画面
 │   ├── workout/           # ワークアウト実行画面
 │   ├── layout.tsx
@@ -156,7 +156,8 @@ PRISMA_DATABASE_URL=mysql://docker:docker@db:3306/willfit
 | workout_records | セッション記録 |
 | workout_set_records | セットごとの記録 |
 | weight_records | 体重記録 |
-| week_schedules | 週間スケジュール |
+| schedule_routines | スケジュールルーティン |
+| daily_schedules | 日次スケジュール記録 |
 
 ### スキーマ操作
 

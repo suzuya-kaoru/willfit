@@ -3,19 +3,17 @@ import {
   eachDayOfInterval,
   endOfDay,
   endOfWeek,
-  getDay,
   startOfDay,
   startOfWeek,
 } from "date-fns";
 import { toDateKey } from "@/lib/date-key";
 import {
-  getMenusWithExercises,
-  getScheduleCheckMap,
-  getScheduleRemindersMap,
-  getWeekSchedules,
+  getActiveRoutines,
+  getDailySchedulesByDateRange,
+  getMenus,
   getWorkoutSessionsByDateRange,
-  getWorkoutSessionsByMenuIds,
 } from "@/lib/db/queries";
+import { getSchedulesForDate } from "@/lib/schedule-utils";
 import { formatDateTimeJa } from "@/lib/timezone";
 import { DashboardClient } from "./_components/dashboard-client";
 
@@ -37,46 +35,23 @@ export default async function DashboardPage() {
     end: weekEnd,
   });
 
-  const dailyOffsets = [-1, 0, 1] as const;
-  const dailyDates = dailyOffsets.map((offset) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() + offset);
-    return {
-      offset,
-      date,
-      // YYYY-MM-DDの形式に変換
-      dateKey: toDateKey(date),
-      // 曜日（0-6）を取得
-      dayOfWeek: getDay(date),
-    };
-  });
-
-  const weekSchedules = await getWeekSchedules(userId);
-  const menus = await getMenusWithExercises(userId);
-  const menusById = new Map(menus.map((menu) => [menu.id, menu]));
-  const menuIds = [
-    ...new Set(weekSchedules.map((schedule) => schedule.menuId)),
-  ];
+  // 前後1日の範囲
   const dailySessionStart = startOfDay(addDays(today, -1));
   const dailySessionEnd = endOfDay(addDays(today, 1));
-  const dailySessions = await getWorkoutSessionsByDateRange(
-    userId,
-    dailySessionStart,
-    dailySessionEnd,
-  );
-  const weeklySessions = await getWorkoutSessionsByDateRange(
-    userId,
-    weekStart,
-    endOfDay(today),
-  );
-  const sessionsByMenu = await getWorkoutSessionsByMenuIds(userId, menuIds);
 
-  const scheduleChecksByDate = await getScheduleCheckMap(
-    userId,
-    dailyDates.map((day) => day.dateKey),
-  );
-  const remindersByScheduleId = await getScheduleRemindersMap(userId);
+  // データ取得
+  const [routines, menus, dailySchedulesMap, dailySessions, weeklySessions] =
+    await Promise.all([
+      getActiveRoutines(userId),
+      getMenus(userId),
+      getDailySchedulesByDateRange(userId, dailySessionStart, dailySessionEnd),
+      getWorkoutSessionsByDateRange(userId, dailySessionStart, dailySessionEnd),
+      getWorkoutSessionsByDateRange(userId, weekStart, endOfDay(today)),
+    ]);
 
+  const menusById = new Map(menus.map((menu) => [menu.id, menu]));
+
+  // セッションを日付ごとにマッピング
   const dailySessionsByDateKey = new Map<string, typeof dailySessions>();
   for (const session of dailySessions) {
     const dateKey = toDateKey(session.startedAt);
@@ -85,71 +60,48 @@ export default async function DashboardPage() {
     dailySessionsByDateKey.set(dateKey, list);
   }
 
-  const sessionsByMenuId = new Map<number, typeof sessionsByMenu>();
-  for (const session of sessionsByMenu) {
-    const list = sessionsByMenuId.get(session.menuId) ?? [];
-    list.push(session);
-    sessionsByMenuId.set(session.menuId, list);
-  }
-
   // 前後1日（昨日・今日・明日）のスケジュールを構築
-  const dailySchedules = dailyDates.map((day) => {
-    const dateKey = day.dateKey;
-    const dayOfWeek = day.dayOfWeek;
+  const dailyOffsets = [-1, 0, 1] as const;
+  const dailySchedules = dailyOffsets.map((offset) => {
+    const date = addDays(today, offset);
+    const dateKey = toDateKey(date);
+    const dayOfWeek = date.getDay();
 
-    // その日のスケジュール（作成日時の昇順）
-    const daySchedulesRaw = weekSchedules
-      .filter((s) => s.dayOfWeek === dayOfWeek)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-
-    // その日すでに実施済みのメニューを判定
-    const daySessions = dailySessionsByDateKey.get(dateKey) ?? [];
-    const completedScheduleIds = new Set<number>();
-    for (const session of daySessions) {
-      for (const schedule of daySchedulesRaw) {
-        if (schedule.menuId === session.menuId) {
-          completedScheduleIds.add(schedule.id);
-        }
-      }
-    }
-    const checkedScheduleIds = scheduleChecksByDate.get(dateKey) ?? new Set();
-
-    // 「まだ実施していない」スケジュールのみを残す
-    const remainingSchedules = daySchedulesRaw.filter(
-      (s) => !completedScheduleIds.has(s.id) && !checkedScheduleIds.has(s.id),
+    // その日のスケジュールを計算
+    const calculatedSchedules = getSchedulesForDate(
+      routines,
+      menusById,
+      date,
+      dailySchedulesMap,
     );
 
-    const schedules = remainingSchedules
-      .map((schedule) => {
-        const menu = menusById.get(schedule.menuId);
-        if (!menu) return null;
+    // その日すでに実施済みのメニューを除外
+    const daySessions = dailySessionsByDateKey.get(dateKey) ?? [];
+    const completedMenuIds = new Set(daySessions.map((s) => s.menuId));
 
-        const previousSession = sessionsByMenuId.get(menu.id)?.[0] ?? null;
-        const reminder = remindersByScheduleId.get(schedule.id);
-        const reminderView = reminder
-          ? {
-              frequency: reminder.frequency,
-              timeOfDay: reminder.timeOfDay,
-              dayOfWeek: reminder.dayOfWeek ?? null,
-              dayOfMonth: reminder.dayOfMonth ?? null,
-              startDateKey: toDateKey(reminder.startDate),
-              isEnabled: reminder.isEnabled,
-            }
-          : null;
+    // 未完了かつ未スキップのスケジュールのみ残す
+    const remainingSchedules = calculatedSchedules.filter((s) => {
+      // すでにセッションがあれば除外
+      if (completedMenuIds.has(s.menuId)) return false;
+      // daily_scheduleで完了/スキップ済みなら除外
+      if (s.dailySchedule?.status === "completed") return false;
+      if (s.dailySchedule?.status === "skipped") return false;
+      if (s.dailySchedule?.status === "rescheduled") return false;
+      return true;
+    });
 
-        return {
-          scheduleId: schedule.id,
-          menuId: menu.id,
-          menuName: menu.name,
-          exercises: menu.exercises,
-          previousNote: previousSession?.note ?? null,
-          reminder: reminderView,
-        };
-      })
-      .filter((s): s is NonNullable<typeof s> => s !== null);
+    const schedules = remainingSchedules.map((schedule) => {
+      const menu = menusById.get(schedule.menuId);
+      return {
+        routineId: schedule.routineId,
+        menuId: schedule.menuId,
+        menuName: menu?.name ?? "不明なメニュー",
+        routineType: schedule.routineType,
+        isFromReschedule: schedule.isFromReschedule,
+      };
+    });
 
-    const label =
-      day.offset === -1 ? "昨日" : day.offset === 0 ? "今日" : "明日";
+    const label = offset === -1 ? "昨日" : offset === 0 ? "今日" : "明日";
 
     return {
       dateKey,
@@ -160,50 +112,40 @@ export default async function DashboardPage() {
     };
   });
 
-  // 今週のセッション数を計算
-  const weeklyGoal = weekSchedules.length;
-  const weekDateKeys = weekDays.map((dayDate) => toDateKey(dayDate));
-  const scheduleChecksThisWeek = await getScheduleCheckMap(
+  // 今週のスケジュール目標数を計算（全日のスケジュール数）
+  const weeklyDailySchedulesMap = await getDailySchedulesByDateRange(
     userId,
-    weekDateKeys,
+    weekStart,
+    weekEnd,
   );
 
-  const completedScheduleKeys = new Set<string>();
-  for (const session of weeklySessions) {
-    const sessionDate = new Date(session.startedAt);
-    const dateKey = toDateKey(sessionDate);
-    const sessionDayOfWeek = getDay(sessionDate);
-    const matchedSchedules = weekSchedules.filter(
-      (schedule) =>
-        schedule.dayOfWeek === sessionDayOfWeek &&
-        schedule.menuId === session.menuId,
-    );
-    for (const schedule of matchedSchedules) {
-      completedScheduleKeys.add(`${dateKey}:${schedule.id}`);
-    }
-  }
-
-  for (const [dateKey, scheduleIds] of scheduleChecksThisWeek) {
-    for (const scheduleId of scheduleIds) {
-      completedScheduleKeys.add(`${dateKey}:${scheduleId}`);
-    }
-  }
-
-  const weeklyCompleted = completedScheduleKeys.size;
-
-  // 週の各日のステータスを計算
+  let weeklyGoal = 0;
+  let weeklyCompleted = 0;
   const weekDayStatuses = weekDays.map((dayDate) => {
-    const dayOfWeekIndex = getDay(dayDate);
-    const scheduleDay = weekSchedules.find(
-      (s) => s.dayOfWeek === dayOfWeekIndex,
-    );
     const dayDateString = toDateKey(dayDate);
-    const isCompletedBySession = weeklySessions.some(
+    const dayOfWeekIndex = dayDate.getDay();
+
+    // その日のスケジュールを計算
+    const daySchedules = getSchedulesForDate(
+      routines,
+      menusById,
+      dayDate,
+      weeklyDailySchedulesMap,
+    );
+
+    weeklyGoal += daySchedules.length;
+
+    // 完了判定（セッションがある or daily_scheduleがcompleted）
+    const dayHasSession = weeklySessions.some(
       (s) => toDateKey(s.startedAt) === dayDateString,
     );
-    const checkedScheduleIds = scheduleChecksThisWeek.get(dayDateString);
-    const isCompleted =
-      isCompletedBySession || (checkedScheduleIds?.size ?? 0) > 0;
+    const completedCount = daySchedules.filter(
+      (s) => s.dailySchedule?.status === "completed",
+    ).length;
+    weeklyCompleted += completedCount;
+
+    // その日が「完了」とみなすか（少なくとも1つ完了していればOK）
+    const isCompleted = dayHasSession || completedCount > 0;
     const isToday = dayDateString === todayDateKey;
 
     return {
@@ -211,7 +153,7 @@ export default async function DashboardPage() {
       dayOfWeekIndex,
       isCompleted,
       isToday,
-      hasSchedule: !!scheduleDay,
+      hasSchedule: daySchedules.length > 0,
     };
   });
 
