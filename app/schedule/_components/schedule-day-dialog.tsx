@@ -9,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatTime } from "@/lib/timezone";
 import { getRoutineDescription } from "@/lib/schedule-utils";
+import { formatTime } from "@/lib/timezone";
 import type { CalculatedSchedule } from "@/lib/types";
 import type { ScheduleDayDialogProps, WorkoutSessionWithStats } from "./types";
 

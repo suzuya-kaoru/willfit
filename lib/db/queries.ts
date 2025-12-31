@@ -67,11 +67,6 @@ function timeOfDayToDate(value: string): Date {
   return new Date(Date.UTC(1970, 0, 1, hours, minutes, 0, 0));
 }
 
-function dateKeyToUtcDate(dateKey: string): Date {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day));
-}
-
 function toUtcDateOnly(date: Date): Date {
   return new Date(
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),

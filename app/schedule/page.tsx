@@ -185,7 +185,9 @@ interface SchedulePageProps {
   }>;
 }
 
-export default async function SchedulePage({ searchParams }: SchedulePageProps) {
+export default async function SchedulePage({
+  searchParams,
+}: SchedulePageProps) {
   // ============================================================================
   // URL パラメータから年月を取得（デフォルトは現在の年月）
   // ============================================================================
@@ -210,7 +212,6 @@ export default async function SchedulePage({ searchParams }: SchedulePageProps) 
         sessionsList={[]}
         todayDateString={toDateKey(today)}
         menus={[]}
-        routines={[]}
       />
     );
   }
@@ -299,7 +300,6 @@ export default async function SchedulePage({ searchParams }: SchedulePageProps) 
       sessionsList={sessionsList}
       todayDateString={todayDateString}
       menus={allMenus}
-      routines={routines}
     />
   );
 }

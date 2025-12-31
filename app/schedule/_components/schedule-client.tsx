@@ -3,11 +3,6 @@
 import { Calendar, List } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
-import { AppHeader } from "@/components/app-header";
-import { BottomNavigation } from "@/components/bottom-navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toDateKey } from "@/lib/date-key";
-import type { CalculatedSchedule, ScheduleRoutine, WorkoutMenu } from "@/lib/types";
 import {
   completeScheduleAction,
   rescheduleAction,
@@ -17,6 +12,15 @@ import {
   createRoutineAction,
   deleteRoutineAction,
 } from "@/app/_actions/routine-actions";
+import { AppHeader } from "@/components/app-header";
+import { BottomNavigation } from "@/components/bottom-navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toDateKey } from "@/lib/date-key";
+import type {
+  CalculatedSchedule,
+  ScheduleRoutine,
+  WorkoutMenu,
+} from "@/lib/types";
 import { CalendarView } from "./calendar-view";
 import { ListView } from "./list-view";
 import { RescheduleDialog } from "./reschedule-dialog";
@@ -38,7 +42,6 @@ export interface ScheduleClientProps {
   sessionsList: WorkoutSessionWithStats[];
   todayDateString: string;
   menus: WorkoutMenu[];
-  routines: ScheduleRoutine[];
 }
 
 /**
@@ -51,7 +54,6 @@ export function ScheduleClient({
   calendarDays,
   sessionsList,
   menus,
-  routines,
 }: ScheduleClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -86,9 +88,8 @@ export function ScheduleClient({
 
   // 選択されたカレンダー日情報を取得
   const selectedCalendarDay = selectedDate
-    ? calendarDays.find(
-        (day) => day.dateString === toDateKey(selectedDate),
-      ) ?? null
+    ? (calendarDays.find((day) => day.dateString === toDateKey(selectedDate)) ??
+      null)
     : null;
 
   const selectedSession = selectedCalendarDay?.session ?? null;
@@ -163,17 +164,19 @@ export function ScheduleClient({
   const handleSaveRoutine = async (data: RoutineFormData) => {
     startTransition(async () => {
       if (data.routineType === "weekly") {
+        if (data.weekdays == null) return;
         await createRoutineAction({
           menuId: data.menuId,
           routineType: "weekly",
-          weekdays: data.weekdays!,
+          weekdays: data.weekdays,
         });
       } else {
+        if (data.intervalDays == null || !data.startDateKey) return;
         await createRoutineAction({
           menuId: data.menuId,
           routineType: "interval",
-          intervalDays: data.intervalDays!,
-          startDateKey: data.startDateKey!,
+          intervalDays: data.intervalDays,
+          startDateKey: data.startDateKey,
         });
       }
       router.refresh();

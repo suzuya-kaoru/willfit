@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { addDays, format, subDays } from "date-fns";
 import { Calendar } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,7 +33,9 @@ export function RescheduleDialog({
 
   // 前後5日の候補日
   const candidateDates = [-2, -1, 1, 2, 3, 4, 5]
-    .map((offset) => (offset < 0 ? subDays(fromDate, -offset) : addDays(fromDate, offset)))
+    .map((offset) =>
+      offset < 0 ? subDays(fromDate, -offset) : addDays(fromDate, offset),
+    )
     .filter((date) => date.getTime() !== fromDate.getTime());
 
   const handleQuickSelect = (date: Date) => {
@@ -85,8 +87,7 @@ export function RescheduleDialog({
             <div className="flex flex-wrap gap-2">
               {candidateDates.map((date) => {
                 const isSelected =
-                  selectedDate &&
-                  toDateKey(selectedDate) === toDateKey(date);
+                  selectedDate && toDateKey(selectedDate) === toDateKey(date);
                 return (
                   <Button
                     key={toDateKey(date)}
@@ -128,7 +129,8 @@ export function RescheduleDialog({
             <div className="rounded-lg bg-primary/10 p-3 text-center">
               <p className="text-sm text-muted-foreground">振替先</p>
               <p className="text-lg font-bold text-primary">
-                {format(selectedDate, "M月d日")}（{DAYS[selectedDate.getDay()]}）
+                {format(selectedDate, "M月d日")}（{DAYS[selectedDate.getDay()]}
+                ）
               </p>
             </div>
           )}
@@ -138,10 +140,7 @@ export function RescheduleDialog({
           <Button variant="outline" onClick={onClose} disabled={isPending}>
             キャンセル
           </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={isPending || !selectedDate}
-          >
+          <Button onClick={handleConfirm} disabled={isPending || !selectedDate}>
             確定
           </Button>
         </DialogFooter>

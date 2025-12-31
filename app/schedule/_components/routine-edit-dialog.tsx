@@ -19,10 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toDateKey } from "@/lib/date-key";
-import {
-  bitmaskFromWeekdays,
-  weekdaysFromBitmask,
-} from "@/lib/schedule-utils";
+import { bitmaskFromWeekdays, weekdaysFromBitmask } from "@/lib/schedule-utils";
 import type { RoutineEditDialogProps, RoutineFormData } from "./types";
 
 const WEEKDAYS = [
@@ -67,7 +64,9 @@ export function RoutineEditDialog({
         }
         setIntervalDays(routine.intervalDays ?? 3);
         setStartDateKey(
-          routine.startDate ? toDateKey(routine.startDate) : toDateKey(new Date()),
+          routine.startDate
+            ? toDateKey(routine.startDate)
+            : toDateKey(new Date()),
         );
       } else {
         setMenuId(menus[0]?.id ?? null);
