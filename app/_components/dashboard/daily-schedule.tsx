@@ -11,19 +11,17 @@ import { ScheduleCard } from "./schedule-card";
 import type { DailySchedulesViewModel } from "./types";
 
 interface DailyScheduleProps {
-  // todayFormatted: string; // Removed as we use formattedDate from dailySchedules
   dailySchedules: DailySchedulesViewModel[];
   activeDateKey: string;
   onActiveDateChange: (dateKey: string) => void;
-  // hiddenIds は `${dateKey}:${routineId}` の形式
+  // hiddenIds は `${dateKey}:${taskId}` の形式
   hiddenIds: Set<string>;
   isPending: boolean;
-  onComplete: (routineId: number, dateKey: string) => void;
-  onSkip: (routineId: number, dateKey: string) => void;
+  onComplete: (taskId: number, dateKey: string) => void;
+  onSkip: (taskId: number, dateKey: string) => void;
 }
 
 export function DailySchedule({
-  // todayFormatted,
   dailySchedules,
   activeDateKey,
   onActiveDateChange,
@@ -80,8 +78,7 @@ export function DailySchedule({
   // 現在選択されている日のスケジュールを取得
   const visibleSchedules = activeDay
     ? activeDay.schedules.filter(
-        (schedule) =>
-          !hiddenIds.has(`${activeDay.dateKey}:${schedule.routineId}`),
+        (schedule) => !hiddenIds.has(`${activeDay.dateKey}:${schedule.taskId}`),
       )
     : [];
 
@@ -142,7 +139,7 @@ export function DailySchedule({
                 <div className="space-y-3">
                   {visibleSchedules.map((schedule) => (
                     <ScheduleCard
-                      key={schedule.routineId}
+                      key={schedule.taskId}
                       schedule={schedule}
                       day={activeDay}
                       isPending={isPending}

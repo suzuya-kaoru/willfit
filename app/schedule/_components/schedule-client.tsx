@@ -1,34 +1,26 @@
 "use client";
 
-import { Calendar } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
+import { createScheduleRuleAction } from "@/app/_actions/schedule-rule-actions";
 import {
-  completeScheduleAction,
-  rescheduleAction,
-  skipScheduleAction,
-} from "@/app/_actions/daily-schedule-actions";
-import {
-  createRoutineAction,
-  deleteRoutineAction,
-} from "@/app/_actions/routine-actions";
+  completeTaskAction,
+  createManualTaskAction,
+  rescheduleTaskAction,
+  skipTaskAction,
+} from "@/app/_actions/scheduled-task-actions";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { toDateKey } from "@/lib/date-key";
-import type {
-  CalculatedSchedule,
-  ScheduleRoutine,
-  WorkoutMenu,
-} from "@/lib/types";
+import type { SessionPlanWithExercises } from "@/lib/types";
 import { CalendarView } from "./calendar-view";
+import {
+  type PlanSelectionData,
+  PlanSelectionDialog,
+} from "./plan-selection-dialog";
 import { RescheduleDialog } from "./reschedule-dialog";
-import { RoutineEditDialog } from "./routine-edit-dialog";
 import { ScheduleDayDialog } from "./schedule-day-dialog";
-import type {
-  CalendarDay,
-  RoutineFormData,
-  WorkoutSessionWithStats,
-} from "./types";
+import type { CalendarDay, WorkoutSessionWithStats } from "./types";
 
 /**
  * Schedule Client Component Props
@@ -39,7 +31,7 @@ export interface ScheduleClientProps {
   calendarDays: CalendarDay[];
   sessionsList: WorkoutSessionWithStats[];
   todayDateString: string;
-  menus: WorkoutMenu[];
+  plans: SessionPlanWithExercises[];
 }
 
 /**
@@ -50,8 +42,7 @@ export function ScheduleClient({
   year,
   month,
   calendarDays,
-  sessionsList,
-  menus,
+  plans,
 }: ScheduleClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,15 +53,13 @@ export function ScheduleClient({
 
   // ダイアログ状態
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
-  const [routineDialogOpen, setRoutineDialogOpen] = useState(false);
+  const [planSelectionDialogOpen, setPlanSelectionDialogOpen] = useState(false);
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
-  const [editingRoutine, setEditingRoutine] = useState<ScheduleRoutine | null>(
+
+  // 振替対象の状態
+  const [rescheduleTargetId, setRescheduleTargetId] = useState<number | null>(
     null,
   );
-  const [rescheduleTarget, setRescheduleTarget] = useState<{
-    schedule: CalculatedSchedule;
-    fromDate: Date;
-  } | null>(null);
 
   // 月移動処理（URL パラメータを更新）
   const navigateMonth = (direction: number) => {
@@ -93,6 +82,11 @@ export function ScheduleClient({
   const selectedSession = selectedCalendarDay?.session ?? null;
   const selectedSchedules = selectedCalendarDay?.schedules ?? [];
 
+  // 振替対象のタスクオブジェクトを取得
+  const rescheduleTask = rescheduleTargetId
+    ? (selectedSchedules.find((s) => s.taskId === rescheduleTargetId) ?? null)
+    : null;
+
   // 日付クリック時
   const handleSelectDate = (date: Date) => {
     setSelectedDate(date);
@@ -100,91 +94,80 @@ export function ScheduleClient({
   };
 
   // スケジュール完了
-  const handleComplete = async (routineId: number) => {
+  const handleComplete = async (id: number) => {
     if (!selectedDate) return;
     startTransition(async () => {
-      await completeScheduleAction({
-        routineId,
-        dateKey: toDateKey(selectedDate),
-      });
+      await completeTaskAction(id);
       setDayDialogOpen(false);
       router.refresh();
     });
   };
 
   // スケジュールスキップ
-  const handleSkip = async (routineId: number) => {
+  const handleSkip = async (id: number) => {
     if (!selectedDate) return;
     startTransition(async () => {
-      await skipScheduleAction({
-        routineId,
-        dateKey: toDateKey(selectedDate),
-      });
+      await skipTaskAction(id);
       setDayDialogOpen(false);
       router.refresh();
     });
   };
 
   // 振替ダイアログを開く
-  const handleOpenReschedule = (routineId: number) => {
+  const handleOpenReschedule = (id: number) => {
     if (!selectedDate) return;
-    const schedule = selectedSchedules.find((s) => s.routineId === routineId);
-    if (schedule) {
-      setRescheduleTarget({ schedule, fromDate: selectedDate });
-      setRescheduleDialogOpen(true);
-      setDayDialogOpen(false);
-    }
+    setRescheduleTargetId(id);
+    setRescheduleDialogOpen(true);
+    setDayDialogOpen(false);
   };
 
   // 振替確定
   const handleConfirmReschedule = async (toDate: Date) => {
-    if (!rescheduleTarget) return;
+    if (!rescheduleTargetId) return;
     startTransition(async () => {
-      await rescheduleAction({
-        routineId: rescheduleTarget.schedule.routineId,
-        fromDateKey: toDateKey(rescheduleTarget.fromDate),
-        toDateKey: toDateKey(toDate),
+      await rescheduleTaskAction({
+        taskId: rescheduleTargetId,
+        newDateKey: toDateKey(toDate),
       });
       setRescheduleDialogOpen(false);
-      setRescheduleTarget(null);
+      setRescheduleTargetId(null);
       router.refresh();
     });
   };
 
-  // ルーティン追加ダイアログを開く
-  const handleOpenRoutineDialog = () => {
-    setEditingRoutine(null);
-    setRoutineDialogOpen(true);
+  // プラン選択ダイアログを開く
+  const handleOpenPlanSelection = () => {
+    setPlanSelectionDialogOpen(true);
     setDayDialogOpen(false);
   };
 
-  // ルーティン保存
-  const handleSaveRoutine = async (data: RoutineFormData) => {
+  // プラン追加確定
+  const handleConfirmAddPlan = async (data: PlanSelectionData) => {
+    if (!selectedDate) return;
+
     startTransition(async () => {
-      if (data.routineType === "weekly") {
-        if (data.weekdays == null) return;
-        await createRoutineAction({
-          menuId: data.menuId,
-          routineType: "weekly",
+      if (data.type === "manual") {
+        await createManualTaskAction({
+          sessionPlanId: data.sessionPlanId,
+          scheduledDateKey: toDateKey(selectedDate),
+        });
+      } else if (data.type === "weekly") {
+        if (!data.weekdays) return;
+        await createScheduleRuleAction({
+          sessionPlanId: data.sessionPlanId,
+          ruleType: "weekly",
           weekdays: data.weekdays,
         });
-      } else {
-        if (data.intervalDays == null || !data.startDateKey) return;
-        await createRoutineAction({
-          menuId: data.menuId,
-          routineType: "interval",
+      } else if (data.type === "interval") {
+        if (!data.intervalDays) return;
+        await createScheduleRuleAction({
+          sessionPlanId: data.sessionPlanId,
+          ruleType: "interval",
           intervalDays: data.intervalDays,
-          startDateKey: data.startDateKey,
+          startDateKey: toDateKey(selectedDate),
         });
       }
-      router.refresh();
-    });
-  };
-
-  // ルーティン削除
-  const handleDeleteRoutine = async (routineId: number) => {
-    startTransition(async () => {
-      await deleteRoutineAction(routineId);
+      setPlanSelectionDialogOpen(false);
       router.refresh();
     });
   };
@@ -218,27 +201,25 @@ export function ScheduleClient({
         onComplete={handleComplete}
         onSkip={handleSkip}
         onReschedule={handleOpenReschedule}
-        onCreateRoutine={handleOpenRoutineDialog}
+        onAddPlan={handleOpenPlanSelection}
       />
 
-      {/* ルーティン設定ダイアログ */}
-      <RoutineEditDialog
-        isOpen={routineDialogOpen && !isPending}
-        routine={editingRoutine}
-        menus={menus}
-        onClose={() => setRoutineDialogOpen(false)}
-        onSave={handleSaveRoutine}
-        onDelete={editingRoutine ? handleDeleteRoutine : undefined}
+      {/* プラン選択ダイアログ */}
+      <PlanSelectionDialog
+        isOpen={planSelectionDialogOpen && !isPending}
+        plans={plans}
+        onClose={() => setPlanSelectionDialogOpen(false)}
+        onConfirm={handleConfirmAddPlan}
       />
 
       {/* 振替ダイアログ */}
       <RescheduleDialog
         isOpen={rescheduleDialogOpen && !isPending}
-        schedule={rescheduleTarget?.schedule ?? null}
-        fromDate={rescheduleTarget?.fromDate ?? null}
+        schedule={rescheduleTask}
+        fromDate={selectedDate}
         onClose={() => {
           setRescheduleDialogOpen(false);
-          setRescheduleTarget(null);
+          setRescheduleTargetId(null);
         }}
         onConfirm={handleConfirmReschedule}
       />

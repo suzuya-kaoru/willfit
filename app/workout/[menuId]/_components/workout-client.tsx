@@ -36,6 +36,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   ExerciseWithBodyParts,
+  SessionPlanWithRules,
   WorkoutMenuWithExercises,
 } from "@/lib/types";
 
@@ -76,6 +77,8 @@ export interface WorkoutClientProps {
   menu: WorkoutMenuWithExercises;
   previousRecords: Map<number, string>; // exerciseId -> previousRecord string
   scheduledDateKey: string; // スケジュールの日付キー（YYYY-MM-DD）
+  sessionPlan: SessionPlanWithRules | null; // 適用するプラン
+  scheduledTaskId?: number; // 完了対象のタスクID
 }
 
 /**
@@ -86,6 +89,8 @@ export function WorkoutClient({
   menu,
   previousRecords,
   scheduledDateKey,
+  sessionPlan,
+  scheduledTaskId,
 }: WorkoutClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -102,40 +107,55 @@ export function WorkoutClient({
 
   // Initialize exercise logs
   useEffect(() => {
-    const records: LocalExerciseRecord[] = menu.exercises.map((exercise) => {
-      const previousRecord = previousRecords.get(exercise.id);
+    let targetExercises: {
+      exerciseId: number;
+      exercise: ExerciseWithBodyParts;
+      targetSets?: number;
+      targetWeight?: number;
+      targetReps?: number;
+    }[] = [];
+
+    if (sessionPlan) {
+      targetExercises = sessionPlan.exercises
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .map((pe) => ({
+          exerciseId: pe.exerciseId,
+          exercise: pe.exercise, // include nested exercise
+          targetSets: pe.targetSets,
+          targetWeight: pe.targetWeight,
+          targetReps: pe.targetReps,
+        }));
+    } else {
+      targetExercises = menu.exercises.map((e) => ({
+        exerciseId: e.id,
+        exercise: e, // include bodyParts
+      }));
+    }
+
+    const records: LocalExerciseRecord[] = targetExercises.map((target) => {
+      const previousRecord = previousRecords.get(target.exerciseId);
+      const defaultSetsCount = target.targetSets ?? 3;
+      const initialSets: LocalSet[] = [];
+
+      for (let i = 1; i <= defaultSetsCount; i++) {
+        initialSets.push({
+          id: `${target.exerciseId}-${i}`,
+          setNumber: i,
+          weight: target.targetWeight ?? 0,
+          reps: target.targetReps ?? 0,
+          completed: false,
+        });
+      }
 
       return {
-        exerciseId: exercise.id,
-        exercise,
-        sets: [
-          {
-            id: `${exercise.id}-1`,
-            setNumber: 1,
-            weight: 0,
-            reps: 0,
-            completed: false,
-          },
-          {
-            id: `${exercise.id}-2`,
-            setNumber: 2,
-            weight: 0,
-            reps: 0,
-            completed: false,
-          },
-          {
-            id: `${exercise.id}-3`,
-            setNumber: 3,
-            weight: 0,
-            reps: 0,
-            completed: false,
-          },
-        ],
+        exerciseId: target.exerciseId,
+        exercise: target.exercise,
+        sets: initialSets,
         previousRecord,
       };
     });
     setExerciseRecords(records);
-  }, [menu, previousRecords]);
+  }, [menu, previousRecords, sessionPlan]);
 
   // Timer
   useEffect(() => {
@@ -214,6 +234,8 @@ export function WorkoutClient({
       try {
         const input: SaveWorkoutSessionInput = {
           menuId: menu.id,
+          sessionPlanId: sessionPlan?.id ? Number(sessionPlan.id) : undefined,
+          scheduledTaskId: scheduledTaskId,
           scheduledDateKey,
           startedAt: startedAtRef.current,
           endedAt: new Date(),

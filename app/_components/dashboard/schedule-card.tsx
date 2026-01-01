@@ -10,8 +10,8 @@ interface ScheduleCardProps {
   schedule: TodayScheduleViewModel;
   day: DailySchedulesViewModel;
   isPending: boolean;
-  onComplete: (routineId: number, dateKey: string) => void;
-  onSkip: (routineId: number, dateKey: string) => void;
+  onComplete: (taskId: number, dateKey: string) => void;
+  onSkip: (taskId: number, dateKey: string) => void;
 }
 
 export function ScheduleCard({
@@ -24,10 +24,16 @@ export function ScheduleCard({
   const router = useRouter();
 
   const getRoutineTypeLabel = () => {
-    if (schedule.routineType === "weekly") {
+    if (schedule.ruleType === "weekly") {
       return "曜日ベース";
     }
-    return "間隔ベース";
+    if (schedule.ruleType === "interval") {
+      return "間隔ベース";
+    }
+    if (schedule.ruleType === "once") {
+      return "単発";
+    }
+    return "手動";
   };
 
   return (
@@ -56,7 +62,7 @@ export function ScheduleCard({
       {/* Start button */}
       <Button
         onClick={() =>
-          router.push(`/workout/${schedule.menuId}?date=${day.dateKey}`)
+          router.push(`/workout/${schedule.menuId}?taskId=${schedule.taskId}`)
         }
         className="mt-4 w-full gap-2 rounded-xl font-semibold shadow-lg shadow-primary/20"
         size="lg"
@@ -73,7 +79,7 @@ export function ScheduleCard({
           size="sm"
           className="flex-1 gap-1.5 rounded-xl"
           disabled={isPending}
-          onClick={() => onComplete(schedule.routineId, day.dateKey)}
+          onClick={() => onComplete(schedule.taskId, day.dateKey)}
         >
           <Check className="h-4 w-4" />
           完了
@@ -84,7 +90,7 @@ export function ScheduleCard({
           size="sm"
           className="gap-1.5 rounded-xl"
           disabled={isPending}
-          onClick={() => onSkip(schedule.routineId, day.dateKey)}
+          onClick={() => onSkip(schedule.taskId, day.dateKey)}
         >
           <X className="h-4 w-4" />
           スキップ

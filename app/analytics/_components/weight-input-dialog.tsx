@@ -1,18 +1,18 @@
 "use client";
 
-import { useTransition, useState, useEffect } from "react";
 import { Loader2, Scale } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { createWeightRecordAction } from "@/app/_actions/weight-actions";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { createWeightRecordAction } from "@/app/_actions/weight-actions";
 
 interface WeightInputDialogProps {
   isOpen: boolean;
@@ -43,7 +43,7 @@ export function WeightInputDialog({
     const w = parseFloat(weight);
     const bf = bodyFat ? parseFloat(bodyFat) : undefined;
 
-    if (isNaN(w) || w <= 0) return;
+    if (Number.isNaN(w) || w <= 0) return;
 
     startTransition(async () => {
       await createWeightRecordAction({
@@ -88,7 +88,7 @@ export function WeightInputDialog({
               </div>
             </div>
             {/* Quick Slider Adjustment (±2kg from value) */}
-            {weight && !isNaN(parseFloat(weight)) && (
+            {weight && !Number.isNaN(parseFloat(weight)) && (
               <Slider
                 value={[parseFloat(weight)]}
                 min={parseFloat(weight) - 2}

@@ -1,10 +1,3 @@
-export {
-  type ExerciseDialogInput,
-  ExerciseEditDialog,
-  type ExerciseEditDialogProps,
-} from "./exercise-edit-dialog";
-export {
-  type MenuDialogInput,
-  MenuEditDialog,
-  type MenuEditDialogProps,
-} from "./menu-edit-dialog";
+export * from "./exercise-edit-dialog";
+export * from "./menu-edit-dialog";
+export * from "./session-plan-dialog";

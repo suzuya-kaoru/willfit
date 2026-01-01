@@ -1,34 +1,31 @@
 import { NextResponse } from "next/server";
+import { parseDateKey, toDateKey } from "@/lib/date-key";
 import { prisma } from "@/lib/db/prisma";
-import { SchedulerService } from "@/lib/services/scheduler";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // ... existing GET ...
   return NextResponse.json({ msg: "Use POST to sync" });
 }
 
 export async function POST() {
   try {
-    const routine = await prisma.scheduleRoutine.findFirst({
-      where: { menu: { name: { contains: "3日" } } },
+    const plan = await prisma.sessionPlan.findFirst({
+      where: { name: { contains: "3日" } },
     });
 
-    if (!routine) return NextResponse.json({ error: "Routine not found" });
+    if (!plan) return NextResponse.json({ error: "Plan not found" });
 
-    // Sync
-    await SchedulerService.syncRoutineSchedules(
-      Number(routine.userId),
-      Number(routine.id),
-    );
+    // Sync is now rule-based, handled by rules.
+    // This debug endpoint might be obsolete or needed for specific testing.
+    // For now, let's list future tasks for this plan.
 
     // Fetch result
-    const schedules = await prisma.dailySchedule.findMany({
+    const tasks = await prisma.scheduledTask.findMany({
       where: {
-        routineId: routine.id,
+        sessionPlanId: plan.id,
         status: "pending",
-        scheduledDate: { gte: new Date("2026-01-01") },
+        scheduledDate: { gte: parseDateKey("2026-01-01") },
       },
       orderBy: { scheduledDate: "asc" },
       take: 10,
@@ -36,10 +33,8 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      routineId: String(routine.id),
-      schedules: schedules.map(
-        (s) => s.scheduledDate.toISOString().split("T")[0],
-      ),
+      planId: String(plan.id),
+      schedules: tasks.map((s) => toDateKey(s.scheduledDate)),
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });

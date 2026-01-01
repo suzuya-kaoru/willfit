@@ -1,17 +1,16 @@
 "use client";
 
-import { TrendingUp, Plus, Scale } from "lucide-react";
+import { Plus, Scale } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   Area,
-  AreaChart,
   CartesianGrid,
+  ComposedChart,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  Line,
-  ComposedChart,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

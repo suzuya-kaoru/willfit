@@ -13,9 +13,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toDateKey } from "@/lib/date-key";
-import type { RescheduleDialogProps } from "./types";
+import { WEEKDAY_LABELS } from "@/lib/schedule-utils";
+import type { CalculatedTask } from "@/lib/types";
 
-const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
+interface RescheduleDialogProps {
+  isOpen: boolean;
+  schedule: CalculatedTask | null;
+  fromDate: Date | null;
+  onClose: () => void;
+  onConfirm: (toDate: Date) => Promise<void>;
+}
 
 export function RescheduleDialog({
   isOpen,
@@ -62,7 +69,7 @@ export function RescheduleDialog({
   };
 
   const formatQuickDate = (date: Date) => {
-    return `${date.getDate()}日(${DAYS[date.getDay()]})`;
+    return `${date.getDate()}日(${WEEKDAY_LABELS[date.getDay()]})`;
   };
 
   return (
@@ -77,7 +84,8 @@ export function RescheduleDialog({
           <div className="rounded-lg bg-secondary/30 p-3">
             <p className="font-medium">{schedule.menuName}</p>
             <p className="text-sm text-muted-foreground">
-              {format(fromDate, "M月d日")}（{DAYS[fromDate.getDay()]}） → ?
+              {format(fromDate, "M月d日")}（{WEEKDAY_LABELS[fromDate.getDay()]}
+              ） → ?
             </p>
           </div>
 
@@ -129,8 +137,8 @@ export function RescheduleDialog({
             <div className="rounded-lg bg-primary/10 p-3 text-center">
               <p className="text-sm text-muted-foreground">振替先</p>
               <p className="text-lg font-bold text-primary">
-                {format(selectedDate, "M月d日")}（{DAYS[selectedDate.getDay()]}
-                ）
+                {format(selectedDate, "M月d日")}（
+                {WEEKDAY_LABELS[selectedDate.getDay()]}）
               </p>
             </div>
           )}

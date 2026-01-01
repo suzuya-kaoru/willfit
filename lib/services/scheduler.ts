@@ -1,77 +1,143 @@
-import { addDays, eachDayOfInterval, startOfDay } from "date-fns";
+import {
+  addDays,
+  differenceInDays,
+  eachDayOfInterval,
+  getDay,
+  startOfDay,
+} from "date-fns";
+import { parseDateKey, toDateKey } from "@/lib/date-key";
 import { prisma } from "@/lib/db/prisma";
-import { isScheduledDate } from "@/lib/schedule-utils";
-import { mapScheduleRoutine } from "@/lib/db/queries";
+import { isWeekdayInBitmask } from "@/lib/schedule-utils";
 import { toUtcDateOnly } from "@/lib/timezone";
-import { toDateKey } from "@/lib/date-key";
+import type { ScheduleRule, ScheduleRuleType } from "@/lib/types";
+
+// =============================================================================
+// 新スケジュール機能（SessionPlan ベース）
+// =============================================================================
 
 /**
- * スケジュール生成サービスのコアロジック
+ * ルールに基づいて特定の日付がスケジュール対象かどうか判定
  */
-export const SchedulerService = {
+function isRuleScheduledDate(rule: ScheduleRule, date: Date): boolean {
+  if (!rule.isEnabled) return false;
+
+  // weekly: 曜日ビットマスクで判定
+  if (rule.ruleType === "weekly" && rule.weekdays != null) {
+    const dayOfWeek = getDay(date);
+    return isWeekdayInBitmask(rule.weekdays, dayOfWeek);
+  }
+
+  // interval: 起点日からの差分で判定
+  if (
+    rule.ruleType === "interval" &&
+    rule.intervalDays != null &&
+    rule.startDate != null
+  ) {
+    const targetDate = parseDateKey(toDateKey(date));
+    const startDate = parseDateKey(toDateKey(rule.startDate));
+    const diffDays = differenceInDays(targetDate, startDate);
+    return diffDays >= 0 && diffDays % rule.intervalDays === 0;
+  }
+
+  // once: 開始日のみ
+  if (rule.ruleType === "once" && rule.startDate != null) {
+    return toDateKey(date) === toDateKey(rule.startDate);
+  }
+
+  return false;
+}
+
+/**
+ * 新スケジュール機能用のタスク生成サービス
+ */
+export const TaskSchedulerService = {
   /**
-   * 指定されたユーザー・ルーティンのスケジュールを生成する
+   * 指定されたルールに基づいてスケジュールタスクを生成する
    * 既に存在するレコードはスキップされる（冪等性あり）
    *
    * @param userId ユーザーID
-   * @param routineId ルーティンID
+   * @param ruleId ルールID
+   * @param sessionPlanId セッションプランID
+   * @param rule スケジュールルール（DBから取得済み）
    * @param fromDate 開始日
    * @param toDate 終了日
    */
-  async generateSchedules(
+  async generateTasks(
     userId: number,
-    routineId: number,
+    ruleId: number,
+    sessionPlanId: number,
+    rule: ScheduleRule,
     fromDate: Date,
     toDate: Date,
-  ) {
-    // ルーティンとメニュー情報を取得
-    const routine = await prisma.scheduleRoutine.findUnique({
-      where: { id: routineId },
-      include: { menu: true },
-    });
+  ): Promise<number> {
+    if (!rule.isEnabled) return 0;
 
-    if (!routine || !routine.isEnabled) return;
+    // 終了日の考慮
+    const effectiveToDate =
+      rule.endDate && rule.endDate < toDate ? rule.endDate : toDate;
 
-    // 指定期間の日付をループ
+    // onceタイプの場合は特別処理
+    if (rule.ruleType === "once" && rule.startDate) {
+      const onceDate = rule.startDate;
+      if (onceDate >= fromDate && onceDate <= effectiveToDate) {
+        // 既存チェック
+        const existing = await prisma.scheduledTask.findUnique({
+          where: {
+            userId_sessionPlanId_scheduledDate: {
+              userId: BigInt(userId),
+              sessionPlanId: BigInt(sessionPlanId),
+              scheduledDate: toUtcDateOnly(onceDate),
+            },
+          },
+        });
+        if (!existing) {
+          await prisma.scheduledTask.create({
+            data: {
+              userId: BigInt(userId),
+              ruleId: BigInt(ruleId),
+              sessionPlanId: BigInt(sessionPlanId),
+              scheduledDate: toUtcDateOnly(onceDate),
+              status: "pending",
+            },
+          });
+          return 1;
+        }
+      }
+      return 0;
+    }
+
+    // weekly / interval タイプの処理
     const interval = eachDayOfInterval({
       start: startOfDay(fromDate),
-      end: startOfDay(toDate),
+      end: startOfDay(effectiveToDate),
     });
 
-    // 一括作成用のデータ配列
-    const dataToCreate = [];
-
-    // ドメイン型に変換
-    const mappedRoutine = mapScheduleRoutine(routine);
+    const dataToCreate: {
+      userId: number;
+      ruleId: number;
+      sessionPlanId: number;
+      scheduledDate: Date;
+    }[] = [];
 
     for (const date of interval) {
-      // 1. ルーティンのルールに基づいて「その日にやるべきか」判定
-      if (!isScheduledDate(mappedRoutine, date)) {
+      if (!isRuleScheduledDate(rule, date)) {
         continue;
       }
-
-      // 2. 既にレコードが存在するかチェック（メモリ上での簡易チェック用）
-      // ※ 実際の重複排除はDBのskipDuplicatesまたはクエリで行うのが確実だが
-      //    PrismaのcreateMany(skipDuplicates)はDB依存があるため、
-      //    ここでは「無い日だけリストアップ」する前にDBチェックを入れる。
-
-      // パフォーマンスのため、チェックはループ外で行うのが理想だが、
-      // ここでは可読性優先で、既存チェック済みの日付リストを取得してからフィルタリングする実装にする。
       dataToCreate.push({
         userId,
-        routineId,
+        ruleId,
+        sessionPlanId,
         scheduledDate: toUtcDateOnly(date),
-        status: "pending" as const, // デフォルトステータス
       });
     }
 
-    if (dataToCreate.length === 0) return;
+    if (dataToCreate.length === 0) return 0;
 
     // 既に存在する日付をDBから取得
-    const existingSchedules = await prisma.dailySchedule.findMany({
+    const existingTasks = await prisma.scheduledTask.findMany({
       where: {
-        userId,
-        routineId,
+        userId: BigInt(userId),
+        sessionPlanId: BigInt(sessionPlanId),
         scheduledDate: {
           in: dataToCreate.map((d) => d.scheduledDate),
         },
@@ -80,7 +146,7 @@ export const SchedulerService = {
     });
 
     const existingDateSet = new Set(
-      existingSchedules.map((s) => toDateKey(s.scheduledDate)),
+      existingTasks.map((s) => toDateKey(s.scheduledDate)),
     );
 
     // 存在しないものだけをフィルタリング
@@ -89,73 +155,136 @@ export const SchedulerService = {
     );
 
     if (finalCreates.length > 0) {
-      await prisma.dailySchedule.createMany({
-        data: finalCreates,
+      await prisma.scheduledTask.createMany({
+        data: finalCreates.map((d) => ({
+          userId: BigInt(d.userId),
+          ruleId: BigInt(d.ruleId),
+          sessionPlanId: BigInt(d.sessionPlanId),
+          scheduledDate: d.scheduledDate,
+          status: "pending" as const,
+        })),
       });
       console.log(
-        `[Scheduler] Created ${finalCreates.length} schedules for routine ${routineId}`,
+        `[TaskScheduler] Created ${finalCreates.length} tasks for rule ${ruleId}`,
       );
     }
+
+    return finalCreates.length;
   },
 
   /**
-   * ルーティン設定変更時に、未来のスケジュールを同期（再生成）する
+   * ルール設定変更時に、未来のスケジュールを同期（再生成）する
    * - 未来の未完了(status=pending)レコードを物理削除
    * - 新しいルールで再生成
-   *
-   * @param userId ユーザーID
-   * @param routineId ルーティンID
    */
-  async syncRoutineSchedules(userId: number, routineId: number) {
+  async syncRuleTasks(
+    userId: number,
+    ruleId: number,
+    sessionPlanId: number,
+    rule: ScheduleRule,
+  ): Promise<void> {
     const today = startOfDay(new Date());
 
     // 1. 未来の未完了タスクを物理削除
-    //    【重要】completed, skipped 等の「実績」は絶対に消さない
-    const deleteResult = await prisma.dailySchedule.deleteMany({
+    const deleteResult = await prisma.scheduledTask.deleteMany({
       where: {
-        userId,
-        routineId,
-        scheduledDate: { gt: today }, // 明日以降
+        userId: BigInt(userId),
+        ruleId: BigInt(ruleId),
+        scheduledDate: { gte: today },
         status: "pending",
       },
     });
 
     console.log(
-      `[Scheduler] Deleted ${deleteResult.count} pending schedules for routine ${routineId}`,
+      `[TaskScheduler] Deleted ${deleteResult.count} pending tasks for rule ${ruleId}`,
     );
 
     // 2. 向こう3ヶ月分を再生成
     const threeMonthsLater = addDays(today, 90);
 
-    // 明日から3ヶ月後までを生成対象とする
-    // （今日は既に終わっている可能性や、中途半端に残るのを防ぐため、同期は「明日以降」を基本とするが
-    //   ユーザー体験としては「今日」も変わってほしい場合がある。
-    //   今回は「明日以降」を再生成し、今日の分は既存ロジック（そのまま）とするのが安全）
-    //   -> いや、Sync on Saveなら「今日」も直すべき。
-    //      ただし今日既に「完了」しているなら消えないので安全。
-    //      今日の分も再生成対象に含める。
-
-    await this.generateSchedules(
+    await this.generateTasks(
       userId,
-      routineId,
-      addDays(today, 0),
+      ruleId,
+      sessionPlanId,
+      rule,
+      today,
       threeMonthsLater,
     );
   },
 
   /**
-   * ルーティン削除時のクリーンアップ
+   * ルール削除時のクリーンアップ
    * 未来の未完了タスクのみ削除する
    */
-  async cleanupFutureSchedules(userId: number, routineId: number) {
+  async cleanupFutureTasks(ruleId: number): Promise<void> {
     const today = startOfDay(new Date());
-    await prisma.dailySchedule.deleteMany({
+    await prisma.scheduledTask.deleteMany({
       where: {
-        userId,
-        routineId,
-        scheduledDate: { gt: today },
+        ruleId: BigInt(ruleId),
+        scheduledDate: { gte: today },
         status: "pending",
       },
     });
+  },
+
+  /**
+   * 手動でタスクを追加（ルールなし）
+   */
+  async createManualTask(
+    userId: number,
+    sessionPlanId: number,
+    scheduledDate: Date,
+  ): Promise<void> {
+    await prisma.scheduledTask.create({
+      data: {
+        userId: BigInt(userId),
+        sessionPlanId: BigInt(sessionPlanId),
+        scheduledDate: toUtcDateOnly(scheduledDate),
+        status: "pending",
+      },
+    });
+  },
+
+  /**
+   * 全ユーザーの全ルールについて、向こう90日分のタスクを生成
+   * Cronジョブ用
+   */
+  async generateAllUsersTasks(): Promise<void> {
+    const today = startOfDay(new Date());
+    const threeMonthsLater = addDays(today, 90);
+
+    // 有効なルールを全て取得
+    const rules = await prisma.scheduleRule.findMany({
+      where: {
+        isEnabled: true,
+        deletedAt: null,
+      },
+    });
+
+    for (const rule of rules) {
+      const mappedRule: ScheduleRule = {
+        id: Number(rule.id),
+        userId: Number(rule.userId),
+        sessionPlanId: Number(rule.sessionPlanId),
+        ruleType: rule.ruleType as ScheduleRuleType,
+        weekdays: rule.weekdays ?? undefined,
+        intervalDays: rule.intervalDays ?? undefined,
+        startDate: rule.startDate ?? undefined,
+        endDate: rule.endDate ?? undefined,
+        isEnabled: rule.isEnabled,
+        createdAt: rule.createdAt,
+        updatedAt: rule.updatedAt,
+        deletedAt: rule.deletedAt ?? undefined,
+      };
+
+      await this.generateTasks(
+        Number(rule.userId),
+        Number(rule.id),
+        Number(rule.sessionPlanId),
+        mappedRule,
+        today,
+        threeMonthsLater,
+      );
+    }
   },
 };

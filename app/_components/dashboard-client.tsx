@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
-  completeScheduleAction,
-  skipScheduleAction,
-} from "@/app/_actions/daily-schedule-actions";
+  completeTaskAction,
+  skipTaskAction,
+} from "@/app/_actions/scheduled-task-actions";
 import { DailySchedule } from "@/app/_components/dashboard/daily-schedule";
 import type {
   DailySchedulesViewModel,
@@ -67,13 +67,13 @@ export function DashboardClient({
   }, [dailySchedules, activeDateKey]);
 
   // Handlers
-  const handleCompleteSchedule = (routineId: number, dateKey: string) => {
-    const key = `${dateKey}:${routineId}`;
+  const handleCompleteSchedule = (taskId: number, dateKey: string) => {
+    const key = `${dateKey}:${taskId}`;
     setOptimisticHidden((prev) => new Set(prev).add(key));
 
     startTransition(async () => {
       try {
-        await completeScheduleAction({ routineId, dateKey });
+        await completeTaskAction(taskId);
         router.refresh();
       } catch {
         setOptimisticHidden((prev) => {
@@ -85,13 +85,13 @@ export function DashboardClient({
     });
   };
 
-  const handleSkipSchedule = (routineId: number, dateKey: string) => {
-    const key = `${dateKey}:${routineId}`;
+  const handleSkipSchedule = (taskId: number, dateKey: string) => {
+    const key = `${dateKey}:${taskId}`;
     setOptimisticHidden((prev) => new Set(prev).add(key));
 
     startTransition(async () => {
       try {
-        await skipScheduleAction({ routineId, dateKey });
+        await skipTaskAction(taskId);
         router.refresh();
       } catch {
         setOptimisticHidden((prev) => {

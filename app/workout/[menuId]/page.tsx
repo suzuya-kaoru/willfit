@@ -2,6 +2,7 @@ import { toDateKey } from "@/lib/date-key";
 import {
   getExerciseRecordsBySessionIds,
   getMenuWithExercises,
+  getSessionPlanWithDetails,
   getWorkoutSessionsByMenuIds,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
@@ -80,7 +81,7 @@ async function calculatePreviousRecords(
  */
 interface PageProps {
   params: Promise<{ menuId: string }>;
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; planId?: string; taskId?: string }>;
 }
 
 export default async function ActiveWorkoutPage({
@@ -88,7 +89,7 @@ export default async function ActiveWorkoutPage({
   searchParams,
 }: PageProps) {
   const { menuId: menuIdStr } = await params;
-  const { date } = await searchParams;
+  const { date, planId: planIdStr, taskId: taskIdStr } = await searchParams;
 
   // dateが指定されていなければ今日の日付を使用
   const scheduledDateKey = date ?? toDateKey(new Date());
@@ -118,6 +119,17 @@ export default async function ActiveWorkoutPage({
   }
 
   // ============================================================================
+  // Session Plan 取得 (Option)
+  // ============================================================================
+  let sessionPlan = null;
+  if (planIdStr) {
+    const planId = parseInt(planIdStr, 10);
+    if (!Number.isNaN(planId)) {
+      sessionPlan = await getSessionPlanWithDetails(userId, planId);
+    }
+  }
+
+  // ============================================================================
   // 前回記録の計算（サーバー側で実行）
   // ============================================================================
   const exerciseIds = menu.exercises.map((e) => e.id);
@@ -135,6 +147,8 @@ export default async function ActiveWorkoutPage({
       menu={menu}
       previousRecords={previousRecords}
       scheduledDateKey={scheduledDateKey}
+      sessionPlan={sessionPlan}
+      scheduledTaskId={taskIdStr ? parseInt(taskIdStr, 10) : undefined}
     />
   );
 }

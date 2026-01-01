@@ -1,16 +1,20 @@
 import { toDateKey } from "@/lib/date-key";
 import {
-  getActiveRoutines,
-  getDailySchedulesByDateRange,
   getExerciseRecordsBySessionIds,
-  getMenus,
   getMenusByIds,
+  getScheduledTasksWithPlanByDateRange,
+  getSessionPlans,
   getWorkoutSessionsByDateRange,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
-import { getSchedulesForDate } from "@/lib/schedule-utils";
+import { weekdaysFromBitmask } from "@/lib/schedule-utils";
 import { getMonthEnd, getMonthStart } from "@/lib/timezone";
-import type { ExerciseRecord, WorkoutSession, WorkoutSet } from "@/lib/types";
+import type {
+  CalculatedTask,
+  ExerciseRecord,
+  WorkoutSession,
+  WorkoutSet,
+} from "@/lib/types";
 import { ScheduleClient } from "./_components/schedule-client";
 import type { CalendarDay, WorkoutSessionWithStats } from "./_components/types";
 
@@ -122,7 +126,7 @@ function generateCalendarDays(
   month: number,
   sessions: WorkoutSessionWithStats[],
   todayDateString: string,
-  schedulesMap: Map<string, import("@/lib/types").CalculatedSchedule[]>,
+  schedulesMap: Map<string, CalculatedTask[]>,
 ): CalendarDay[] {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -211,7 +215,7 @@ export default async function SchedulePage({
         calendarDays={[]}
         sessionsList={[]}
         todayDateString={toDateKey(today)}
-        menus={[]}
+        plans={[]}
       />
     );
   }
@@ -222,13 +226,11 @@ export default async function SchedulePage({
   const startDate = getMonthStart(year, month);
   const endDate = getMonthEnd(year, month);
 
-  const [sessionsInMonth, routines, allMenus, dailySchedulesMap] =
-    await Promise.all([
-      getSessionsByDateRange(userId, year, month),
-      getActiveRoutines(userId),
-      getMenus(userId),
-      getDailySchedulesByDateRange(userId, startDate, endDate),
-    ]);
+  const [sessionsInMonth, sessionPlans, scheduledTasks] = await Promise.all([
+    getSessionsByDateRange(userId, year, month),
+    getSessionPlans(userId),
+    getScheduledTasksWithPlanByDateRange(userId, startDate, endDate),
+  ]);
 
   const sessionIds = sessionsInMonth.map((session) => session.id);
   const exerciseRecords = await getExerciseRecordsBySessionIds(sessionIds);
@@ -261,22 +263,34 @@ export default async function SchedulePage({
   );
 
   // 各日付のスケジュールを計算
-  const schedulesMap = new Map<
-    string,
-    import("@/lib/types").CalculatedSchedule[]
-  >();
-  const allMenusMap = new Map(allMenus.map((menu) => [menu.id, menu]));
-  const lastDay = new Date(year, month + 1, 0);
-  for (let day = 1; day <= lastDay.getDate(); day++) {
-    const date = new Date(year, month, day);
-    const dateKey = toDateKey(date);
-    const schedules = getSchedulesForDate(
-      routines,
-      allMenusMap,
-      date,
-      dailySchedulesMap,
-    );
-    schedulesMap.set(dateKey, schedules);
+  // 各日付のスケジュールを計算
+  const schedulesMap = new Map<string, CalculatedTask[]>();
+
+  for (const task of scheduledTasks) {
+    const dateKey = toDateKey(task.scheduledDate);
+    const existing = schedulesMap.get(dateKey) ?? [];
+
+    if (task.status === "completed") continue; // セッション履歴として表示されるためスキップ？
+
+    const mappedTask: CalculatedTask = {
+      taskId: Number(task.id),
+      sessionPlanId: Number(task.sessionPlanId),
+      sessionPlanName: task.sessionPlan.name,
+      menuId: Number(task.sessionPlan.menuId),
+      menuName: task.sessionPlan.menu.name,
+      ruleId: task.ruleId ? Number(task.ruleId) : undefined,
+      ruleType: task.rule?.ruleType,
+      weekdays:
+        task.rule?.ruleType === "weekly" && task.rule.weekdays
+          ? weekdaysFromBitmask(task.rule.weekdays)
+          : undefined,
+      intervalDays: task.rule?.intervalDays ?? undefined,
+      scheduledTask: task,
+      isFromReschedule: !!task.rescheduledFrom,
+    };
+
+    existing.push(mappedTask);
+    schedulesMap.set(dateKey, existing);
   }
 
   // カレンダーの日付情報を生成
@@ -299,7 +313,7 @@ export default async function SchedulePage({
       calendarDays={calendarDays}
       sessionsList={sessionsList}
       todayDateString={todayDateString}
-      menus={allMenus}
+      plans={sessionPlans}
     />
   );
 }

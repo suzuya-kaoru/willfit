@@ -2,6 +2,7 @@
 
 import {
   ChevronRight,
+  ClipboardList,
   Dumbbell,
   LayoutList,
   Pencil,
@@ -25,6 +26,13 @@ import {
   type UpdateMenuInput,
   updateMenuAction,
 } from "@/app/_actions/menu-actions";
+import {
+  type CreateSessionPlanInput,
+  createSessionPlanAction,
+  deleteSessionPlanAction,
+  type UpdateSessionPlanInput,
+  updateSessionPlanAction,
+} from "@/app/_actions/session-plan-actions";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { Badge } from "@/components/ui/badge";
@@ -35,24 +43,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type {
   BodyPart,
   ExerciseWithBodyParts,
+  SessionPlanWithExercises,
   WorkoutMenuWithExercises,
 } from "@/lib/types";
-import { ExerciseEditDialog, MenuEditDialog } from "./dialogs";
+import {
+  ExerciseEditDialog,
+  MenuEditDialog,
+  SessionPlanDialog,
+} from "./dialogs";
 
 export interface SettingsClientProps {
   initialExercises: ExerciseWithBodyParts[];
   initialMenus: WorkoutMenuWithExercises[];
+  initialSessionPlans: SessionPlanWithExercises[];
   initialBodyParts: BodyPart[];
 }
 
 export function SettingsClient({
   initialExercises,
   initialMenus,
+  initialSessionPlans,
   initialBodyParts,
 }: SettingsClientProps) {
   // propsを直接使用（冗長なuseState+useEffectを削除）
   const exercises = initialExercises;
   const menus = initialMenus;
+  const sessionPlans = initialSessionPlans;
   const bodyParts = initialBodyParts;
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,8 +76,11 @@ export function SettingsClient({
     useState<ExerciseWithBodyParts | null>(null);
   const [editingMenu, setEditingMenu] =
     useState<WorkoutMenuWithExercises | null>(null);
+  const [editingPlan, setEditingPlan] =
+    useState<SessionPlanWithExercises | null>(null);
   const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [isAddingMenu, setIsAddingMenu] = useState(false);
+  const [isAddingPlan, setIsAddingPlan] = useState(false);
   const router = useRouter();
 
   // Filter exercises by search query
@@ -109,13 +128,41 @@ export function SettingsClient({
     router.refresh();
   };
 
+  // Session Plan CRUD
+  const handleSavePlan = async (
+    input: CreateSessionPlanInput | UpdateSessionPlanInput,
+  ) => {
+    if (isAddingPlan) {
+      await createSessionPlanAction(input as CreateSessionPlanInput);
+      router.refresh();
+      setIsAddingPlan(false);
+    } else if ("id" in input) {
+      await updateSessionPlanAction(input as UpdateSessionPlanInput);
+      router.refresh();
+      setEditingPlan(null);
+    }
+  };
+
+  const handleDeletePlan = async (id: number) => {
+    await deleteSessionPlanAction(id);
+    router.refresh();
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <AppHeader title="設定" />
 
       <main className="mx-auto max-w-md px-4 pt-2 pb-4">
-        <Tabs defaultValue="menus" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="session-plans" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger
+              value="session-plans"
+              className="gap-1 text-xs sm:gap-2 sm:text-sm"
+            >
+              <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">プラン管理</span>
+              <span className="sm:hidden">プラン</span>
+            </TabsTrigger>
             <TabsTrigger
               value="menus"
               className="gap-1 text-xs sm:gap-2 sm:text-sm"
@@ -133,6 +180,94 @@ export function SettingsClient({
               <span className="sm:hidden">種目</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Session Plan Management Tab */}
+          <TabsContent value="session-plans" className="space-y-4">
+            <Button
+              className="w-full gap-2"
+              onClick={() => {
+                setIsAddingPlan(true);
+                setEditingPlan(null);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              新規プラン作成
+            </Button>
+
+            <div className="space-y-3">
+              {sessionPlans.map((plan) => (
+                <Card key={plan.id} className="overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div>
+                      <CardTitle className="text-base">{plan.name}</CardTitle>
+                      {plan.description && (
+                        <p className="line-clamp-1 text-xs text-muted-foreground">
+                          {plan.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setEditingPlan(plan);
+                          setIsAddingPlan(false);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDeletePlan(plan.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-2 text-xs font-semibold text-muted-foreground">
+                      ベースメニュー: {plan.menu.name}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {plan.exercises.map((ex, index) => (
+                        <div
+                          key={ex.id}
+                          className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1"
+                        >
+                          <span className="text-xs font-medium text-secondary-foreground">
+                            {index + 1}. {ex.exercise.name}
+                          </span>
+                          {(ex.targetWeight || ex.targetReps) && (
+                            <span className="text-[10px] text-muted-foreground ml-1">
+                              {ex.targetWeight ? `${ex.targetWeight}kg` : ""}
+                              {ex.targetWeight && ex.targetReps ? " x " : ""}
+                              {ex.targetReps ? `${ex.targetReps}回` : ""}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {plan.exercises.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        種目が設定されていません
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+              {sessionPlans.length === 0 && (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  セッションプランがありません。
+                  <br />
+                  よく行うトレーニングの目標設定を保存しましょう。
+                </p>
+              )}
+            </div>
+          </TabsContent>
 
           {/* Menu Management Tab */}
           <TabsContent value="menus" className="space-y-4">
@@ -290,6 +425,21 @@ export function SettingsClient({
         }}
         onSave={handleSaveMenu}
         onDelete={handleDeleteMenu}
+      />
+
+      {/* Session Plan Edit Dialog */}
+      <SessionPlanDialog
+        plan={editingPlan}
+        isOpen={!!editingPlan || isAddingPlan}
+        isNew={isAddingPlan}
+        menus={menus}
+        allExercises={exercises}
+        onClose={() => {
+          setEditingPlan(null);
+          setIsAddingPlan(false);
+        }}
+        onSave={handleSavePlan}
+        onDelete={handleDeletePlan}
       />
 
       <BottomNavigation />

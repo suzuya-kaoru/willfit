@@ -156,8 +156,12 @@ PRISMA_DATABASE_URL=mysql://docker:docker@db:3306/willfit
 | workout_records | セッション記録 |
 | workout_set_records | セットごとの記録 |
 | weight_records | 体重記録 |
-| schedule_routines | スケジュールルーティン |
-| daily_schedules | 日次スケジュール記録 |
+| session_plans | セッションプラン |
+| scheduled_tasks | スケジュールタスク |
+
+> [!IMPORTANT]
+> データベース操作（特にシードデータの投入）は、環境変数の整合性を保つため、必ず `make` コマンド経由で行ってください。
+> 例: `make db-seed` または `make db-reset`
 
 ### スキーマ操作
 

@@ -1,17 +1,24 @@
 import type { Prisma } from "@prisma/client";
-import { toDateKey } from "@/lib/date-key";
 import { toUtcDateOnly } from "@/lib/timezone";
 import type {
   BodyPart,
-  DailySchedule,
-  DailyScheduleStatus,
   Exercise,
   ExerciseRecord,
   ExerciseWithBodyParts,
   MenuExercise,
-  RoutineType,
-  ScheduleRoutine,
-  ScheduleRoutineReminder,
+  ReminderType,
+  ScheduledTask,
+  ScheduledTaskStatus,
+  ScheduledTaskWithPlan,
+  ScheduleReminder,
+  ScheduleRule,
+  ScheduleRuleType,
+  // 新スケジュール機能
+  SessionPlan,
+  SessionPlanExercise,
+  SessionPlanExerciseWithDetails,
+  SessionPlanWithExercises,
+  SessionPlanWithRules,
   WeightRecord,
   WorkoutMenu,
   WorkoutMenuWithExercises,
@@ -616,30 +623,118 @@ export async function getWorkoutSessionWithDetails(
 }
 
 // =============================================================================
-// ルーティンスケジュール機能
+// 新スケジュール機能（SessionPlan ベース）
 // =============================================================================
 
-export function mapScheduleRoutine(row: {
-  id: bigint;
-  userId: bigint;
-  menuId: bigint;
-  routineType: "weekly" | "interval";
-  weekdays: number | null;
-  intervalDays: number | null;
-  startDate: Date | null;
-  isEnabled: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-}): ScheduleRoutine {
+// -----------------------------------------------------------------------------
+// マッパー関数
+// -----------------------------------------------------------------------------
+
+type SessionPlanRow = Prisma.SessionPlanGetPayload<object>;
+
+function mapSessionPlan(row: SessionPlanRow): SessionPlan {
   return {
-    id: toSafeNumber(row.id, "schedule_routines.id"),
-    userId: toSafeNumber(row.userId, "schedule_routines.user_id"),
-    menuId: toSafeNumber(row.menuId, "schedule_routines.menu_id"),
-    routineType: row.routineType as RoutineType,
+    id: toSafeNumber(row.id, "sessionPlan.id"),
+    userId: toSafeNumber(row.userId, "sessionPlan.userId"),
+    menuId: toSafeNumber(row.menuId, "sessionPlan.menuId"),
+    name: row.name,
+    description: row.description ?? undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    deletedAt: row.deletedAt ?? undefined,
+  };
+}
+
+type SessionPlanExerciseRow = Prisma.SessionPlanExerciseGetPayload<object>;
+
+function mapSessionPlanExercise(
+  row: SessionPlanExerciseRow,
+): SessionPlanExercise {
+  return {
+    id: toSafeNumber(row.id, "sessionPlanExercise.id"),
+    sessionPlanId: toSafeNumber(
+      row.sessionPlanId,
+      "sessionPlanExercise.sessionPlanId",
+    ),
+    exerciseId: toSafeNumber(row.exerciseId, "sessionPlanExercise.exerciseId"),
+    displayOrder: row.displayOrder,
+    targetWeight: row.targetWeight
+      ? toDecimalNumber(row.targetWeight)
+      : undefined,
+    targetReps: row.targetReps ?? undefined,
+    targetSets: row.targetSets ?? undefined,
+    restSeconds: row.restSeconds ?? undefined,
+    note: row.note ?? undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+type SessionPlanExerciseWithDetailsRow = Prisma.SessionPlanExerciseGetPayload<{
+  include: {
+    exercise: {
+      include: {
+        bodyParts: {
+          include: { bodyPart: true };
+        };
+      };
+    };
+  };
+}>;
+
+function mapSessionPlanExerciseWithDetails(
+  row: SessionPlanExerciseWithDetailsRow,
+): SessionPlanExerciseWithDetails {
+  return {
+    ...mapSessionPlanExercise(row),
+    exercise: mapExerciseWithBodyParts(row.exercise),
+  };
+}
+
+type SessionPlanWithExercisesRow = Prisma.SessionPlanGetPayload<{
+  include: {
+    menu: true;
+    exercises: {
+      include: {
+        exercise: {
+          include: {
+            bodyParts: {
+              include: { bodyPart: true };
+            };
+          };
+        };
+      };
+    };
+  };
+}>;
+
+function mapSessionPlanWithExercises(
+  row: SessionPlanWithExercisesRow,
+): SessionPlanWithExercises {
+  return {
+    ...mapSessionPlan(row),
+    menu: mapMenu(row.menu),
+    exercises: row.exercises
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map(mapSessionPlanExerciseWithDetails),
+  };
+}
+
+type ScheduleRuleRow = Prisma.ScheduleRuleGetPayload<object>;
+
+function mapScheduleRule(row: ScheduleRuleRow): ScheduleRule {
+  return {
+    id: toSafeNumber(row.id, "scheduleRule.id"),
+    userId: toSafeNumber(row.userId, "scheduleRule.userId"),
+    sessionPlanId: toSafeNumber(
+      row.sessionPlanId,
+      "scheduleRule.sessionPlanId",
+    ),
+    ruleType: row.ruleType as ScheduleRuleType,
     weekdays: row.weekdays ?? undefined,
     intervalDays: row.intervalDays ?? undefined,
     startDate: row.startDate ?? undefined,
+    endDate: row.endDate ?? undefined,
     isEnabled: row.isEnabled,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -647,24 +742,21 @@ export function mapScheduleRoutine(row: {
   };
 }
 
-function mapDailySchedule(row: {
-  id: bigint;
-  userId: bigint;
-  routineId: bigint;
-  scheduledDate: Date;
-  status: "pending" | "completed" | "skipped" | "rescheduled";
-  rescheduledTo: Date | null;
-  rescheduledFrom: Date | null;
-  completedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): DailySchedule {
+type ScheduledTaskRow = Prisma.ScheduledTaskGetPayload<object>;
+
+function mapScheduledTask(row: ScheduledTaskRow): ScheduledTask {
   return {
-    id: toSafeNumber(row.id, "daily_schedules.id"),
-    userId: toSafeNumber(row.userId, "daily_schedules.user_id"),
-    routineId: toSafeNumber(row.routineId, "daily_schedules.routine_id"),
+    id: toSafeNumber(row.id, "scheduledTask.id"),
+    userId: toSafeNumber(row.userId, "scheduledTask.userId"),
+    ruleId: row.ruleId
+      ? toSafeNumber(row.ruleId, "scheduledTask.ruleId")
+      : undefined,
+    sessionPlanId: toSafeNumber(
+      row.sessionPlanId,
+      "scheduledTask.sessionPlanId",
+    ),
     scheduledDate: row.scheduledDate,
-    status: row.status as DailyScheduleStatus,
+    status: row.status as ScheduledTaskStatus,
     rescheduledTo: row.rescheduledTo ?? undefined,
     rescheduledFrom: row.rescheduledFrom ?? undefined,
     completedAt: row.completedAt ?? undefined,
@@ -673,358 +765,637 @@ function mapDailySchedule(row: {
   };
 }
 
-function mapScheduleRoutineReminder(row: {
-  id: bigint;
-  userId: bigint;
-  routineId: bigint;
-  frequency: "daily" | "weekly" | "monthly";
-  timeOfDay: Date;
-  dayOfWeek: number | null;
-  dayOfMonth: number | null;
-  startDate: Date;
-  timezone: string;
-  nextFireAt: Date;
-  isEnabled: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}): ScheduleRoutineReminder {
+type ScheduledTaskWithPlanRow = Prisma.ScheduledTaskGetPayload<{
+  include: {
+    sessionPlan: {
+      include: {
+        menu: true;
+        exercises: {
+          include: {
+            exercise: {
+              include: {
+                bodyParts: {
+                  include: { bodyPart: true };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+    rule: true;
+  };
+}>;
+
+function mapScheduledTaskWithPlan(
+  row: ScheduledTaskWithPlanRow,
+): ScheduledTaskWithPlan {
   return {
-    id: toSafeNumber(row.id, "schedule_routine_reminders.id"),
-    userId: toSafeNumber(row.userId, "schedule_routine_reminders.user_id"),
-    routineId: toSafeNumber(
-      row.routineId,
-      "schedule_routine_reminders.routine_id",
+    ...mapScheduledTask(row),
+    sessionPlan: mapSessionPlanWithExercises(row.sessionPlan),
+    rule: row.rule ? mapScheduleRule(row.rule) : undefined,
+  };
+}
+
+type ScheduleReminderRow = Prisma.ScheduleReminderGetPayload<object>;
+
+function mapScheduleReminder(row: ScheduleReminderRow): ScheduleReminder {
+  return {
+    id: toSafeNumber(row.id, "scheduleReminder.id"),
+    userId: toSafeNumber(row.userId, "scheduleReminder.userId"),
+    sessionPlanId: toSafeNumber(
+      row.sessionPlanId,
+      "scheduleReminder.sessionPlanId",
     ),
-    frequency: row.frequency,
-    timeOfDay: normalizeTimeOfDay(row.timeOfDay),
-    dayOfWeek: row.dayOfWeek ?? undefined,
-    dayOfMonth: row.dayOfMonth ?? undefined,
-    startDate: row.startDate,
+    reminderType: row.reminderType as ReminderType,
+    offsetMinutes: row.offsetMinutes ?? undefined,
+    fixedTimeOfDay: row.fixedTimeOfDay
+      ? normalizeTimeOfDay(row.fixedTimeOfDay)
+      : undefined,
     timezone: row.timezone,
-    nextFireAt: row.nextFireAt,
     isEnabled: row.isEnabled,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
 }
 
-/**
- * 有効なルーティン一覧を取得
- */
-export async function getActiveRoutines(
-  userId: number,
-): Promise<ScheduleRoutine[]> {
-  const rows = await prisma.scheduleRoutine.findMany({
-    where: {
-      userId: toBigInt(userId, "userId"),
-      deletedAt: null,
-      isEnabled: true,
-    },
-    orderBy: { createdAt: "asc" },
-  });
-  return rows.map(mapScheduleRoutine);
-}
+// -----------------------------------------------------------------------------
+// SessionPlan CRUD
+// -----------------------------------------------------------------------------
 
 /**
- * 全ルーティン一覧を取得（削除済み除く）
+ * セッションプランを作成
  */
-export async function getAllRoutines(
-  userId: number,
-): Promise<ScheduleRoutine[]> {
-  const rows = await prisma.scheduleRoutine.findMany({
-    where: {
-      userId: toBigInt(userId, "userId"),
-      deletedAt: null,
-    },
-    orderBy: { createdAt: "asc" },
-  });
-  return rows.map(mapScheduleRoutine);
-}
-
-/**
- * メニューIDでルーティンを取得
- */
-export async function getRoutineByMenuId(
-  userId: number,
-  menuId: number,
-): Promise<ScheduleRoutine | null> {
-  const row = await prisma.scheduleRoutine.findFirst({
-    where: {
-      userId: toBigInt(userId, "userId"),
-      menuId: toBigInt(menuId, "menuId"),
-      deletedAt: null,
-    },
-  });
-  return row ? mapScheduleRoutine(row) : null;
-}
-
-/**
- * 日別スケジュールを日付範囲で取得
- */
-export async function getDailySchedulesByDateRange(
-  userId: number,
-  startDate: Date,
-  endDate: Date,
-): Promise<Map<string, DailySchedule>> {
-  const rows = await prisma.dailySchedule.findMany({
-    where: {
-      userId: toBigInt(userId, "userId"),
-      scheduledDate: {
-        gte: toUtcDateOnly(startDate),
-        lte: toUtcDateOnly(endDate),
-      },
-    },
-  });
-
-  const map = new Map<string, DailySchedule>();
-  for (const row of rows) {
-    const daily = mapDailySchedule(row);
-    const key = `${daily.routineId}:${toDateKey(daily.scheduledDate)}`;
-    map.set(key, daily);
-  }
-  return map;
-}
-
-/**
- * ダッシュボード表示用：リレーションを含む日別スケジュールを取得
- */
-export async function getPopulatedDailySchedules(
-  userId: number,
-  startDate: Date,
-  endDate: Date,
-) {
-  const rows = await prisma.dailySchedule.findMany({
-    where: {
-      userId: toBigInt(userId, "userId"),
-      scheduledDate: {
-        gte: toUtcDateOnly(startDate),
-        lte: toUtcDateOnly(endDate),
-      },
-    },
-    include: {
-      routine: {
-        include: {
-          menu: true,
-        },
-      },
-    },
-    orderBy: {
-      routineId: "asc",
-    },
-  });
-
-  return rows.map((row) => ({
-    ...mapDailySchedule(row),
-    routine: {
-      ...mapScheduleRoutine(row.routine),
-      menu: {
-        id: toSafeNumber(row.routine.menu.id, "workout_menus.id"),
-        name: row.routine.menu.name,
-      },
-    },
-  }));
-}
-
-/**
- * 日別スケジュールをupsert
- */
-export async function upsertDailySchedule(input: {
-  userId: number;
-  routineId: number;
-  scheduledDate: Date;
-  status: DailyScheduleStatus;
-  rescheduledTo?: Date;
-  rescheduledFrom?: Date;
-  completedAt?: Date;
-}): Promise<void> {
-  const now = new Date();
-  const userId = toBigInt(input.userId, "userId");
-  const routineId = toBigInt(input.routineId, "routineId");
-  const scheduledDate = toUtcDateOnly(input.scheduledDate);
-  const rescheduledTo = input.rescheduledTo
-    ? toUtcDateOnly(input.rescheduledTo)
-    : null;
-  const rescheduledFrom = input.rescheduledFrom
-    ? toUtcDateOnly(input.rescheduledFrom)
-    : null;
-
-  await prisma.dailySchedule.upsert({
-    where: {
-      userId_routineId_scheduledDate: {
-        userId,
-        routineId,
-        scheduledDate,
-      },
-    },
-    create: {
-      userId,
-      routineId,
-      scheduledDate,
-      status: input.status,
-      rescheduledTo,
-      rescheduledFrom,
-      completedAt: input.completedAt ?? null,
-      createdAt: now,
-      updatedAt: now,
-    },
-    update: {
-      status: input.status,
-      rescheduledTo,
-      rescheduledFrom,
-      completedAt: input.completedAt ?? null,
-      updatedAt: now,
-    },
-  });
-}
-
-/**
- * ルーティンを作成
- */
-export async function createRoutine(input: {
+export async function createSessionPlan(input: {
   userId: number;
   menuId: number;
-  routineType: RoutineType;
-  weekdays?: number;
-  intervalDays?: number;
-  startDate?: Date;
-}): Promise<ScheduleRoutine> {
-  const now = new Date();
-  const row = await prisma.scheduleRoutine.create({
+  name: string;
+  description?: string;
+  exercises: {
+    exerciseId: number;
+    displayOrder: number;
+    targetWeight?: number;
+    targetReps?: number;
+    targetSets?: number;
+    restSeconds?: number;
+    note?: string;
+  }[];
+}): Promise<SessionPlan> {
+  const row = await prisma.sessionPlan.create({
     data: {
       userId: toBigInt(input.userId, "userId"),
       menuId: toBigInt(input.menuId, "menuId"),
-      routineType: input.routineType,
-      weekdays: input.weekdays ?? null,
-      intervalDays: input.intervalDays ?? null,
-      startDate: input.startDate ? toUtcDateOnly(input.startDate) : null,
-      isEnabled: true,
-      createdAt: now,
-      updatedAt: now,
+      name: input.name,
+      description: input.description,
+      exercises: {
+        create: input.exercises.map((ex) => ({
+          exerciseId: toBigInt(ex.exerciseId, "exerciseId"),
+          displayOrder: ex.displayOrder,
+          targetWeight: ex.targetWeight,
+          targetReps: ex.targetReps,
+          targetSets: ex.targetSets,
+          restSeconds: ex.restSeconds,
+          note: ex.note,
+        })),
+      },
     },
   });
-  return mapScheduleRoutine(row);
+  return mapSessionPlan(row);
 }
 
 /**
- * ルーティンを更新
+ * セッションプラン一覧を取得（削除済み除く）
  */
-export async function updateRoutine(
-  routineId: number,
-  input: {
-    routineType?: RoutineType;
-    weekdays?: number | null;
-    intervalDays?: number | null;
-    startDate?: Date | null;
-    isEnabled?: boolean;
-  },
-): Promise<void> {
-  const now = new Date();
-  await prisma.scheduleRoutine.update({
-    where: { id: toBigInt(routineId, "routineId") },
-    data: {
-      ...(input.routineType !== undefined && {
-        routineType: input.routineType,
-      }),
-      ...(input.weekdays !== undefined && { weekdays: input.weekdays }),
-      ...(input.intervalDays !== undefined && {
-        intervalDays: input.intervalDays,
-      }),
-      ...(input.startDate !== undefined && {
-        startDate: input.startDate ? toUtcDateOnly(input.startDate) : null,
-      }),
-      ...(input.isEnabled !== undefined && { isEnabled: input.isEnabled }),
-      updatedAt: now,
-    },
-  });
-}
-
-/**
- * ルーティンを論理削除
- */
-export async function deleteRoutine(routineId: number): Promise<void> {
-  const now = new Date();
-  await prisma.scheduleRoutine.update({
-    where: { id: toBigInt(routineId, "routineId") },
-    data: {
-      deletedAt: now,
-      updatedAt: now,
-    },
-  });
-}
-
-/**
- * ルーティン用リマインダーを取得
- */
-export async function getRoutineRemindersMap(
+export async function getSessionPlans(
   userId: number,
-): Promise<Map<number, ScheduleRoutineReminder>> {
-  const rows = await prisma.scheduleRoutineReminder.findMany({
-    where: { userId: toBigInt(userId, "userId") },
+): Promise<SessionPlanWithExercises[]> {
+  const rows = await prisma.sessionPlan.findMany({
+    where: {
+      userId: toBigInt(userId, "userId"),
+      deletedAt: null,
+    },
+    include: {
+      menu: true,
+      exercises: {
+        include: {
+          exercise: {
+            include: {
+              bodyParts: {
+                include: { bodyPart: true },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
   });
-  const map = new Map<number, ScheduleRoutineReminder>();
-  for (const row of rows) {
-    const reminder = mapScheduleRoutineReminder(row);
-    map.set(reminder.routineId, reminder);
-  }
-  return map;
+  return rows.map(mapSessionPlanWithExercises);
 }
 
 /**
- * ルーティン用リマインダーをupsert
+ * セッションプランを取得（種目・ルール・リマインダー付き）
  */
-export async function upsertRoutineReminder(input: {
-  userId: number;
-  routineId: number;
-  frequency: "daily" | "weekly" | "monthly";
-  timeOfDay: string;
-  dayOfWeek?: number;
-  dayOfMonth?: number;
-  startDate: Date;
-  timezone: string;
-  nextFireAt: Date;
-  isEnabled: boolean;
-}): Promise<void> {
-  const now = new Date();
-  const userId = toBigInt(input.userId, "userId");
-  const routineId = toBigInt(input.routineId, "routineId");
-  const timeOfDay = timeOfDayToDate(input.timeOfDay);
-  const startDate = toUtcDateOnly(input.startDate);
+export async function getSessionPlanWithDetails(
+  userId: number,
+  sessionPlanId: number,
+): Promise<SessionPlanWithRules | null> {
+  const row = await prisma.sessionPlan.findFirst({
+    where: {
+      id: toBigInt(sessionPlanId, "sessionPlanId"),
+      userId: toBigInt(userId, "userId"),
+      deletedAt: null,
+    },
+    include: {
+      menu: true,
+      exercises: {
+        include: {
+          exercise: {
+            include: {
+              bodyParts: {
+                include: { bodyPart: true },
+              },
+            },
+          },
+        },
+      },
+      scheduleRules: {
+        where: { deletedAt: null },
+      },
+      reminders: true,
+    },
+  });
+  if (!row) return null;
+  return {
+    ...mapSessionPlanWithExercises(row),
+    scheduleRules: row.scheduleRules.map(mapScheduleRule),
+    reminders: row.reminders.map(mapScheduleReminder),
+  };
+}
 
-  await prisma.scheduleRoutineReminder.upsert({
-    where: { routineId },
-    create: {
-      userId,
-      routineId,
-      frequency: input.frequency,
-      timeOfDay,
-      dayOfWeek: input.dayOfWeek ?? null,
-      dayOfMonth: input.dayOfMonth ?? null,
-      startDate,
-      timezone: input.timezone,
-      nextFireAt: input.nextFireAt,
+/**
+ * セッションプランを更新
+ */
+export async function updateSessionPlan(input: {
+  sessionPlanId: number;
+  userId: number;
+  name?: string;
+  description?: string;
+  exercises?: {
+    exerciseId: number;
+    displayOrder: number;
+    targetWeight?: number;
+    targetReps?: number;
+    targetSets?: number;
+    restSeconds?: number;
+    note?: string;
+  }[];
+}): Promise<SessionPlan> {
+  const row = await prisma.$transaction(async (tx) => {
+    // 種目の更新がある場合は削除して再作成
+    if (input.exercises) {
+      await tx.sessionPlanExercise.deleteMany({
+        where: {
+          sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+        },
+      });
+    }
+
+    return tx.sessionPlan.update({
+      where: { id: toBigInt(input.sessionPlanId, "sessionPlanId") },
+      data: {
+        name: input.name,
+        description: input.description,
+        exercises: input.exercises
+          ? {
+              create: input.exercises.map((ex) => ({
+                exerciseId: toBigInt(ex.exerciseId, "exerciseId"),
+                displayOrder: ex.displayOrder,
+                targetWeight: ex.targetWeight,
+                targetReps: ex.targetReps,
+                targetSets: ex.targetSets,
+                restSeconds: ex.restSeconds,
+                note: ex.note,
+              })),
+            }
+          : undefined,
+      },
+    });
+  });
+  return mapSessionPlan(row);
+}
+
+/**
+ * セッションプランを論理削除
+ */
+export async function deleteSessionPlan(
+  _userId: number,
+  sessionPlanId: number,
+): Promise<void> {
+  await prisma.sessionPlan.update({
+    where: { id: toBigInt(sessionPlanId, "sessionPlanId") },
+    data: { deletedAt: new Date() },
+  });
+}
+
+// -----------------------------------------------------------------------------
+// ScheduleRule CRUD
+// -----------------------------------------------------------------------------
+
+/**
+ * スケジュールルールを作成
+ */
+export async function createScheduleRule(input: {
+  userId: number;
+  sessionPlanId: number;
+  ruleType: ScheduleRuleType;
+  weekdays?: number;
+  intervalDays?: number;
+  startDate?: Date;
+  endDate?: Date;
+}): Promise<ScheduleRule> {
+  const row = await prisma.scheduleRule.create({
+    data: {
+      userId: toBigInt(input.userId, "userId"),
+      sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+      ruleType: input.ruleType,
+      weekdays: input.weekdays,
+      intervalDays: input.intervalDays,
+      startDate: input.startDate ? toUtcDateOnly(input.startDate) : null,
+      endDate: input.endDate ? toUtcDateOnly(input.endDate) : null,
+      isEnabled: true,
+    },
+  });
+  return mapScheduleRule(row);
+}
+
+/**
+ * 有効なスケジュールルール一覧を取得
+ */
+export async function getActiveScheduleRules(
+  userId: number,
+): Promise<ScheduleRule[]> {
+  const rows = await prisma.scheduleRule.findMany({
+    where: {
+      userId: toBigInt(userId, "userId"),
+      isEnabled: true,
+      deletedAt: null,
+    },
+  });
+  return rows.map(mapScheduleRule);
+}
+
+/**
+ * セッションプランのスケジュールルール一覧を取得
+ */
+export async function getScheduleRulesByPlan(
+  userId: number,
+  sessionPlanId: number,
+): Promise<ScheduleRule[]> {
+  const rows = await prisma.scheduleRule.findMany({
+    where: {
+      userId: toBigInt(userId, "userId"),
+      sessionPlanId: toBigInt(sessionPlanId, "sessionPlanId"),
+      deletedAt: null,
+    },
+  });
+  return rows.map(mapScheduleRule);
+}
+
+/**
+ * 特定のスケジュールルールを取得
+ */
+export async function getScheduleRuleById(
+  userId: number,
+  ruleId: number,
+): Promise<ScheduleRule | null> {
+  const row = await prisma.scheduleRule.findFirst({
+    where: {
+      id: toBigInt(ruleId, "ruleId"),
+      userId: toBigInt(userId, "userId"),
+      deletedAt: null,
+    },
+  });
+  return row ? mapScheduleRule(row) : null;
+}
+
+/**
+ * スケジュールルールを更新
+ */
+export async function updateScheduleRule(input: {
+  ruleId: number;
+  weekdays?: number;
+  intervalDays?: number;
+  startDate?: Date;
+  endDate?: Date;
+  isEnabled?: boolean;
+}): Promise<ScheduleRule> {
+  const row = await prisma.scheduleRule.update({
+    where: { id: toBigInt(input.ruleId, "ruleId") },
+    data: {
+      weekdays: input.weekdays,
+      intervalDays: input.intervalDays,
+      startDate: input.startDate ? toUtcDateOnly(input.startDate) : undefined,
+      endDate: input.endDate ? toUtcDateOnly(input.endDate) : undefined,
       isEnabled: input.isEnabled,
-      createdAt: now,
-      updatedAt: now,
+    },
+  });
+  return mapScheduleRule(row);
+}
+
+/**
+ * スケジュールルールを論理削除
+ */
+export async function deleteScheduleRule(ruleId: number): Promise<void> {
+  await prisma.scheduleRule.update({
+    where: { id: toBigInt(ruleId, "ruleId") },
+    data: { deletedAt: new Date() },
+  });
+}
+
+// -----------------------------------------------------------------------------
+// ScheduledTask CRUD
+// -----------------------------------------------------------------------------
+
+/**
+ * スケジュールタスクを作成
+ */
+export async function createScheduledTask(input: {
+  userId: number;
+  ruleId?: number;
+  sessionPlanId: number;
+  scheduledDate: Date;
+}): Promise<ScheduledTask> {
+  const row = await prisma.scheduledTask.create({
+    data: {
+      userId: toBigInt(input.userId, "userId"),
+      ruleId: input.ruleId ? toBigInt(input.ruleId, "ruleId") : null,
+      sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+      scheduledDate: toUtcDateOnly(input.scheduledDate),
+      status: "pending",
+    },
+  });
+  return mapScheduledTask(row);
+}
+
+/**
+ * スケジュールタスクを一括作成
+ */
+export async function createScheduledTasks(
+  tasks: {
+    userId: number;
+    ruleId?: number;
+    sessionPlanId: number;
+    scheduledDate: Date;
+  }[],
+): Promise<number> {
+  const result = await prisma.scheduledTask.createMany({
+    data: tasks.map((t) => ({
+      userId: toBigInt(t.userId, "userId"),
+      ruleId: t.ruleId ? toBigInt(t.ruleId, "ruleId") : null,
+      sessionPlanId: toBigInt(t.sessionPlanId, "sessionPlanId"),
+      scheduledDate: toUtcDateOnly(t.scheduledDate),
+      status: "pending" as const,
+    })),
+    skipDuplicates: true,
+  });
+  return result.count;
+}
+
+/**
+ * 期間内のスケジュールタスクを取得
+ */
+export async function getScheduledTasksByDateRange(
+  userId: number,
+  fromDate: Date,
+  toDate: Date,
+): Promise<ScheduledTask[]> {
+  const rows = await prisma.scheduledTask.findMany({
+    where: {
+      userId: toBigInt(userId, "userId"),
+      scheduledDate: {
+        gte: toUtcDateOnly(fromDate),
+        lte: toUtcDateOnly(toDate),
+      },
+    },
+    orderBy: { scheduledDate: "asc" },
+  });
+  return rows.map(mapScheduledTask);
+}
+
+/**
+ * 期間内のスケジュールタスクを取得（プラン情報付き）
+ */
+export async function getScheduledTasksWithPlanByDateRange(
+  userId: number,
+  fromDate: Date,
+  toDate: Date,
+): Promise<ScheduledTaskWithPlan[]> {
+  const rows = await prisma.scheduledTask.findMany({
+    where: {
+      userId: toBigInt(userId, "userId"),
+      scheduledDate: {
+        gte: toUtcDateOnly(fromDate),
+        lte: toUtcDateOnly(toDate),
+      },
+    },
+    include: {
+      sessionPlan: {
+        include: {
+          menu: true,
+          exercises: {
+            include: {
+              exercise: {
+                include: {
+                  bodyParts: {
+                    include: { bodyPart: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      rule: true,
+    },
+    orderBy: { scheduledDate: "asc" },
+  });
+  return rows.map(mapScheduledTaskWithPlan);
+}
+
+/**
+ * スケジュールタスクのステータスを更新
+ */
+export async function updateScheduledTaskStatus(input: {
+  taskId: number;
+  status: ScheduledTaskStatus;
+  completedAt?: Date;
+}): Promise<ScheduledTask> {
+  const row = await prisma.scheduledTask.update({
+    where: { id: toBigInt(input.taskId, "taskId") },
+    data: {
+      status: input.status,
+      completedAt: input.completedAt,
+    },
+  });
+  return mapScheduledTask(row);
+}
+
+/**
+ * スケジュールタスクを振替
+ */
+export async function rescheduleTask(input: {
+  userId: number;
+  taskId: number;
+  toDate: Date;
+}): Promise<{ originalTask: ScheduledTask; newTask: ScheduledTask }> {
+  const result = await prisma.$transaction(async (tx) => {
+    // 元のタスクを取得
+    const original = await tx.scheduledTask.findUnique({
+      where: { id: toBigInt(input.taskId, "taskId") },
+    });
+    if (!original) throw new Error("タスクが見つかりません");
+
+    // 元のタスクを振替済みに更新
+    const updatedOriginal = await tx.scheduledTask.update({
+      where: { id: toBigInt(input.taskId, "taskId") },
+      data: {
+        status: "rescheduled",
+        rescheduledTo: toUtcDateOnly(input.toDate),
+      },
+    });
+
+    // 新しいタスクを作成
+    const newTask = await tx.scheduledTask.create({
+      data: {
+        userId: original.userId,
+        ruleId: original.ruleId,
+        sessionPlanId: original.sessionPlanId,
+        scheduledDate: toUtcDateOnly(input.toDate),
+        status: "pending",
+        rescheduledFrom: original.scheduledDate,
+      },
+    });
+
+    return {
+      originalTask: mapScheduledTask(updatedOriginal),
+      newTask: mapScheduledTask(newTask),
+    };
+  });
+  return result;
+}
+
+/**
+ * 特定ルールの未来のpendingタスクを削除
+ */
+export async function deleteFuturePendingTasks(
+  ruleId: number,
+  fromDate: Date,
+): Promise<number> {
+  const result = await prisma.scheduledTask.deleteMany({
+    where: {
+      ruleId: toBigInt(ruleId, "ruleId"),
+      scheduledDate: { gte: toUtcDateOnly(fromDate) },
+      status: "pending",
+    },
+  });
+  return result.count;
+}
+
+/**
+ * 日付とセッションプランでタスクを取得または作成
+ */
+export async function upsertScheduledTask(input: {
+  userId: number;
+  sessionPlanId: number;
+  scheduledDate: Date;
+  status: ScheduledTaskStatus;
+  completedAt?: Date;
+}): Promise<ScheduledTask> {
+  const row = await prisma.scheduledTask.upsert({
+    where: {
+      userId_sessionPlanId_scheduledDate: {
+        userId: toBigInt(input.userId, "userId"),
+        sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+        scheduledDate: toUtcDateOnly(input.scheduledDate),
+      },
+    },
+    create: {
+      userId: toBigInt(input.userId, "userId"),
+      sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+      scheduledDate: toUtcDateOnly(input.scheduledDate),
+      status: input.status,
+      completedAt: input.completedAt,
     },
     update: {
-      frequency: input.frequency,
-      timeOfDay,
-      dayOfWeek: input.dayOfWeek ?? null,
-      dayOfMonth: input.dayOfMonth ?? null,
-      startDate,
-      timezone: input.timezone,
-      nextFireAt: input.nextFireAt,
-      isEnabled: input.isEnabled,
-      updatedAt: now,
+      status: input.status,
+      completedAt: input.completedAt,
     },
   });
+  return mapScheduledTask(row);
+}
+
+// -----------------------------------------------------------------------------
+// ScheduleReminder CRUD
+// -----------------------------------------------------------------------------
+
+/**
+ * スケジュールリマインダーを作成/更新
+ */
+export async function upsertScheduleReminder(input: {
+  userId: number;
+  sessionPlanId: number;
+  reminderType: ReminderType;
+  offsetMinutes?: number;
+  fixedTimeOfDay?: string;
+  timezone: string;
+  isEnabled: boolean;
+}): Promise<ScheduleReminder> {
+  const fixedTime = input.fixedTimeOfDay
+    ? timeOfDayToDate(input.fixedTimeOfDay)
+    : null;
+
+  // 既存のリマインダーを探す
+  const existing = await prisma.scheduleReminder.findFirst({
+    where: {
+      userId: toBigInt(input.userId, "userId"),
+      sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+    },
+  });
+
+  const row = existing
+    ? await prisma.scheduleReminder.update({
+        where: { id: existing.id },
+        data: {
+          reminderType: input.reminderType,
+          offsetMinutes: input.offsetMinutes,
+          fixedTimeOfDay: fixedTime,
+          timezone: input.timezone,
+          isEnabled: input.isEnabled,
+        },
+      })
+    : await prisma.scheduleReminder.create({
+        data: {
+          userId: toBigInt(input.userId, "userId"),
+          sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+          reminderType: input.reminderType,
+          offsetMinutes: input.offsetMinutes,
+          fixedTimeOfDay: fixedTime,
+          timezone: input.timezone,
+          isEnabled: input.isEnabled,
+        },
+      });
+
+  return mapScheduleReminder(row);
 }
 
 /**
- * ルーティン用リマインダーを削除
+ * スケジュールリマインダーを削除
  */
-export async function deleteRoutineReminder(routineId: number): Promise<void> {
-  await prisma.scheduleRoutineReminder.deleteMany({
-    where: { routineId: toBigInt(routineId, "routineId") },
+export async function deleteScheduleReminder(
+  sessionPlanId: number,
+): Promise<void> {
+  await prisma.scheduleReminder.deleteMany({
+    where: { sessionPlanId: toBigInt(sessionPlanId, "sessionPlanId") },
   });
 }

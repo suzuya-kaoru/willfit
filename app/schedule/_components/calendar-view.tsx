@@ -3,24 +3,9 @@
 import { ChevronLeft, ChevronRight, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MONTH_LABELS, WEEKDAY_LABELS } from "@/lib/schedule-utils";
 import { formatTime } from "@/lib/timezone";
 import type { CalendarDay, WorkoutSessionWithStats } from "./types";
-
-const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
-const MONTHS = [
-  "1月",
-  "2月",
-  "3月",
-  "4月",
-  "5月",
-  "6月",
-  "7月",
-  "8月",
-  "9月",
-  "10月",
-  "11月",
-  "12月",
-];
 
 export interface CalendarViewProps {
   year: number;
@@ -49,7 +34,7 @@ export function CalendarView({
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <h2 className="text-lg font-semibold">
-          {year}年 {MONTHS[month]}
+          {year}年 {MONTH_LABELS[month]}
         </h2>
         <Button variant="ghost" size="icon" onClick={() => onNavigateMonth(1)}>
           <ChevronRight className="h-5 w-5" />
@@ -61,7 +46,7 @@ export function CalendarView({
         <CardContent className="p-3">
           {/* Day Headers */}
           <div className="mb-2 grid grid-cols-7 gap-1">
-            {DAYS.map((day, i) => (
+            {WEEKDAY_LABELS.map((day, i) => (
               <div
                 key={day}
                 className={`py-2 text-center text-xs font-medium ${
@@ -148,7 +133,7 @@ function SelectedDaySummary({
       <CardHeader className="pb-2">
         <CardTitle className="text-base">
           {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日（
-          {DAYS[selectedDate.getDay()]}）
+          {WEEKDAY_LABELS[selectedDate.getDay()]}）
         </CardTitle>
       </CardHeader>
       <CardContent>

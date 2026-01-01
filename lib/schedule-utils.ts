@@ -4,15 +4,30 @@
  * ビットマスク変換とスケジュール計算のヘルパー関数
  */
 
-import { differenceInDays, getDay } from "date-fns";
+export const WEEKDAY_LABELS = [
+  "日",
+  "月",
+  "火",
+  "水",
+  "木",
+  "金",
+  "土",
+] as const;
 
-import { parseDateKey, toDateKey } from "./date-key";
-import type {
-  CalculatedSchedule,
-  DailySchedule,
-  ScheduleRoutine,
-  WorkoutMenu,
-} from "./types";
+export const MONTH_LABELS = [
+  "1月",
+  "2月",
+  "3月",
+  "4月",
+  "5月",
+  "6月",
+  "7月",
+  "8月",
+  "9月",
+  "10月",
+  "11月",
+  "12月",
+] as const;
 
 // =============================================================================
 // ビットマスク変換
@@ -54,109 +69,11 @@ export function isWeekdayInBitmask(
   return (bitmask & (1 << dayOfWeek)) !== 0;
 }
 
-// =============================================================================
-// スケジュール計算
-// =============================================================================
-
-/**
- * ルーティンが特定の日にスケジュールされているか判定
- * @param routine ルーティン
- * @param date 判定対象日
- */
-export function isScheduledDate(routine: ScheduleRoutine, date: Date): boolean {
-  if (!routine.isEnabled) return false;
-
-  if (routine.routineType === "weekly" && routine.weekdays != null) {
-    const dayOfWeek = getDay(date);
-    return isWeekdayInBitmask(routine.weekdays, dayOfWeek);
-  }
-
-  if (
-    routine.routineType === "interval" &&
-    routine.intervalDays != null &&
-    routine.startDate != null
-  ) {
-    // 日付の違いによる誤差を防ぐため、一度文字列（yyyy-MM-dd）に正規化してから比較
-    const targetDate = parseDateKey(toDateKey(date));
-    const startDate = parseDateKey(toDateKey(routine.startDate));
-    const diffDays = differenceInDays(targetDate, startDate);
-    return diffDays >= 0 && diffDays % routine.intervalDays === 0;
-  }
-
-  return false;
-}
-
-/**
- * 特定日のスケジュールを計算
- * @param routines ルーティン一覧
- * @param menus メニュー一覧（ID→名前マッピング用）
- * @param date 対象日
- * @param dailySchedules 日別スケジュール（オーバーライド用）
- */
-export function getSchedulesForDate(
-  routines: ScheduleRoutine[],
-  menus: Map<number, WorkoutMenu>,
-  date: Date,
-  dailySchedules: Map<string, DailySchedule>,
-): CalculatedSchedule[] {
-  const dateKey = toDateKey(date);
-  const result: CalculatedSchedule[] = [];
-
-  for (const routine of routines) {
-    const dailyKey = `${routine.id}:${dateKey}`;
-    const daily = dailySchedules.get(dailyKey);
-    const menu = menus.get(routine.menuId);
-
-    if (!menu) continue;
-
-    // 日別スケジュールに記録がある場合
-    if (daily) {
-      // rescheduled, completed, skipped は表示しない
-      if (daily.status === "pending") {
-        result.push({
-          routineId: routine.id,
-          menuId: routine.menuId,
-          menuName: menu.name,
-          routineType: routine.routineType,
-          weekdays:
-            routine.weekdays != null
-              ? weekdaysFromBitmask(routine.weekdays)
-              : undefined,
-          intervalDays: routine.intervalDays ?? undefined,
-          dailySchedule: daily,
-          isFromReschedule: daily.rescheduledFrom != null,
-        });
-      }
-      continue;
-    }
-
-    // ルーティンから計算
-    if (isScheduledDate(routine, date)) {
-      result.push({
-        routineId: routine.id,
-        menuId: routine.menuId,
-        menuName: menu.name,
-        routineType: routine.routineType,
-        weekdays:
-          routine.weekdays != null
-            ? weekdaysFromBitmask(routine.weekdays)
-            : undefined,
-        intervalDays: routine.intervalDays ?? undefined,
-        dailySchedule: undefined,
-        isFromReschedule: false,
-      });
-    }
-  }
-
-  return result;
-}
-
 /**
  * 曜日を日本語に変換
  */
 export function weekdayToJapanese(dayOfWeek: number): string {
-  const days = ["日", "月", "火", "水", "木", "金", "土"];
-  return days[dayOfWeek] ?? "";
+  return WEEKDAY_LABELS[dayOfWeek] ?? "";
 }
 
 /**
@@ -167,19 +84,4 @@ export function weekdayToJapanese(dayOfWeek: number): string {
 export function weekdayBitmaskToString(bitmask: number): string {
   const days = weekdaysFromBitmask(bitmask);
   return days.map(weekdayToJapanese).join("・");
-}
-
-/**
- * ルーティンの説明文を生成
- */
-export function getRoutineDescription(routine: ScheduleRoutine): string {
-  if (routine.routineType === "weekly" && routine.weekdays != null) {
-    return `毎週 ${weekdayBitmaskToString(routine.weekdays)}`;
-  }
-
-  if (routine.routineType === "interval" && routine.intervalDays != null) {
-    return `${routine.intervalDays}日ごと`;
-  }
-
-  return "";
 }

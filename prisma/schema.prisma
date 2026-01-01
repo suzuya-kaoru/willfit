@@ -25,6 +25,28 @@ enum DailyScheduleStatus {
   rescheduled
 }
 
+// ========================================
+// 新スケジュール機能用 Enum
+// ========================================
+
+enum ScheduleRuleType {
+  weekly
+  interval
+  once
+}
+
+enum ScheduledTaskStatus {
+  pending
+  completed
+  skipped
+  rescheduled
+}
+
+enum ReminderType {
+  before_scheduled
+  fixed_time
+}
+
 model User {
   id               BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
   email            String               @unique(map: "idx_users_email") @db.VarChar(255)
@@ -37,9 +59,13 @@ model User {
   workoutMenus     WorkoutMenu[]
   workoutRecords   WorkoutSession[]
   weightRecords    WeightRecord[]
-  scheduleRoutines  ScheduleRoutine[]
-  dailySchedules    DailySchedule[]
-  routineReminders  ScheduleRoutineReminder[]
+
+
+  // 新スケジュール機能
+  sessionPlans      SessionPlan[]
+  scheduleRules     ScheduleRule[]
+  scheduledTasks    ScheduledTask[]
+  scheduleReminders ScheduleReminder[]
 
   @@index([deletedAt], map: "idx_users_deleted_at")
   @@map("users")
@@ -71,6 +97,7 @@ model Exercise {
   bodyParts      ExerciseBodyPart[]
   exerciseRecords ExerciseRecord[]
   menuExercises  MenuExercise[]
+  sessionPlanExercises SessionPlanExercise[]
 
   @@index([userId], map: "idx_exercises_user_id")
   @@index([userId, deletedAt], map: "idx_exercises_user_id_deleted_at")
@@ -98,7 +125,8 @@ model WorkoutMenu {
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   menuExercises MenuExercise[]
   workoutRecords WorkoutSession[]
-  scheduleRoutines ScheduleRoutine[]
+
+  sessionPlans  SessionPlan[]
 
   @@index([userId], map: "idx_workout_menus_user_id")
   @@index([userId, deletedAt], map: "idx_workout_menus_user_id_deleted_at")
@@ -122,23 +150,28 @@ model MenuExercise {
 }
 
 model WorkoutSession {
-  id         BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
-  userId     BigInt       @map("user_id") @db.UnsignedBigInt
-  menuId     BigInt       @map("menu_id") @db.UnsignedBigInt
-  startedAt  DateTime     @map("started_at")
-  endedAt    DateTime?    @map("ended_at")
-  condition  Int          @map("condition_score") @db.UnsignedTinyInt
-  fatigue    Int          @db.UnsignedTinyInt
-  note       String       @db.Text
-  createdAt  DateTime     @default(now()) @map("created_at")
-  updatedAt  DateTime     @updatedAt @map("updated_at")
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  menu       WorkoutMenu  @relation(fields: [menuId], references: [id], onDelete: Restrict)
+  id              BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  userId          BigInt          @map("user_id") @db.UnsignedBigInt
+  menuId          BigInt          @map("menu_id") @db.UnsignedBigInt
+  sessionPlanId   BigInt?         @map("session_plan_id") @db.UnsignedBigInt
+  scheduledTaskId BigInt?         @unique @map("scheduled_task_id") @db.UnsignedBigInt
+  startedAt       DateTime        @map("started_at")
+  endedAt         DateTime?       @map("ended_at")
+  condition       Int             @map("condition_score") @db.UnsignedTinyInt
+  fatigue         Int             @db.UnsignedTinyInt
+  note            String          @db.Text
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  menu            WorkoutMenu     @relation(fields: [menuId], references: [id], onDelete: Restrict)
+  sessionPlan     SessionPlan?    @relation(fields: [sessionPlanId], references: [id], onDelete: SetNull)
+  scheduledTask   ScheduledTask?  @relation(fields: [scheduledTaskId], references: [id], onDelete: SetNull)
   exerciseRecords ExerciseRecord[]
 
   @@index([userId], map: "idx_workout_records_user_id")
   @@index([userId, startedAt], map: "idx_workout_records_user_id_started_at")
   @@index([menuId], map: "idx_workout_records_menu_id")
+  @@index([sessionPlanId], map: "idx_workout_records_session_plan_id")
   @@map("workout_records")
 }
 
@@ -193,76 +226,134 @@ model WeightRecord {
 // ルーティンスケジュール機能
 // ========================================
 
-model ScheduleRoutine {
-  id           BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
-  userId       BigInt      @map("user_id") @db.UnsignedBigInt
-  menuId       BigInt      @map("menu_id") @db.UnsignedBigInt
-  routineType  RoutineType @map("routine_type")
+
+
+// ========================================
+// 新スケジュール機能（SessionPlan ベース）
+// ========================================
+
+model SessionPlan {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  userId      BigInt    @map("user_id") @db.UnsignedBigInt
+  menuId      BigInt    @map("menu_id") @db.UnsignedBigInt
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  menu            WorkoutMenu           @relation(fields: [menuId], references: [id], onDelete: Restrict)
+  exercises       SessionPlanExercise[]
+  scheduleRules   ScheduleRule[]
+  scheduledTasks  ScheduledTask[]
+  reminders       ScheduleReminder[]
+  workoutSessions WorkoutSession[]
+
+  @@index([userId], map: "idx_session_plans_user_id")
+  @@index([userId, deletedAt], map: "idx_session_plans_user_deleted")
+  @@index([menuId], map: "idx_session_plans_menu_id")
+  @@map("session_plans")
+}
+
+model SessionPlanExercise {
+  id            BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  sessionPlanId BigInt   @map("session_plan_id") @db.UnsignedBigInt
+  exerciseId    BigInt   @map("exercise_id") @db.UnsignedBigInt
+  displayOrder  Int      @map("display_order") @db.UnsignedInt
+  targetWeight  Decimal? @map("target_weight") @db.Decimal(5, 1)
+  targetReps    Int?     @map("target_reps") @db.UnsignedInt
+  targetSets    Int?     @map("target_sets") @db.UnsignedInt
+  restSeconds   Int?     @map("rest_seconds") @db.UnsignedSmallInt
+  note          String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  sessionPlan SessionPlan @relation(fields: [sessionPlanId], references: [id], onDelete: Cascade)
+  exercise    Exercise    @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionPlanId, exerciseId], map: "uk_session_plan_exercises_plan_exercise")
+  @@index([sessionPlanId], map: "idx_session_plan_exercises_plan_id")
+  @@map("session_plan_exercises")
+}
+
+model ScheduleRule {
+  id            BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  userId        BigInt           @map("user_id") @db.UnsignedBigInt
+  sessionPlanId BigInt           @map("session_plan_id") @db.UnsignedBigInt
+  ruleType      ScheduleRuleType @map("rule_type")
 
   // weekly用: ビットマスク (日=1, 月=2, 火=4, 水=8, 木=16, 金=32, 土=64)
-  weekdays     Int?        @db.UnsignedTinyInt
+  weekdays     Int?      @db.UnsignedTinyInt
 
   // interval用
-  intervalDays Int?        @map("interval_days") @db.UnsignedSmallInt
-  startDate    DateTime?   @map("start_date") @db.Date
+  intervalDays Int?      @map("interval_days") @db.UnsignedSmallInt
 
-  isEnabled    Boolean     @default(true) @map("is_enabled") @db.TinyInt
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  deletedAt    DateTime?   @map("deleted_at")
+  // interval/once共通: 開始日
+  startDate    DateTime? @map("start_date") @db.Date
 
-  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  menu           WorkoutMenu              @relation(fields: [menuId], references: [id], onDelete: Restrict)
-  dailySchedules DailySchedule[]
-  reminder       ScheduleRoutineReminder?
+  // 終了日（任意: 期間限定ルール対応）
+  endDate      DateTime? @map("end_date") @db.Date
 
-  @@unique([userId, menuId], map: "uk_schedule_routines_user_menu")
-  @@index([userId], map: "idx_schedule_routines_user_id")
-  @@index([userId, deletedAt], map: "idx_schedule_routines_user_deleted")
-  @@map("schedule_routines")
+  isEnabled Boolean   @default(true) @map("is_enabled") @db.TinyInt
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionPlan    SessionPlan     @relation(fields: [sessionPlanId], references: [id], onDelete: Cascade)
+  scheduledTasks ScheduledTask[]
+
+  @@index([userId], map: "idx_schedule_rules_user_id")
+  @@index([userId, deletedAt], map: "idx_schedule_rules_user_deleted")
+  @@index([sessionPlanId], map: "idx_schedule_rules_session_plan_id")
+  @@map("schedule_rules")
 }
 
-model DailySchedule {
-  id              BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
-  userId          BigInt              @map("user_id") @db.UnsignedBigInt
-  routineId       BigInt              @map("routine_id") @db.UnsignedBigInt
-  scheduledDate   DateTime            @map("scheduled_date") @db.Date
-  status          DailyScheduleStatus @default(pending)
+model ScheduledTask {
+  id            BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  userId        BigInt              @map("user_id") @db.UnsignedBigInt
+  ruleId        BigInt?             @map("rule_id") @db.UnsignedBigInt
+  sessionPlanId BigInt              @map("session_plan_id") @db.UnsignedBigInt
+  scheduledDate DateTime            @map("scheduled_date") @db.Date
+  status        ScheduledTaskStatus @default(pending)
 
   // 振替追跡
-  rescheduledTo   DateTime?           @map("rescheduled_to") @db.Date
-  rescheduledFrom DateTime?           @map("rescheduled_from") @db.Date
+  rescheduledTo   DateTime? @map("rescheduled_to") @db.Date
+  rescheduledFrom DateTime? @map("rescheduled_from") @db.Date
 
-  completedAt     DateTime?           @map("completed_at")
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  routine ScheduleRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rule           ScheduleRule?   @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  sessionPlan    SessionPlan     @relation(fields: [sessionPlanId], references: [id], onDelete: Cascade)
+  workoutSession WorkoutSession?
 
-  @@unique([userId, routineId, scheduledDate], map: "uk_daily_schedules_user_routine_date")
-  @@index([userId, scheduledDate], map: "idx_daily_schedules_user_date")
-  @@map("daily_schedules")
+  @@unique([userId, sessionPlanId, scheduledDate], map: "uk_scheduled_tasks_user_plan_date")
+  @@index([userId, scheduledDate], map: "idx_scheduled_tasks_user_date")
+  @@index([ruleId], map: "idx_scheduled_tasks_rule_id")
+  @@index([sessionPlanId], map: "idx_scheduled_tasks_session_plan_id")
+  @@map("scheduled_tasks")
 }
 
-model ScheduleRoutineReminder {
-  id         BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
-  userId     BigInt            @map("user_id") @db.UnsignedBigInt
-  routineId  BigInt            @unique @map("routine_id") @db.UnsignedBigInt
-  frequency  ReminderFrequency
-  timeOfDay  DateTime          @map("time_of_day") @db.Time(0)
-  dayOfWeek  Int?              @map("day_of_week") @db.UnsignedTinyInt
-  dayOfMonth Int?              @map("day_of_month") @db.UnsignedTinyInt
-  startDate  DateTime          @map("start_date") @db.Date
-  timezone   String            @db.VarChar(64)
-  nextFireAt DateTime          @map("next_fire_at")
-  isEnabled  Boolean           @default(true) @map("is_enabled") @db.TinyInt
-  createdAt  DateTime          @default(now()) @map("created_at")
-  updatedAt  DateTime          @updatedAt @map("updated_at")
+model ScheduleReminder {
+  id             BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  userId         BigInt       @map("user_id") @db.UnsignedBigInt
+  sessionPlanId  BigInt       @map("session_plan_id") @db.UnsignedBigInt
+  reminderType   ReminderType @map("reminder_type")
+  offsetMinutes  Int?         @map("offset_minutes") @db.UnsignedSmallInt
+  fixedTimeOfDay DateTime?    @map("fixed_time_of_day") @db.Time(0)
+  timezone       String       @db.VarChar(64)
+  isEnabled      Boolean      @default(true) @map("is_enabled") @db.TinyInt
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
-  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  routine ScheduleRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionPlan SessionPlan @relation(fields: [sessionPlanId], references: [id], onDelete: Cascade)
 
-  @@index([userId], map: "idx_schedule_routine_reminders_user")
-  @@map("schedule_routine_reminders")
+  @@index([userId], map: "idx_schedule_reminders_user_id")
+  @@index([sessionPlanId], map: "idx_schedule_reminders_session_plan_id")
+  @@map("schedule_reminders")
 }

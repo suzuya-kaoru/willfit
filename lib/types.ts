@@ -112,6 +112,8 @@ export interface MenuExercise extends BaseEntity {
 export interface WorkoutSession extends BaseEntity {
   userId: number; // FK → users.id
   menuId: number; // FK → workout_menus.id
+  sessionPlanId?: number; // FK → session_plans.id（新スケジュール機能）
+  scheduledTaskId?: number; // FK → scheduled_tasks.id（新スケジュール機能）
   startedAt: Date; // 開始日時
   endedAt?: Date; // 終了日時
   condition: number; // 体調（1-10）
@@ -165,85 +167,158 @@ export interface WeightRecord extends BaseEntity {
  */
 export type RoutineType = "weekly" | "interval";
 
+// =============================================================================
+// 新スケジュール機能（SessionPlan ベース）
+// =============================================================================
+
 /**
- * 日別スケジュールステータス
+ * スケジュールルールタイプ
  */
-export type DailyScheduleStatus =
+export type ScheduleRuleType = "weekly" | "interval" | "once";
+
+/**
+ * スケジュールタスクステータス
+ */
+export type ScheduledTaskStatus =
   | "pending"
   | "completed"
   | "skipped"
   | "rescheduled";
 
 /**
- * スケジュールルーティン
- * @table schedule_routines
+ * リマインダータイプ
  */
-export interface ScheduleRoutine extends SoftDeletable {
-  userId: number; // FK → users.id
-  menuId: number; // FK → workout_menus.id
-  routineType: RoutineType;
+export type ReminderType = "before_scheduled" | "fixed_time";
+
+/**
+ * セッションプラン
+ * @table session_plans
+ */
+export interface SessionPlan extends SoftDeletable {
+  userId: number;
+  menuId: number;
+  name: string;
+  description?: string;
+}
+
+/**
+ * セッションプラン種目詳細
+ * @table session_plan_exercises
+ */
+export interface SessionPlanExercise extends BaseEntity {
+  sessionPlanId: number;
+  exerciseId: number;
+  displayOrder: number;
+  targetWeight?: number;
+  targetReps?: number;
+  targetSets?: number;
+  restSeconds?: number;
+  note?: string;
+}
+
+/**
+ * スケジュールルール
+ * @table schedule_rules
+ */
+export interface ScheduleRule extends SoftDeletable {
+  userId: number;
+  sessionPlanId: number;
+  ruleType: ScheduleRuleType;
   weekdays?: number; // ビットマスク (日=1, 月=2, 火=4, 水=8, 木=16, 金=32, 土=64)
-  intervalDays?: number; // interval用: X日毎
-  startDate?: Date; // interval用: 起点日
+  intervalDays?: number;
+  startDate?: Date;
+  endDate?: Date;
   isEnabled: boolean;
 }
 
 /**
- * 日別スケジュール
- * @table daily_schedules
+ * スケジュールタスク
+ * @table scheduled_tasks
  */
-export interface DailySchedule extends BaseEntity {
-  userId: number; // FK → users.id
-  routineId: number; // FK → schedule_routines.id
-  scheduledDate: Date; // 対象日
-  status: DailyScheduleStatus;
-  rescheduledTo?: Date; // 振替先日付
-  rescheduledFrom?: Date; // 振替元日付
+export interface ScheduledTask extends BaseEntity {
+  userId: number;
+  ruleId?: number; // NULL = 手動追加
+  sessionPlanId: number;
+  scheduledDate: Date;
+  status: ScheduledTaskStatus;
+  rescheduledTo?: Date;
+  rescheduledFrom?: Date;
   completedAt?: Date;
 }
 
 /**
- * リマインド頻度
+ * スケジュールリマインダー
+ * @table schedule_reminders
  */
-export type ReminderFrequency = "daily" | "weekly" | "monthly";
-
-/**
- * ルーティン用リマインダー
- * @table schedule_routine_reminders
- */
-export interface ScheduleRoutineReminder extends BaseEntity {
-  userId: number; // FK → users.id
-  routineId: number; // FK → schedule_routines.id
-  frequency: ReminderFrequency;
-  timeOfDay: string; // "HH:mm"
-  dayOfWeek?: number; // 0-6（weekly時のみ）
-  dayOfMonth?: number; // 1-31（monthly時のみ）
-  startDate: Date;
-  timezone: string; // 例: "Asia/Tokyo"
-  nextFireAt: Date;
+export interface ScheduleReminder extends BaseEntity {
+  userId: number;
+  sessionPlanId: number;
+  reminderType: ReminderType;
+  offsetMinutes?: number;
+  fixedTimeOfDay?: string; // "HH:mm"
+  timezone: string;
   isEnabled: boolean;
 }
 
+// =============================================================================
+// 新スケジュール機能 派生型
+// =============================================================================
+
 /**
- * ルーティン（メニュー情報付き）
+ * セッションプラン種目詳細（種目情報付き）
  */
-export interface ScheduleRoutineWithMenu extends ScheduleRoutine {
-  menu: WorkoutMenu;
-  reminder?: ScheduleRoutineReminder;
+export interface SessionPlanExerciseWithDetails extends SessionPlanExercise {
+  exercise: ExerciseWithBodyParts;
 }
 
 /**
- * 計算済みスケジュール（特定日付のスケジュール情報）
+ * セッションプラン（種目リスト付き）
  */
-export interface CalculatedSchedule {
-  routineId: number;
+export interface SessionPlanWithExercises extends SessionPlan {
+  menu: WorkoutMenu;
+  exercises: SessionPlanExerciseWithDetails[];
+}
+
+/**
+ * セッションプラン（ルール付き）
+ */
+export interface SessionPlanWithRules extends SessionPlan {
+  menu: WorkoutMenu;
+  exercises: SessionPlanExerciseWithDetails[];
+  scheduleRules: ScheduleRule[];
+  reminders: ScheduleReminder[];
+}
+
+/**
+ * スケジュールルール（プラン情報付き）
+ */
+export interface ScheduleRuleWithPlan extends ScheduleRule {
+  sessionPlan: SessionPlanWithExercises;
+}
+
+/**
+ * スケジュールタスク（プラン情報付き）
+ */
+export interface ScheduledTaskWithPlan extends ScheduledTask {
+  sessionPlan: SessionPlanWithExercises;
+  rule?: ScheduleRule;
+}
+
+/**
+ * 計算済みタスク（特定日付のスケジュール情報 - 新版）
+ */
+export interface CalculatedTask {
+  taskId?: number; // ScheduledTask.id（未生成の場合はundefined）
+  sessionPlanId: number;
+  sessionPlanName: string;
   menuId: number;
   menuName: string;
-  routineType: RoutineType;
+  ruleId?: number;
+  ruleType?: ScheduleRuleType;
   weekdays?: number[];
   intervalDays?: number;
-  dailySchedule?: DailySchedule; // 日別の調整がある場合
-  isFromReschedule: boolean; // 振替で追加されたか
+  scheduledTask?: ScheduledTask;
+  isFromReschedule: boolean;
 }
 
 // =============================================================================

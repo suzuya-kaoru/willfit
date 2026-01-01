@@ -9,12 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getRoutineDescription } from "@/lib/schedule-utils";
+import { WEEKDAY_LABELS } from "@/lib/schedule-utils";
 import { formatTime } from "@/lib/timezone";
-import type { CalculatedSchedule } from "@/lib/types";
+import type { CalculatedTask } from "@/lib/types";
 import type { ScheduleDayDialogProps, WorkoutSessionWithStats } from "./types";
-
-const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
 export function ScheduleDayDialog({
   isOpen,
@@ -25,12 +23,12 @@ export function ScheduleDayDialog({
   onComplete,
   onSkip,
   onReschedule,
-  onCreateRoutine,
+  onAddPlan,
 }: ScheduleDayDialogProps) {
   if (!date) return null;
 
   const dayOfWeek = date.getDay();
-  const dateString = `${date.getMonth() + 1}月${date.getDate()}日（${DAYS[dayOfWeek]}）`;
+  const dateString = `${date.getMonth() + 1}月${date.getDate()}日（${WEEKDAY_LABELS[dayOfWeek]}）`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -49,15 +47,22 @@ export function ScheduleDayDialog({
               <h3 className="text-sm font-medium text-muted-foreground">
                 予定
               </h3>
-              {schedules.map((schedule) => (
-                <ScheduleCard
-                  key={schedule.routineId}
-                  schedule={schedule}
-                  onComplete={() => onComplete(schedule.routineId)}
-                  onSkip={() => onSkip(schedule.routineId)}
-                  onReschedule={() => onReschedule(schedule.routineId)}
-                />
-              ))}
+              {schedules.map((schedule) => {
+                // Task ID must exist for scheduled tasks (DB backed)
+                const id = schedule.taskId;
+
+                if (!id) return null;
+
+                return (
+                  <ScheduleCard
+                    key={`task-${id}`}
+                    schedule={schedule}
+                    onComplete={() => onComplete(id)}
+                    onSkip={() => onSkip(id)}
+                    onReschedule={() => onReschedule(id)}
+                  />
+                );
+              })}
             </div>
           )}
 
@@ -68,14 +73,10 @@ export function ScheduleDayDialog({
             </p>
           )}
 
-          {/* ルーティン追加ボタン */}
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={onCreateRoutine}
-          >
+          {/* プラン追加ボタン */}
+          <Button className="w-full" onClick={onAddPlan}>
             <Plus className="mr-2 h-4 w-4" />
-            ルーティンを追加
+            プランを追加
           </Button>
         </div>
       </DialogContent>
@@ -128,7 +129,7 @@ function SessionInfo({ session }: SessionInfoProps) {
 }
 
 interface ScheduleCardProps {
-  schedule: CalculatedSchedule;
+  schedule: CalculatedTask;
   onComplete: () => void;
   onSkip: () => void;
   onReschedule: () => void;
@@ -140,19 +141,22 @@ function ScheduleCard({
   onSkip,
   onReschedule,
 }: ScheduleCardProps) {
-  const routineInfo = getRoutineDescription({
-    id: schedule.routineId,
-    userId: 0,
-    menuId: schedule.menuId,
-    routineType: schedule.routineType,
-    weekdays: schedule.weekdays
-      ? schedule.weekdays.reduce((mask, day) => mask | (1 << day), 0)
-      : undefined,
-    intervalDays: schedule.intervalDays,
-    isEnabled: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
+  let routineInfo = "";
+
+  // New Task Description logic
+  if (schedule.ruleType === "weekly" && schedule.weekdays) {
+    const days = schedule.weekdays.map((d) => WEEKDAY_LABELS[d]).join("・");
+    routineInfo = `毎週 ${days}`;
+  } else if (schedule.ruleType === "interval") {
+    routineInfo = `${schedule.intervalDays}日ごと`;
+  } else if (schedule.ruleType === "once") {
+    routineInfo = "単発";
+  } else {
+    routineInfo = "手動追加";
+  }
+
+  const menuName = schedule.sessionPlanName || schedule.menuName;
+  const isRescheduled = schedule.isFromReschedule;
 
   return (
     <Card>
@@ -160,10 +164,10 @@ function ScheduleCard({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">{schedule.menuName}</p>
+              <p className="font-medium">{menuName}</p>
               <p className="text-sm text-muted-foreground">{routineInfo}</p>
             </div>
-            {schedule.isFromReschedule && (
+            {isRescheduled && (
               <span className="rounded-full bg-info/10 px-2 py-0.5 text-xs text-info">
                 振替
               </span>

@@ -1,8 +1,7 @@
-import { Check, Circle, Target, Trophy } from "lucide-react";
+import { Check, Target, Trophy } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { WEEKDAY_LABELS } from "@/lib/schedule-utils";
 import { cn } from "@/lib/utils";
-
-const dayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 
 interface WeeklyProgressProps {
   weeklyCompleted: number;
@@ -75,12 +74,12 @@ export function WeeklyProgress({
                 ) : dayStatus.status === "incomplete" ? (
                   <div className="flex flex-col items-center justify-center">
                     <span className="text-[10px] leading-none mb-0.5">
-                      {dayLabels[dayStatus.dayOfWeekIndex]}
+                      {WEEKDAY_LABELS[dayStatus.dayOfWeekIndex]}
                     </span>
                     <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                   </div>
                 ) : (
-                  dayLabels[dayStatus.dayOfWeekIndex]
+                  WEEKDAY_LABELS[dayStatus.dayOfWeekIndex]
                 )}
               </div>
               {dayStatus.isToday && (

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseDateKey } from "@/lib/date-key";
+import { dateKeySchema } from "@/lib/date-key";
 import { prisma } from "@/lib/db/prisma";
 
 // =============================================================================
@@ -11,6 +11,8 @@ import { prisma } from "@/lib/db/prisma";
 
 export interface SaveWorkoutSessionInput {
   menuId: number;
+  sessionPlanId?: number; // 新規追加
+  scheduledTaskId?: number; // 新規追加
   scheduledDateKey: string; // スケジュールの日付キー（YYYY-MM-DD）
   startedAt: Date;
   endedAt: Date;
@@ -63,7 +65,9 @@ const exerciseRecordSchema = z.object({
 
 const saveWorkoutSessionSchema = z.object({
   menuId: z.number().int().positive(),
-  scheduledDateKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  sessionPlanId: z.number().int().positive().optional(),
+  scheduledTaskId: z.number().int().positive().optional(),
+  scheduledDateKey: dateKeySchema,
   startedAt: z.date(),
   endedAt: z.date(),
   condition: z.number().int().min(1).max(10),
@@ -100,7 +104,7 @@ function toBigInt(value: number, label: string): bigint {
  * トレーニングセッションを保存
  *
  * - WorkoutSession, ExerciseRecord, WorkoutSet を一括保存
- * - 該当日のDailyScheduleをcompletedに更新
+ * - 該当日のDailySchedule または ScheduledTask をcompletedに更新
  */
 export async function saveWorkoutSessionAction(
   input: SaveWorkoutSessionInput,
@@ -114,6 +118,12 @@ export async function saveWorkoutSessionAction(
       data: {
         userId: toBigInt(userId, "userId"),
         menuId: toBigInt(data.menuId, "menuId"),
+        sessionPlanId: data.sessionPlanId
+          ? toBigInt(data.sessionPlanId, "sessionPlanId")
+          : null,
+        scheduledTaskId: data.scheduledTaskId
+          ? toBigInt(data.scheduledTaskId, "scheduledTaskId")
+          : null,
         startedAt: data.startedAt,
         endedAt: data.endedAt,
         condition: data.condition,
@@ -135,25 +145,9 @@ export async function saveWorkoutSessionAction(
       },
     });
 
-    // 2. 紐づくルーティンを特定し、指定日のスケジュールを完了にする
-    const routine = await tx.scheduleRoutine.findFirst({
-      where: {
-        userId: toBigInt(userId, "userId"),
-        menuId: toBigInt(data.menuId, "menuId"),
-        deletedAt: null,
-      },
-    });
-
-    if (routine) {
-      // scheduledDateKeyを使用して正しい日付のスケジュールを更新
-      const scheduledDate = parseDateKey(data.scheduledDateKey);
-      await tx.dailySchedule.updateMany({
-        where: {
-          userId: toBigInt(userId, "userId"),
-          routineId: routine.id,
-          scheduledDate,
-          status: "pending",
-        },
+    if (data.scheduledTaskId) {
+      await tx.scheduledTask.update({
+        where: { id: toBigInt(data.scheduledTaskId, "scheduledTaskId") },
         data: {
           status: "completed",
           completedAt: new Date(),

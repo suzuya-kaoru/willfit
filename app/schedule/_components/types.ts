@@ -1,9 +1,4 @@
-import type {
-  CalculatedSchedule,
-  ScheduleRoutine,
-  WorkoutMenu,
-  WorkoutSession,
-} from "@/lib/types";
+import type { CalculatedTask, WorkoutSession } from "@/lib/types";
 
 /**
  * カレンダーの日付情報
@@ -12,7 +7,7 @@ export interface CalendarDay {
   day: number | null;
   dateString: string;
   session: WorkoutSessionWithStats | null;
-  schedules: CalculatedSchedule[];
+  schedules: CalculatedTask[];
   isScheduled: boolean;
   isToday: boolean;
 }
@@ -28,50 +23,16 @@ export interface WorkoutSessionWithStats extends WorkoutSession {
 }
 
 /**
- * ルーティン設定ダイアログのProps
- */
-export interface RoutineEditDialogProps {
-  isOpen: boolean;
-  routine: ScheduleRoutine | null;
-  menus: WorkoutMenu[];
-  onClose: () => void;
-  onSave: (data: RoutineFormData) => Promise<void>;
-  onDelete?: (routineId: number) => Promise<void>;
-}
-
-/**
- * ルーティン設定フォームデータ
- */
-export interface RoutineFormData {
-  menuId: number;
-  routineType: "weekly" | "interval";
-  weekdays?: number;
-  intervalDays?: number;
-  startDateKey?: string;
-}
-
-/**
- * 振替ダイアログのProps
- */
-export interface RescheduleDialogProps {
-  isOpen: boolean;
-  schedule: CalculatedSchedule | null;
-  fromDate: Date | null;
-  onClose: () => void;
-  onConfirm: (toDate: Date) => Promise<void>;
-}
-
-/**
  * 日付選択ダイアログのProps
  */
 export interface ScheduleDayDialogProps {
   isOpen: boolean;
   date: Date | null;
   session: WorkoutSessionWithStats | null;
-  schedules: CalculatedSchedule[];
+  schedules: CalculatedTask[];
   onClose: () => void;
-  onComplete: (routineId: number) => Promise<void>;
-  onSkip: (routineId: number) => Promise<void>;
-  onReschedule: (routineId: number) => void;
-  onCreateRoutine: () => void;
+  onComplete: (id: number) => Promise<void>;
+  onSkip: (id: number) => Promise<void>;
+  onReschedule: (id: number) => void;
+  onAddPlan: () => void;
 }

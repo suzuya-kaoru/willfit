@@ -8,10 +8,9 @@ import {
 } from "date-fns";
 import { toDateKey } from "@/lib/date-key";
 import {
-  getPopulatedDailySchedules,
+  getScheduledTasksWithPlanByDateRange,
   getWorkoutSessionsByDateRange,
 } from "@/lib/db/queries";
-// import { getSchedulesForDate } from "@/lib/schedule-utils"; // Removed
 import { formatDateTimeJa } from "@/lib/timezone";
 import { DashboardClient } from "./_components/dashboard-client";
 
@@ -38,15 +37,15 @@ export default async function DashboardPage() {
   const dailySessionEnd = endOfDay(addDays(today, 1));
 
   // データ取得
-  const [populatedSchedules, dailySessions, weeklySessions] = await Promise.all(
-    [
-      getPopulatedDailySchedules(userId, dailySessionStart, dailySessionEnd),
-      getWorkoutSessionsByDateRange(userId, dailySessionStart, dailySessionEnd),
-      getWorkoutSessionsByDateRange(userId, weekStart, endOfDay(today)),
-    ],
-  );
-
-  // const menusById = new Map(menus.map((menu) => [menu.id, menu])); // Removed unused
+  const [scheduledTasks, dailySessions, weeklySessions] = await Promise.all([
+    getScheduledTasksWithPlanByDateRange(
+      userId,
+      dailySessionStart,
+      dailySessionEnd,
+    ),
+    getWorkoutSessionsByDateRange(userId, dailySessionStart, dailySessionEnd),
+    getWorkoutSessionsByDateRange(userId, weekStart, endOfDay(today)),
+  ]);
 
   // セッションを日付ごとにマッピング
   const dailySessionsByDateKey = new Map<string, typeof dailySessions>();
@@ -58,12 +57,12 @@ export default async function DashboardPage() {
   }
 
   // スケジュールを日付ごとにマッピング
-  const schedulesByDateKey = new Map<string, typeof populatedSchedules>();
-  for (const schedule of populatedSchedules) {
-    const dateKey = toDateKey(schedule.scheduledDate);
-    const list = schedulesByDateKey.get(dateKey) ?? [];
-    list.push(schedule);
-    schedulesByDateKey.set(dateKey, list);
+  const tasksByDateKey = new Map<string, typeof scheduledTasks>();
+  for (const task of scheduledTasks) {
+    const dateKey = toDateKey(task.scheduledDate);
+    const list = tasksByDateKey.get(dateKey) ?? [];
+    list.push(task);
+    tasksByDateKey.set(dateKey, list);
   }
 
   // 前後1日（昨日・今日・明日）のスケジュールを構築
@@ -74,34 +73,39 @@ export default async function DashboardPage() {
     const dayOfWeek = date.getDay();
 
     // その日のスケジュールをDBから取得
-    const dbSchedules = schedulesByDateKey.get(dateKey) ?? [];
+    const dbTasks = tasksByDateKey.get(dateKey) ?? [];
 
     // その日すでに実施済みのメニューを除外（WorkoutSessionベース）
+    // NOTE: 新システムでは sessionPlanId をチェックすべき
     const daySessions = dailySessionsByDateKey.get(dateKey) ?? [];
-    const completedMenuIds = new Set(daySessions.map((s) => s.menuId));
+    // sessionPlanIdを持つセッションのセット
+    const completedPlanIds = new Set(
+      daySessions
+        .map((s) => (s.sessionPlanId ? Number(s.sessionPlanId) : null))
+        .filter(Boolean),
+    );
 
     // 未完了(pending)かつ未実施のスケジュールのみ残す
-    // ※ completed, skipped, rescheduled はDBレベルで除外されているわけではないのでここでフィルタ
-    //    (getPopulatedDailySchedulesは全ステータスを返す)
-    const remainingSchedules = dbSchedules.filter((s) => {
+    const remainingTasks = dbTasks.filter((task) => {
       // すでにセッションがあれば除外
-      if (completedMenuIds.has(s.routine.menuId)) return false;
+      if (completedPlanIds.has(Number(task.sessionPlanId))) return false;
 
       // ステータスチェック
-      if (s.status === "completed") return false;
-      if (s.status === "skipped") return false;
-      if (s.status === "rescheduled") return false;
+      if (task.status === "completed") return false;
+      if (task.status === "skipped") return false;
+      if (task.status === "rescheduled") return false;
 
       return true;
     });
 
-    const schedules = remainingSchedules.map((schedule) => {
+    const schedules = remainingTasks.map((task) => {
       return {
-        routineId: schedule.routineId,
-        menuId: schedule.routine.menuId,
-        menuName: schedule.routine.menu.name,
-        routineType: schedule.routine.routineType,
-        isFromReschedule: schedule.rescheduledFrom != null,
+        taskId: Number(task.id),
+        sessionPlanId: Number(task.sessionPlanId),
+        menuId: Number(task.sessionPlan.menu.id),
+        menuName: task.sessionPlan.name,
+        ruleType: task.rule?.ruleType,
+        isFromReschedule: task.rescheduledFrom != null,
       };
     });
 
@@ -118,27 +122,20 @@ export default async function DashboardPage() {
     };
   });
 
-  // 今週のスケジュール目標数を計算（全日のスケジュール数）
-  // ※ ここも本当はDBから取得すべきだが、週次統計は今回は簡易対応として
-  //    現状のロジック（getSchedulesForDate）を残すか、ここだけgetPopulatedDailySchedulesを呼ぶか。
-  //    一貫性のため、週次もDBから取得するように変更する。
-
-  const weeklyPopulatedSchedules = await getPopulatedDailySchedules(
+  // 今週のスケジュール目標数を計算
+  const weeklyScheduledTasks = await getScheduledTasksWithPlanByDateRange(
     userId,
     weekStart,
     weekEnd,
   );
 
   // マッピング
-  const weeklySchedulesByDateKey = new Map<
-    string,
-    typeof weeklyPopulatedSchedules
-  >();
-  for (const schedule of weeklyPopulatedSchedules) {
-    const dateKey = toDateKey(schedule.scheduledDate);
-    const list = weeklySchedulesByDateKey.get(dateKey) ?? [];
-    list.push(schedule);
-    weeklySchedulesByDateKey.set(dateKey, list);
+  const weeklyTasksByDateKey = new Map<string, typeof weeklyScheduledTasks>();
+  for (const task of weeklyScheduledTasks) {
+    const dateKey = toDateKey(task.scheduledDate);
+    const list = weeklyTasksByDateKey.get(dateKey) ?? [];
+    list.push(task);
+    weeklyTasksByDateKey.set(dateKey, list);
   }
 
   let weeklyGoal = 0;
@@ -148,17 +145,11 @@ export default async function DashboardPage() {
     const dayOfWeekIndex = dayDate.getDay();
 
     // その日のスケジュールをDBから取得
-    const daySchedules = weeklySchedulesByDateKey.get(dayDateString) ?? [];
+    const dayTasks = weeklyTasksByDateKey.get(dayDateString) ?? [];
 
-    // 目標数に含まれるのは pending, completed, skipped (rescheduledは移動しているので元の日には含まない？)
-    // ここでは単純に「その日に予定されていたもの」とする
-    // ただし rescheduled されたものは移動先にあるはず。
-    // pending, completed, skipped をカウント。
-    // rescheduled は除外。
-    const targetSchedules = daySchedules.filter(
-      (s) => s.status !== "rescheduled",
-    );
-    weeklyGoal += targetSchedules.length;
+    // 目標数に含まれるのは pending, completed, skipped
+    const targetTasks = dayTasks.filter((s) => s.status !== "rescheduled");
+    weeklyGoal += targetTasks.length;
 
     // その日にセッション履歴があるか
     const dayHasSession = weeklySessions.some(
@@ -166,23 +157,19 @@ export default async function DashboardPage() {
     );
 
     // 完了数（skippedも含む）
-    const completedCount = daySchedules.filter(
+    const completedCount = dayTasks.filter(
       (s) => s.status === "completed" || s.status === "skipped",
     ).length;
     weeklyCompleted += completedCount;
 
     // pending数
-    const pendingCount = targetSchedules.filter(
+    const pendingCount = targetTasks.filter(
       (s) => s.status === "pending",
     ).length;
 
     // ステータス判定
-    // 1. 予定がないのにセッション履歴がある -> completed (エクストラ)
-    // 2. 予定があり、pendingが0 (すべて完了/スキップ) -> completed
-    // 3. 予定があり、pending > 0 -> incomplete
-    // 4. 予定がない -> none
     let status: "completed" | "incomplete" | "none" = "none";
-    if (targetSchedules.length > 0) {
+    if (targetTasks.length > 0) {
       if (pendingCount === 0) {
         status = "completed";
       } else {
@@ -201,13 +188,10 @@ export default async function DashboardPage() {
       dayOfWeekIndex,
       status,
       isToday,
-      hasSchedule: targetSchedules.length > 0,
+      hasSchedule: targetTasks.length > 0,
     };
   });
 
-  // ============================================================================
-  // Client Component に props として渡す
-  // ============================================================================
   return (
     <DashboardClient
       dailySchedules={dailySchedules}

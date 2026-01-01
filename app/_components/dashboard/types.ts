@@ -1,10 +1,9 @@
-import type { RoutineType } from "@/lib/types";
-
 export type TodayScheduleViewModel = {
-  routineId: number;
+  taskId: number;
+  sessionPlanId: number;
   menuId: number;
   menuName: string;
-  routineType: RoutineType;
+  ruleType?: "weekly" | "interval" | "once";
   isFromReschedule: boolean;
 };
 
