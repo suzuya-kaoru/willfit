@@ -22,12 +22,19 @@ export interface PersonalBest {
   date: string;
 }
 
+export interface MonthlyStats {
+  totalVolume: number;
+  workoutCount: number;
+}
+
 export interface AnalyticsClientProps {
   allExercises: ExerciseWithBodyParts[];
   allWeightRecords: Array<{
     recordedAt: Date;
     weight: number;
+    bodyFat?: number;
   }>;
   exerciseDataByExerciseId: Record<number, ExerciseDataPoint[]>;
   personalBests: PersonalBest[];
+  monthlyStats: MonthlyStats;
 }

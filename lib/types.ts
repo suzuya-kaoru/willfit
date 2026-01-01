@@ -152,6 +152,8 @@ export interface WeightRecord extends BaseEntity {
   userId: number; // FK → users.id
   recordedAt: Date; // 記録日時
   weight: number; // 体重（kg）- 小数点1桁
+  bodyFat?: number; // 体脂肪率（%）- 小数点1桁
+  photoUrl?: string; // 写真URL
 }
 
 // =============================================================================

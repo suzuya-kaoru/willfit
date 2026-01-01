@@ -242,6 +242,8 @@ function mapWeightRecord(row: {
   userId: bigint;
   recordedAt: Date;
   weight: Prisma.Decimal;
+  bodyFat: Prisma.Decimal | null;
+  photoUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): WeightRecord {
@@ -250,6 +252,8 @@ function mapWeightRecord(row: {
     userId: toSafeNumber(row.userId, "weight_records.user_id"),
     recordedAt: row.recordedAt,
     weight: toDecimalNumber(row.weight),
+    bodyFat: row.bodyFat ? toDecimalNumber(row.bodyFat) : undefined,
+    photoUrl: row.photoUrl ?? undefined,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -433,6 +437,60 @@ export async function getWorkoutSessionsByDateRange(
     orderBy: { startedAt: "desc" },
   });
   return rows.map(mapSession);
+}
+
+/**
+ * 月間の統計情報を取得
+ */
+export async function getMonthlyStats(
+  userId: number,
+  year: number,
+  month: number,
+): Promise<{ totalVolume: number; workoutCount: number }> {
+  // 月初と月末を計算
+  const startDate = new Date(year, month, 1);
+  const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+  // 指定期間のセッションを取得
+  const sessions = await prisma.workoutSession.findMany({
+    where: {
+      userId: toBigInt(userId, "userId"),
+      startedAt: { gte: startDate, lte: endDate },
+    },
+    select: { id: true },
+  });
+
+  const sessionIds = sessions.map((s) => s.id);
+
+  if (sessionIds.length === 0) {
+    return { totalVolume: 0, workoutCount: 0 };
+  }
+
+  // 期間内のセット情報を取得してボリュームを計算
+  // Note: Prismaの集計機能を使うとより効率的だが、現在の構造上セットレベルでの結合が必要
+  // ここでは一度生クエリに近い形で集計するか、既存のリレーションを辿る
+  const workoutSets = await prisma.workoutSet.findMany({
+    where: {
+      exerciseRecord: {
+        sessionId: { in: sessionIds },
+      },
+      completed: true,
+    },
+    select: {
+      weight: true,
+      reps: true,
+    },
+  });
+
+  // 総重量計算 (kg * reps)
+  const totalVolume = workoutSets.reduce((sum, set) => {
+    return sum + set.weight.toNumber() * set.reps;
+  }, 0);
+
+  return {
+    totalVolume,
+    workoutCount: sessionIds.length,
+  };
 }
 
 export async function getWorkoutSessionsByMenuIds(

@@ -2,7 +2,6 @@ import {
   getBodyParts,
   getExercisesWithBodyParts,
   getMenusWithExercises,
-  getWeightRecords,
 } from "@/lib/db/queries";
 import { SettingsClient } from "./_components/settings-client";
 
@@ -28,19 +27,11 @@ async function getMenus(userId: number) {
   return getMenusWithExercises(userId);
 }
 
-/**
- * 体重記録を取得（新しい順）
- */
-async function getWeightRecordsByUser(userId: number) {
-  return getWeightRecords(userId);
-}
-
 export default async function SettingsPage() {
   const userId = 1;
-  const [exercises, menus, weightRecords, bodyParts] = await Promise.all([
+  const [exercises, menus, bodyParts] = await Promise.all([
     getExercises(userId),
     getMenus(userId),
-    getWeightRecordsByUser(userId),
     getBodyParts(),
   ]);
 
@@ -48,7 +39,6 @@ export default async function SettingsPage() {
     <SettingsClient
       initialExercises={exercises}
       initialMenus={menus}
-      initialWeightRecords={weightRecords}
       initialBodyParts={bodyParts}
     />
   );

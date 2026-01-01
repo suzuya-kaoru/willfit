@@ -7,6 +7,7 @@ import { BottomNavigation } from "@/components/bottom-navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BodyCompositionTab } from "./body-composition-tab";
 import { ExerciseProgressTab } from "./exercise-progress-tab";
+import { MonthlySummary } from "./monthly-summary";
 import type {
   AnalyticsClientProps,
   ExerciseDataPoint,
@@ -35,6 +36,7 @@ export function AnalyticsClient({
   allWeightRecords,
   exerciseDataByExerciseId,
   personalBests,
+  monthlyStats,
 }: AnalyticsClientProps) {
   const [activeTab, setActiveTab] = useState<"body" | "exercise">("body");
 
@@ -42,7 +44,18 @@ export function AnalyticsClient({
     <div className="min-h-screen bg-background pb-20">
       <AppHeader title="分析" />
 
-      <main className="mx-auto max-w-md px-4 pt-2 pb-4">
+      <main className="mx-auto max-w-md px-4 pt-2 pb-4 space-y-6">
+        {/* Monthly Summary */}
+        <section>
+          <h2 className="text-sm font-semibold mb-2 ml-1 text-muted-foreground">
+            今月のハイライト
+          </h2>
+          <MonthlySummary
+            totalVolume={monthlyStats.totalVolume}
+            workoutCount={monthlyStats.workoutCount}
+          />
+        </section>
+
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as "body" | "exercise")}

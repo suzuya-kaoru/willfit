@@ -178,6 +178,8 @@ model WeightRecord {
   userId     BigInt     @map("user_id") @db.UnsignedBigInt
   recordedAt DateTime   @map("recorded_at")
   weight     Decimal    @db.Decimal(5, 1)
+  bodyFat    Decimal?   @map("body_fat") @db.Decimal(4, 1)
+  photoUrl   String?    @map("photo_url") @db.VarChar(500)
   createdAt  DateTime   @default(now()) @map("created_at")
   updatedAt  DateTime   @updatedAt @map("updated_at")
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)

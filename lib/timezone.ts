@@ -101,3 +101,23 @@ export function toUtcDateOnly(date: Date): Date {
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
   );
 }
+
+/**
+ * 指定した日付の開始時刻を取得（Asia/Tokyo）
+ * 例: 2024-12-24 00:00:00
+ */
+export function getStartOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * 指定した日付の終了時刻を取得（Asia/Tokyo）
+ * 例: 2024-12-24 23:59:59.999
+ */
+export function getEndOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Plus, Scale } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   Area,
@@ -10,15 +10,20 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Line,
+  ComposedChart,
 } from "recharts";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/timezone";
 import type { Period } from "./types";
+import { WeightInputDialog } from "./weight-input-dialog";
 
 export interface BodyCompositionTabProps {
   allWeightRecords: Array<{
     recordedAt: Date;
     weight: number;
+    bodyFat?: number;
   }>;
 }
 
@@ -26,8 +31,9 @@ export function BodyCompositionTab({
   allWeightRecords,
 }: BodyCompositionTabProps) {
   const [weightPeriod, setWeightPeriod] = useState<Period>("3m");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Filter weight data by period
+  // Filter and sort weight data by period
   const weightData = useMemo(() => {
     const now = new Date();
     const periodDays =
@@ -38,74 +44,92 @@ export function BodyCompositionTab({
 
     return allWeightRecords
       .filter((r) => new Date(r.recordedAt) >= cutoffDate)
+      .sort(
+        (a, b) =>
+          new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime(),
+      )
       .map((r) => ({
         date: formatDateTime(r.recordedAt, "M/d"),
         weight: r.weight,
+        bodyFat: r.bodyFat,
       }));
   }, [weightPeriod, allWeightRecords]);
 
-  const chartColor = "#4ade80";
+  const latestRecord = allWeightRecords[0]; // Assuming sorted descending in parent or handled here?
+  // Parent passes sorted by recordedAt ASC usually? Check queries.
+  // queries.getWeightRecords sorts by recordedAt DESC.
+  // So allWeightRecords[0] is LATEST.
+
+  const currentWeight = latestRecord?.weight;
+  const currentBodyFat = latestRecord?.bodyFat;
+
+  const chartColorWeight = "#4ade80"; // Green
+  const chartColorBodyFat = "#facc15"; // Yellow
 
   return (
     <div className="space-y-4">
-      {/* Period Filter */}
+      {/* Quick Actions */}
       <div className="flex gap-2">
-        {(["1m", "3m", "1y"] as const).map((period) => (
-          <button
-            type="button"
-            key={period}
-            onClick={() => setWeightPeriod(period)}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              weightPeriod === period
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            }`}
-          >
-            {period === "1m" ? "1ヶ月" : period === "3m" ? "3ヶ月" : "1年"}
-          </button>
-        ))}
+        {/* Period Filter */}
+        <div className="flex flex-1 gap-1 bg-secondary/20 p-1 rounded-lg">
+          {(["1m", "3m", "1y"] as const).map((period) => (
+            <button
+              type="button"
+              key={period}
+              onClick={() => setWeightPeriod(period)}
+              className={`flex-1 rounded-md py-1 text-xs font-medium transition-all ${
+                weightPeriod === period
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {period === "1m" ? "1ヶ月" : period === "3m" ? "3ヶ月" : "1年"}
+            </button>
+          ))}
+        </div>
+
+        {/* Record Button */}
+        <Button
+          size="sm"
+          className="gap-1 shadow-md shadow-primary/20"
+          onClick={() => setIsDialogOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          記録
+        </Button>
       </div>
 
-      {/* Weight Chart */}
+      {/* Body Composition Chart */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">体重推移</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Scale className="h-4 w-4 text-primary" />
+              Body Composition
+            </CardTitle>
             {weightData.length > 1 && (
-              <div className="flex items-center gap-1 text-sm">
-                <TrendingUp
-                  className={`h-4 w-4 ${
-                    weightData[weightData.length - 1].weight <
-                    weightData[0].weight
-                      ? "text-primary"
-                      : "text-destructive"
-                  }`}
-                />
-                <span
-                  className={
-                    weightData[weightData.length - 1].weight <
-                    weightData[0].weight
-                      ? "text-primary"
-                      : "text-destructive"
-                  }
-                >
-                  {(
-                    weightData[weightData.length - 1].weight -
-                    weightData[0].weight
-                  ).toFixed(1)}{" "}
-                  kg
-                </span>
+              <div className="flex items-center gap-3 text-sm">
+                {/* Weight Trend */}
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-green-400" />
+                  <span className="text-xs text-muted-foreground">kg</span>
+                </div>
+                {/* Body Fat Trend */}
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                  <span className="text-xs text-muted-foreground">%</span>
+                </div>
               </div>
             )}
           </div>
         </CardHeader>
         <CardContent>
           {weightData.length > 0 ? (
-            <div className="h-[200px]">
+            <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
+                <ComposedChart
                   data={weightData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
                 >
                   <defs>
                     <linearGradient
@@ -117,83 +141,141 @@ export function BodyCompositionTab({
                     >
                       <stop
                         offset="5%"
-                        stopColor={chartColor}
+                        stopColor={chartColorWeight}
                         stopOpacity={0.3}
                       />
                       <stop
                         offset="95%"
-                        stopColor={chartColor}
+                        stopColor={chartColorWeight}
                         stopOpacity={0}
                       />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#333"
+                    vertical={false}
+                  />
+
                   <XAxis
                     dataKey="date"
-                    tick={{ fontSize: 11, fill: "#888" }}
+                    tick={{ fontSize: 10, fill: "#888" }}
                     tickLine={false}
                     axisLine={false}
+                    minTickGap={30}
                   />
+
+                  {/* Weight Axis (Left) */}
                   <YAxis
+                    yAxisId="left"
                     domain={["dataMin - 1", "dataMax + 1"]}
-                    tick={{ fontSize: 11, fill: "#888" }}
+                    tick={{ fontSize: 10, fill: "#888" }}
                     tickLine={false}
                     axisLine={false}
+                    width={30}
                   />
+
+                  {/* Body Fat Axis (Right) */}
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    domain={[5, 40]} // Reasonable range for body fat
+                    tick={{ fontSize: 10, fill: "#888" }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={30}
+                    hide={!weightData.some((d) => d.bodyFat)}
+                  />
+
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#1a1a2e",
                       border: "1px solid #333",
                       borderRadius: "8px",
+                      fontSize: "12px",
                     }}
-                    labelStyle={{ color: "#888" }}
-                    itemStyle={{ color: chartColor }}
+                    labelStyle={{ color: "#888", marginBottom: "4px" }}
+                    itemStyle={{ padding: 0 }}
+                    cursor={{ stroke: "#666", strokeWidth: 1 }}
                   />
+
                   <Area
+                    yAxisId="left"
                     type="monotone"
                     dataKey="weight"
-                    stroke={chartColor}
+                    stroke={chartColorWeight}
                     fill="url(#weightGradient)"
                     strokeWidth={2}
                     name="体重"
                     unit=" kg"
                   />
-                </AreaChart>
+
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="bodyFat"
+                    stroke={chartColorBodyFat}
+                    strokeWidth={2}
+                    dot={{ fill: chartColorBodyFat, r: 2, strokeWidth: 0 }}
+                    activeDot={{ r: 4, stroke: chartColorBodyFat }}
+                    name="体脂肪率"
+                    unit=" %"
+                    connectNulls
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              データがありません
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              データがありません。
+              <br />
+              「記録」ボタンから体重を入力しましょう。
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Current Stats */}
-      {weightData.length > 0 && (
-        <Card>
-          <CardContent className="grid grid-cols-3 gap-4 p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold">
-                {weightData[weightData.length - 1].weight}
-              </p>
-              <p className="text-xs text-muted-foreground">現在 (kg)</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">
-                {Math.min(...weightData.map((d) => d.weight))}
-              </p>
-              <p className="text-xs text-muted-foreground">最低 (kg)</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">
-                {Math.max(...weightData.map((d) => d.weight))}
-              </p>
-              <p className="text-xs text-muted-foreground">最高 (kg)</p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Current Stats Grid */}
+      {latestRecord && (
+        <div className="grid grid-cols-2 gap-3">
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">現在の体重</p>
+              <div className="flex items-baseline justify-center gap-1">
+                <span className="text-2xl font-bold">
+                  {latestRecord.weight.toFixed(1)}
+                </span>
+                <span className="text-sm">kg</span>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">体脂肪率</p>
+              <div className="flex items-baseline justify-center gap-1">
+                {latestRecord.bodyFat ? (
+                  <>
+                    <span className="text-2xl font-bold">
+                      {latestRecord.bodyFat.toFixed(1)}
+                    </span>
+                    <span className="text-sm">%</span>
+                  </>
+                ) : (
+                  <span className="text-xl text-muted-foreground">-</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
+
+      <WeightInputDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        currentWeight={currentWeight}
+        currentBodyFat={currentBodyFat}
+      />
     </div>
   );
 }

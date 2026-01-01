@@ -6,7 +6,6 @@ import {
   LayoutList,
   Pencil,
   Plus,
-  Scale,
   Search,
   Trash2,
 } from "lucide-react";
@@ -33,11 +32,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDateTimeJa } from "@/lib/timezone";
 import type {
   BodyPart,
   ExerciseWithBodyParts,
-  WeightRecord,
   WorkoutMenuWithExercises,
 } from "@/lib/types";
 import { ExerciseEditDialog, MenuEditDialog } from "./dialogs";
@@ -45,20 +42,17 @@ import { ExerciseEditDialog, MenuEditDialog } from "./dialogs";
 export interface SettingsClientProps {
   initialExercises: ExerciseWithBodyParts[];
   initialMenus: WorkoutMenuWithExercises[];
-  initialWeightRecords: WeightRecord[];
   initialBodyParts: BodyPart[];
 }
 
 export function SettingsClient({
   initialExercises,
   initialMenus,
-  initialWeightRecords,
   initialBodyParts,
 }: SettingsClientProps) {
   // propsを直接使用（冗長なuseState+useEffectを削除）
   const exercises = initialExercises;
   const menus = initialMenus;
-  const weightRecords = initialWeightRecords;
   const bodyParts = initialBodyParts;
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -68,7 +62,6 @@ export function SettingsClient({
     useState<WorkoutMenuWithExercises | null>(null);
   const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [isAddingMenu, setIsAddingMenu] = useState(false);
-  const [weightInput, setWeightInput] = useState("");
   const router = useRouter();
 
   // Filter exercises by search query
@@ -116,28 +109,13 @@ export function SettingsClient({
     router.refresh();
   };
 
-  // Weight Record CRUD（TODO: DB永続化対応）
-  const handleSaveWeightRecord = () => {
-    const weight = parseFloat(weightInput);
-    if (Number.isNaN(weight) || weight <= 0) return;
-
-    // TODO: Server Actionに置き換え
-    console.log("Weight record to save:", weight);
-    setWeightInput("");
-  };
-
-  const handleDeleteWeightRecord = (id: number) => {
-    // TODO: Server Actionに置き換え
-    console.log("Weight record to delete:", id);
-  };
-
   return (
     <div className="min-h-screen bg-background pb-20">
       <AppHeader title="設定" />
 
       <main className="mx-auto max-w-md px-4 pt-2 pb-4">
         <Tabs defaultValue="menus" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger
               value="menus"
               className="gap-1 text-xs sm:gap-2 sm:text-sm"
@@ -153,14 +131,6 @@ export function SettingsClient({
               <Dumbbell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">種目管理</span>
               <span className="sm:hidden">種目</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="weight"
-              className="gap-1 text-xs sm:gap-2 sm:text-sm"
-            >
-              <Scale className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">体重管理</span>
-              <span className="sm:hidden">体重</span>
             </TabsTrigger>
           </TabsList>
 
@@ -288,87 +258,6 @@ export function SettingsClient({
                     ? "該当する種目が見つかりません"
                     : "種目がありません"}
                 </p>
-              )}
-            </div>
-          </TabsContent>
-
-          {/* Weight Management Tab */}
-          <TabsContent value="weight" className="space-y-4">
-            {/* Weight Input Card */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base font-medium">
-                  <Scale className="h-4 w-4 text-primary" />
-                  体重を記録
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      type="number"
-                      step="0.1"
-                      placeholder="70.0"
-                      value={weightInput}
-                      onChange={(e) => setWeightInput(e.target.value)}
-                      className="pr-8"
-                      min="0"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      kg
-                    </span>
-                  </div>
-                  <Button
-                    onClick={handleSaveWeightRecord}
-                    disabled={!weightInput || parseFloat(weightInput) <= 0}
-                  >
-                    記録
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Weight Records History */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-foreground">記録履歴</h3>
-              {weightRecords.length > 0 ? (
-                <div className="space-y-2">
-                  {weightRecords.map((record) => (
-                    <Card key={record.id} className="overflow-hidden">
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                            <Scale className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">
-                              {record.weight.toFixed(1)} kg
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDateTimeJa(record.recordedAt)}
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteWeightRecord(record.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      まだ体重記録がありません
-                    </p>
-                  </CardContent>
-                </Card>
               )}
             </div>
           </TabsContent>

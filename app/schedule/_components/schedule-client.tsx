@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, List } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
@@ -14,7 +14,6 @@ import {
 } from "@/app/_actions/routine-actions";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toDateKey } from "@/lib/date-key";
 import type {
   CalculatedSchedule,
@@ -22,7 +21,6 @@ import type {
   WorkoutMenu,
 } from "@/lib/types";
 import { CalendarView } from "./calendar-view";
-import { ListView } from "./list-view";
 import { RescheduleDialog } from "./reschedule-dialog";
 import { RoutineEditDialog } from "./routine-edit-dialog";
 import { ScheduleDayDialog } from "./schedule-day-dialog";
@@ -196,34 +194,16 @@ export function ScheduleClient({
       <AppHeader title="スケジュール" />
 
       <main className="mx-auto max-w-md p-4">
-        <Tabs defaultValue="calendar" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="calendar" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              カレンダー
-            </TabsTrigger>
-            <TabsTrigger value="list" className="gap-2">
-              <List className="h-4 w-4" />
-              リスト
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="calendar">
-            <CalendarView
-              year={year}
-              month={month}
-              calendarDays={calendarDays}
-              selectedDate={selectedDate}
-              selectedSession={selectedSession}
-              onNavigateMonth={navigateMonth}
-              onSelectDate={handleSelectDate}
-            />
-          </TabsContent>
-
-          <TabsContent value="list">
-            <ListView sessions={sessionsList} />
-          </TabsContent>
-        </Tabs>
+        {/* Calendar View Only */}
+        <CalendarView
+          year={year}
+          month={month}
+          calendarDays={calendarDays}
+          selectedDate={selectedDate}
+          selectedSession={selectedSession}
+          onNavigateMonth={navigateMonth}
+          onSelectDate={handleSelectDate}
+        />
       </main>
 
       <BottomNavigation />

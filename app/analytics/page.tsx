@@ -2,6 +2,7 @@ import { toDateKey } from "@/lib/date-key";
 import {
   getExerciseRecordsBySessionIds,
   getExercisesWithBodyParts,
+  getMonthlyStats,
   getWeightRecords,
   getWorkoutSessions,
   getWorkoutSetsByExerciseRecordIds,
@@ -130,10 +131,12 @@ function calculatePersonalBests(
 
 export default async function AnalyticsPage() {
   const userId = 1;
-  const [weightRecords, sessions, exercises] = await Promise.all([
+  const now = new Date();
+  const [weightRecords, sessions, exercises, monthlyStats] = await Promise.all([
     getWeightRecords(userId),
     getWorkoutSessions(userId),
     getExercisesWithBodyParts(userId),
+    getMonthlyStats(userId, now.getFullYear(), now.getMonth()),
   ]);
   const sessionsAsc = [...sessions].sort(
     (a, b) => a.startedAt.getTime() - b.startedAt.getTime(),
@@ -187,6 +190,7 @@ export default async function AnalyticsPage() {
     .map((r) => ({
       recordedAt: r.recordedAt,
       weight: r.weight,
+      bodyFat: r.bodyFat,
     }));
 
   return (
@@ -195,6 +199,7 @@ export default async function AnalyticsPage() {
       allWeightRecords={allWeightRecords}
       exerciseDataByExerciseId={exerciseDataByExerciseId}
       personalBests={personalBests}
+      monthlyStats={monthlyStats}
     />
   );
 }
