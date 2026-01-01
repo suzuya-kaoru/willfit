@@ -13,13 +13,14 @@ export type DailySchedulesViewModel = {
   label: string;
   isToday: boolean;
   dayOfWeek: number;
+  formattedDate: string;
   schedules: TodayScheduleViewModel[];
 };
 
 export type WeekDayStatus = {
   dateString: string;
   dayOfWeekIndex: number;
-  isCompleted: boolean;
+  status: "completed" | "incomplete" | "none"; // 'completed' = 全て完了, 'incomplete' = 残りあり, 'none' = 予定なし
   isToday: boolean;
   hasSchedule: boolean;
 };

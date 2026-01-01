@@ -1,5 +1,6 @@
 "use server";
 
+import { addDays } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { parseDateKey } from "@/lib/date-key";
@@ -9,6 +10,7 @@ import {
   getRoutineByMenuId,
   updateRoutine,
 } from "@/lib/db/queries";
+import { SchedulerService } from "@/lib/services/scheduler";
 
 // =============================================================================
 // Zodスキーマ
@@ -116,6 +118,16 @@ export async function createRoutineAction(input: CreateRoutineInput) {
         : undefined,
   });
 
+  // 初回生成: 今日から90日後まで
+  // (createRoutineが完了した時点で、IsEnabledなら作る)
+  const today = new Date();
+  await SchedulerService.generateSchedules(
+    userId,
+    Number(routine.id),
+    today,
+    addDays(today, 90),
+  );
+
   revalidatePath("/");
   revalidatePath("/schedule");
   revalidatePath("/settings");
@@ -128,7 +140,7 @@ export async function createRoutineAction(input: CreateRoutineInput) {
  */
 export async function updateRoutineAction(input: UpdateRoutineInput) {
   const data = updateRoutineSchema.parse(input);
-  // const userId = 1; // TODO: 認証実装後に動的取得
+  const userId = 1; // TODO: 認証実装後に動的取得
 
   await updateRoutine(data.routineId, {
     routineType: data.routineType,
@@ -137,6 +149,9 @@ export async function updateRoutineAction(input: UpdateRoutineInput) {
     startDate: data.startDateKey ? parseDateKey(data.startDateKey) : null,
     isEnabled: data.isEnabled,
   });
+
+  // Sync on Save: 未来のスケジュールを再生成
+  await SchedulerService.syncRoutineSchedules(userId, data.routineId);
 
   revalidatePath("/");
   revalidatePath("/schedule");
@@ -150,7 +165,11 @@ export async function updateRoutineAction(input: UpdateRoutineInput) {
  */
 export async function deleteRoutineAction(routineId: number) {
   const validId = z.number().int().positive().parse(routineId);
-  // const userId = 1; // TODO: 認証実装後に動的取得
+  const userId = 1; // TODO: 認証実装後に動的取得
+
+  // 論理削除の前に、未来のpendingスケジュールを物理削除する
+  // （ルーティン自体が消えるので、未来の予測も不要になる）
+  await SchedulerService.cleanupFutureSchedules(userId, validId);
 
   await deleteRoutine(validId);
 

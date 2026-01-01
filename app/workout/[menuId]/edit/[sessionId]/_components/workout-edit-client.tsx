@@ -10,11 +10,11 @@ import {
   Save,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
-  type SaveWorkoutSessionInput,
-  saveWorkoutSessionAction,
+  type UpdateWorkoutSessionInput,
+  updateWorkoutSessionAction,
 } from "@/app/_actions/workout-actions";
 import {
   Accordion,
@@ -34,23 +34,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
+import type { WorkoutSessionWithDetails } from "@/lib/db/queries";
 import type {
   ExerciseWithBodyParts,
   WorkoutMenuWithExercises,
 } from "@/lib/types";
-
-/**
- * ============================================================================
- * Client Component: インタラクティブなUI要素と状態管理（クライアント側で実行）
- * ============================================================================
- *
- * このコンポーネントは以下の責務を持ちます：
- * - 経過時間タイマーの管理
- * - セット入力の状態管理
- * - 体調・疲労感・メモの状態管理
- * - ダイアログの開閉状態
- * - 保存処理（将来的にAPI呼び出しに置き換え）
- */
 
 // ローカル用のセット型（IDはstring）
 interface LocalSet {
@@ -66,78 +54,56 @@ interface LocalExerciseRecord {
   exerciseId: number;
   exercise: ExerciseWithBodyParts;
   sets: LocalSet[];
-  previousRecord?: string;
 }
 
-/**
- * Workout Client Component Props
- */
-export interface WorkoutClientProps {
+export interface WorkoutEditClientProps {
   menu: WorkoutMenuWithExercises;
-  previousRecords: Map<number, string>; // exerciseId -> previousRecord string
-  scheduledDateKey: string; // スケジュールの日付キー（YYYY-MM-DD）
+  session: WorkoutSessionWithDetails;
 }
 
 /**
- * Workout Client Component
- * インタラクティブな操作（タイマー、セット入力、保存）を担当
+ * トレーニング編集クライアント
+ * 既存セッションを編集して再保存する
  */
-export function WorkoutClient({
-  menu,
-  previousRecords,
-  scheduledDateKey,
-}: WorkoutClientProps) {
+export function WorkoutEditClient({ menu, session }: WorkoutEditClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const startedAtRef = useRef<Date>(new Date());
   const [elapsedTime, setElapsedTime] = useState(0);
   const [exerciseRecords, setExerciseRecords] = useState<LocalExerciseRecord[]>(
     [],
   );
-  const [condition, setCondition] = useState(7);
-  const [fatigue, setFatigue] = useState(5);
-  const [note, setNote] = useState("");
+  const [condition, setCondition] = useState(session.condition);
+  const [fatigue, setFatigue] = useState(session.fatigue);
+  const [note, setNote] = useState(session.note);
   const [showEndDialog, setShowEndDialog] = useState(false);
-  const [showEmptyConfirmDialog, setShowEmptyConfirmDialog] = useState(false);
 
-  // Initialize exercise logs
+  // Initialize from existing session
   useEffect(() => {
-    const records: LocalExerciseRecord[] = menu.exercises.map((exercise) => {
-      const previousRecord = previousRecords.get(exercise.id);
-
-      return {
-        exerciseId: exercise.id,
-        exercise,
-        sets: [
-          {
-            id: `${exercise.id}-1`,
-            setNumber: 1,
-            weight: 0,
-            reps: 0,
-            completed: false,
-          },
-          {
-            id: `${exercise.id}-2`,
-            setNumber: 2,
-            weight: 0,
-            reps: 0,
-            completed: false,
-          },
-          {
-            id: `${exercise.id}-3`,
-            setNumber: 3,
-            weight: 0,
-            reps: 0,
-            completed: false,
-          },
-        ],
-        previousRecord,
-      };
-    });
+    const records: LocalExerciseRecord[] = session.exerciseRecords.map(
+      (er) => ({
+        exerciseId: er.exerciseId,
+        exercise: er.exercise,
+        sets: er.sets.map((set) => ({
+          id: `${er.exerciseId}-${set.setNumber}`,
+          setNumber: set.setNumber,
+          weight: set.weight,
+          reps: set.reps,
+          completed: set.completed,
+        })),
+      }),
+    );
     setExerciseRecords(records);
-  }, [menu, previousRecords]);
 
-  // Timer
+    // Calculate elapsed time from session
+    if (session.endedAt) {
+      const elapsed = Math.floor(
+        (session.endedAt.getTime() - session.startedAt.getTime()) / 1000,
+      );
+      setElapsedTime(elapsed);
+    }
+  }, [session]);
+
+  // Timer (継続カウント)
   useEffect(() => {
     const interval = setInterval(() => {
       setElapsedTime((prev) => prev + 1);
@@ -197,25 +163,11 @@ export function WorkoutClient({
     );
   };
 
-  /**
-   * 全セットが未完了かどうかをチェック
-   */
-  const isAllSetsEmpty = () => {
-    return exerciseRecords.every((record) =>
-      record.sets.every((set) => !set.completed),
-    );
-  };
-
-  /**
-   * 保存処理を実行
-   */
-  const executeSave = () => {
+  const handleSave = () => {
     startTransition(async () => {
       try {
-        const input: SaveWorkoutSessionInput = {
-          menuId: menu.id,
-          scheduledDateKey,
-          startedAt: startedAtRef.current,
+        const input: UpdateWorkoutSessionInput = {
+          sessionId: session.id,
           endedAt: new Date(),
           condition,
           fatigue,
@@ -231,26 +183,14 @@ export function WorkoutClient({
           })),
         };
 
-        const result = await saveWorkoutSessionAction(input);
-        toast.success("トレーニングを保存しました");
-        router.push(`/workout/complete/${result.sessionId}`);
+        await updateWorkoutSessionAction(input);
+        toast.success("トレーニング記録を更新しました");
+        router.push(`/workout/complete/${session.id}`);
       } catch (error) {
-        console.error("Failed to save workout session:", error);
-        toast.error("保存に失敗しました。もう一度お試しください。");
+        console.error("Failed to update workout session:", error);
+        toast.error("更新に失敗しました。もう一度お試しください。");
       }
     });
-  };
-
-  /**
-   * 保存ボタン押下時のハンドラ
-   * 全セット未完了の場合は確認ダイアログを表示
-   */
-  const handleSave = () => {
-    if (isAllSetsEmpty()) {
-      setShowEmptyConfirmDialog(true);
-      return;
-    }
-    executeSave();
   };
 
   return (
@@ -269,6 +209,9 @@ export function WorkoutClient({
             <div>
               <h1 className="text-sm font-semibold leading-tight">
                 {menu.name}
+                <span className="ml-2 text-xs text-muted-foreground">
+                  (編集中)
+                </span>
               </h1>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
@@ -319,12 +262,6 @@ export function WorkoutClient({
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
-                {record.previousRecord && (
-                  <p className="mb-3 text-xs text-muted-foreground">
-                    前回: {record.previousRecord}
-                  </p>
-                )}
-
                 {/* Sets Table */}
                 <div className="space-y-2">
                   <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground">
@@ -476,7 +413,7 @@ export function WorkoutClient({
             ) : (
               <Save className="h-5 w-5" />
             )}
-            {isPending ? "保存中..." : "トレーニングを終了して保存"}
+            {isPending ? "保存中..." : "変更を保存"}
           </Button>
         </div>
       </div>
@@ -485,10 +422,10 @@ export function WorkoutClient({
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
         <DialogContent className="max-w-[90vw] rounded-xl sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>トレーニングを終了しますか？</DialogTitle>
+            <DialogTitle>編集を終了しますか？</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            入力した内容を保存してトレーニングを終了します。
+            変更内容を保存して終了します。
           </p>
           <div className="flex gap-2 pt-4">
             <Button
@@ -497,52 +434,13 @@ export function WorkoutClient({
               onClick={() => setShowEndDialog(false)}
               disabled={isPending}
             >
-              続ける
+              戻る
             </Button>
             <Button
               className="flex-1"
               onClick={() => {
                 setShowEndDialog(false);
                 handleSave();
-              }}
-              disabled={isPending}
-            >
-              {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "保存して終了"
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Empty Session Confirmation Dialog */}
-      <Dialog
-        open={showEmptyConfirmDialog}
-        onOpenChange={setShowEmptyConfirmDialog}
-      >
-        <DialogContent className="max-w-[90vw] rounded-xl sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>記録なしで終了しますか？</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            完了したセットがありません。このまま保存すると「ジムに行った」記録として残ります。
-          </p>
-          <div className="flex gap-2 pt-4">
-            <Button
-              variant="outline"
-              className="flex-1 bg-transparent"
-              onClick={() => setShowEmptyConfirmDialog(false)}
-              disabled={isPending}
-            >
-              戻る
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={() => {
-                setShowEmptyConfirmDialog(false);
-                executeSave();
               }}
               disabled={isPending}
             >

@@ -88,3 +88,16 @@ export function formatDateTimeJa(date: Date | string): string {
 export function isSameDay(date1: Date, date2: Date): boolean {
   return formatDate(date1) === formatDate(date2);
 }
+
+/**
+ * DB保存用に日付をUTC化する（時刻を00:00:00 UTCにする）
+ * Prisma/PostgreSQLのDATE型保存時のタイムゾーンずれ対策
+ *
+ * 例: JST 2024-01-01 00:00:00 -> UTC 2024-01-01 00:00:00
+ * (本来なら JST 00:00 は UTC 前日15:00 だが、そうするとDATE型が前日になってしまうため)
+ */
+export function toUtcDateOnly(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
+}

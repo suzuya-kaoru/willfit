@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { toDateKey } from "@/lib/date-key";
+import { toUtcDateOnly } from "@/lib/timezone";
 import type {
   BodyPart,
   DailySchedule,
@@ -67,11 +68,7 @@ function timeOfDayToDate(value: string): Date {
   return new Date(Date.UTC(1970, 0, 1, hours, minutes, 0, 0));
 }
 
-function toUtcDateOnly(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
-  );
-}
+// function toUtcDateOnly moved to @/lib/timezone
 
 type ExerciseWithBodyPartsRow = Prisma.ExerciseGetPayload<{
   include: {
@@ -498,11 +495,73 @@ export async function getWeightRecords(
   return rows.map(mapWeightRecord);
 }
 
+/**
+ * セッション詳細を取得（種目・セット情報含む）
+ */
+export interface WorkoutSessionWithDetails extends WorkoutSession {
+  menu: {
+    id: number;
+    name: string;
+  };
+  exerciseRecords: {
+    id: number;
+    exerciseId: number;
+    exercise: ExerciseWithBodyParts;
+    sets: WorkoutSet[];
+  }[];
+}
+
+export async function getWorkoutSessionWithDetails(
+  userId: number,
+  sessionId: number,
+): Promise<WorkoutSessionWithDetails | null> {
+  const row = await prisma.workoutSession.findFirst({
+    where: {
+      id: toBigInt(sessionId, "sessionId"),
+      userId: toBigInt(userId, "userId"),
+    },
+    include: {
+      menu: true,
+      exerciseRecords: {
+        include: {
+          exercise: {
+            include: {
+              bodyParts: {
+                include: { bodyPart: true },
+                orderBy: { bodyPart: { displayOrder: "asc" } },
+              },
+            },
+          },
+          workoutSets: {
+            orderBy: { setNumber: "asc" },
+          },
+        },
+      },
+    },
+  });
+
+  if (!row) return null;
+
+  return {
+    ...mapSession(row),
+    menu: {
+      id: toSafeNumber(row.menu.id, "workout_menus.id"),
+      name: row.menu.name,
+    },
+    exerciseRecords: row.exerciseRecords.map((er) => ({
+      id: toSafeNumber(er.id, "exercise_records.id"),
+      exerciseId: toSafeNumber(er.exerciseId, "exercise_records.exercise_id"),
+      exercise: mapExerciseWithBodyParts(er.exercise),
+      sets: er.workoutSets.map(mapWorkoutSet),
+    })),
+  };
+}
+
 // =============================================================================
 // ルーティンスケジュール機能
 // =============================================================================
 
-function mapScheduleRoutine(row: {
+export function mapScheduleRoutine(row: {
   id: bigint;
   userId: bigint;
   menuId: bigint;
@@ -666,6 +725,46 @@ export async function getDailySchedulesByDateRange(
     map.set(key, daily);
   }
   return map;
+}
+
+/**
+ * ダッシュボード表示用：リレーションを含む日別スケジュールを取得
+ */
+export async function getPopulatedDailySchedules(
+  userId: number,
+  startDate: Date,
+  endDate: Date,
+) {
+  const rows = await prisma.dailySchedule.findMany({
+    where: {
+      userId: toBigInt(userId, "userId"),
+      scheduledDate: {
+        gte: toUtcDateOnly(startDate),
+        lte: toUtcDateOnly(endDate),
+      },
+    },
+    include: {
+      routine: {
+        include: {
+          menu: true,
+        },
+      },
+    },
+    orderBy: {
+      routineId: "asc",
+    },
+  });
+
+  return rows.map((row) => ({
+    ...mapDailySchedule(row),
+    routine: {
+      ...mapScheduleRoutine(row.routine),
+      menu: {
+        id: toSafeNumber(row.routine.menu.id, "workout_menus.id"),
+        name: row.routine.menu.name,
+      },
+    },
+  }));
 }
 
 /**

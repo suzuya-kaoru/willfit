@@ -55,7 +55,9 @@ export function ScheduleCard({
 
       {/* Start button */}
       <Button
-        onClick={() => router.push(`/workout/${schedule.menuId}`)}
+        onClick={() =>
+          router.push(`/workout/${schedule.menuId}?date=${day.dateKey}`)
+        }
         className="mt-4 w-full gap-2 rounded-xl font-semibold shadow-lg shadow-primary/20"
         size="lg"
       >

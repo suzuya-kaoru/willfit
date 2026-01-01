@@ -16,7 +16,6 @@ import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 
 interface DashboardClientProps {
-  todayFormatted: string;
   dailySchedules: DailySchedulesViewModel[];
   weeklyCompleted: number;
   weeklyGoal: number;
@@ -24,7 +23,6 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({
-  todayFormatted,
   dailySchedules,
   weeklyCompleted,
   weeklyGoal,
@@ -40,16 +38,31 @@ export function DashboardClient({
   // Global State
   const [activeDateKey, setActiveDateKey] =
     React.useState<string>(defaultDateKey);
+
   const [isPending, startTransition] = React.useTransition();
   const [optimisticHidden, setOptimisticHidden] = React.useState<Set<string>>(
     () => new Set(),
   );
 
-  // Effects
+  // 前回のdailySchedulesを保持して変更を検知
+  const prevDailySchedulesRef = React.useRef(dailySchedules);
+
+  // Effects: データ更新時にoptimisticHiddenをリセット
   React.useEffect(() => {
-    setOptimisticHidden(new Set());
-    if (!dailySchedules.some((day) => day.dateKey === activeDateKey)) {
-      setActiveDateKey(dailySchedules[0]?.dateKey ?? "");
+    if (prevDailySchedulesRef.current !== dailySchedules) {
+      setOptimisticHidden(new Set());
+      prevDailySchedulesRef.current = dailySchedules;
+    }
+  }, [dailySchedules]);
+
+  // activeDateKeyが無効になった場合のみリセット（日付が変わった場合など）
+  React.useEffect(() => {
+    if (
+      activeDateKey &&
+      !dailySchedules.some((day) => day.dateKey === activeDateKey)
+    ) {
+      const todayKey = dailySchedules.find((d) => d.isToday)?.dateKey;
+      setActiveDateKey(todayKey ?? dailySchedules[0]?.dateKey ?? "");
     }
   }, [dailySchedules, activeDateKey]);
 
@@ -103,8 +116,9 @@ export function DashboardClient({
         />
 
         {/* Daily Schedule Carousel */}
+        {/* keyを追加して日付変更時に強制再マウントさせる */}
         <DailySchedule
-          todayFormatted={todayFormatted}
+          key={activeDateKey}
           dailySchedules={dailySchedules}
           activeDateKey={activeDateKey}
           onActiveDateChange={setActiveDateKey}

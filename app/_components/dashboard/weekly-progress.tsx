@@ -1,4 +1,4 @@
-import { Check, Target, Trophy } from "lucide-react";
+import { Check, Circle, Target, Trophy } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +10,7 @@ interface WeeklyProgressProps {
   weekDayStatuses: Array<{
     dateString: string;
     dayOfWeekIndex: number;
-    isCompleted: boolean;
+    status: "completed" | "incomplete" | "none";
     isToday: boolean;
     hasSchedule: boolean;
   }>;
@@ -53,30 +53,37 @@ export function WeeklyProgress({
 
         {/* Weekly Days - grid-cols-7 で均等配置 */}
         <div className="grid grid-cols-7 gap-2">
-          {weekDayStatuses.map((status) => (
+          {weekDayStatuses.map((dayStatus) => (
             <div
-              key={status.dateString}
+              key={dayStatus.dateString}
               className="flex flex-col items-center gap-1"
             >
               <div
                 className={cn(
                   "flex h-10 w-10 items-center justify-center rounded-xl text-xs font-semibold transition-all",
-                  status.isCompleted
+                  dayStatus.status === "completed"
                     ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
-                    : status.isToday
-                      ? "bg-primary/20 text-primary ring-2 ring-primary"
-                      : status.hasSchedule
-                        ? "bg-muted text-muted-foreground"
+                    : dayStatus.status === "incomplete"
+                      ? "bg-muted border border-primary/30 text-primary"
+                      : dayStatus.isToday
+                        ? "bg-primary/20 text-primary ring-2 ring-primary"
                         : "bg-muted/50 text-muted-foreground/50",
                 )}
               >
-                {status.isCompleted ? (
-                  <Check className="h-4 w-4" />
+                {dayStatus.status === "completed" ? (
+                  <Check className="h-5 w-5 stroke-[2.5]" />
+                ) : dayStatus.status === "incomplete" ? (
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="text-[10px] leading-none mb-0.5">
+                      {dayLabels[dayStatus.dayOfWeekIndex]}
+                    </span>
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  </div>
                 ) : (
-                  dayLabels[status.dayOfWeekIndex]
+                  dayLabels[dayStatus.dayOfWeekIndex]
                 )}
               </div>
-              {status.isToday && (
+              {dayStatus.isToday && (
                 <div className="h-1 w-1 rounded-full bg-primary" />
               )}
             </div>

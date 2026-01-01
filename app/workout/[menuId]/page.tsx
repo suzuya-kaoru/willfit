@@ -1,3 +1,4 @@
+import { toDateKey } from "@/lib/date-key";
 import {
   getExerciseRecordsBySessionIds,
   getMenuWithExercises,
@@ -79,10 +80,18 @@ async function calculatePreviousRecords(
  */
 interface PageProps {
   params: Promise<{ menuId: string }>;
+  searchParams: Promise<{ date?: string }>;
 }
 
-export default async function ActiveWorkoutPage({ params }: PageProps) {
+export default async function ActiveWorkoutPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { menuId: menuIdStr } = await params;
+  const { date } = await searchParams;
+
+  // dateが指定されていなければ今日の日付を使用
+  const scheduledDateKey = date ?? toDateKey(new Date());
   // URLパラメータは文字列で来るため、数値に変換
   const menuId = parseInt(menuIdStr, 10);
   const userId = 1;
@@ -121,5 +130,11 @@ export default async function ActiveWorkoutPage({ params }: PageProps) {
   // ============================================================================
   // Client Component に props として渡す
   // ============================================================================
-  return <WorkoutClient menu={menu} previousRecords={previousRecords} />;
+  return (
+    <WorkoutClient
+      menu={menu}
+      previousRecords={previousRecords}
+      scheduledDateKey={scheduledDateKey}
+    />
+  );
 }

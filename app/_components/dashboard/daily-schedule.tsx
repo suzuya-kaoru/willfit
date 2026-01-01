@@ -11,7 +11,7 @@ import { ScheduleCard } from "./schedule-card";
 import type { DailySchedulesViewModel } from "./types";
 
 interface DailyScheduleProps {
-  todayFormatted: string;
+  // todayFormatted: string; // Removed as we use formattedDate from dailySchedules
   dailySchedules: DailySchedulesViewModel[];
   activeDateKey: string;
   onActiveDateChange: (dateKey: string) => void;
@@ -23,7 +23,7 @@ interface DailyScheduleProps {
 }
 
 export function DailySchedule({
-  todayFormatted,
+  // todayFormatted,
   dailySchedules,
   activeDateKey,
   onActiveDateChange,
@@ -35,10 +35,10 @@ export function DailySchedule({
   const router = useRouter();
   const [touchStartX, setTouchStartX] = React.useState<number | null>(null);
 
-  const activeIndex = Math.max(
-    0,
-    dailySchedules.findIndex((d) => d.dateKey === activeDateKey),
-  );
+  // インデックス計算ではなく、直接日付キーで検索する（なければ先頭）
+  const activeDay =
+    dailySchedules.find((d) => d.dateKey === activeDateKey) ??
+    dailySchedules[0];
 
   const moveDay = (direction: "prev" | "next") => {
     if (!dailySchedules.length) return;
@@ -77,6 +77,14 @@ export function DailySchedule({
     setTouchStartX(null);
   };
 
+  // 現在選択されている日のスケジュールを取得
+  const visibleSchedules = activeDay
+    ? activeDay.schedules.filter(
+        (schedule) =>
+          !hiddenIds.has(`${activeDay.dateKey}:${schedule.routineId}`),
+      )
+    : [];
+
   return (
     <Card className="overflow-hidden border-0 shadow-lg">
       {/* Header with gradient */}
@@ -84,7 +92,7 @@ export function DailySchedule({
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-primary" />
           <span className="font-semibold text-foreground">
-            {todayFormatted}
+            {activeDay?.formattedDate}
           </span>
         </div>
         {/* Day tabs */}
@@ -113,82 +121,67 @@ export function DailySchedule({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Carousel */}
-        <div className="relative overflow-hidden">
-          <div
-            className="flex transition-transform duration-300 ease-out"
-            style={{ transform: `translateX(-${activeIndex * 100}%)` }}
-          >
-            {dailySchedules.map((day) => {
-              const visibleSchedules = day.schedules.filter(
-                (schedule) =>
-                  !hiddenIds.has(`${day.dateKey}:${schedule.routineId}`),
-              );
-
-              return (
-                <div key={day.dateKey} className="w-full shrink-0 space-y-4">
-                  {visibleSchedules.length > 0 ? (
-                    <>
-                      {/* Count badge */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          {day.isToday ? "今日" : day.label}のスケジュール
-                        </span>
-                        <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1">
-                          <Flame className="h-3 w-3 text-primary" />
-                          <span className="text-xs font-medium text-primary">
-                            {visibleSchedules.length}件
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Schedule cards */}
-                      <div className="space-y-3">
-                        {visibleSchedules.map((schedule) => (
-                          <ScheduleCard
-                            key={schedule.routineId}
-                            schedule={schedule}
-                            day={day}
-                            isPending={isPending}
-                            onComplete={onComplete}
-                            onSkip={onSkip}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    /* Empty state */
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/5">
-                        <Check className="h-8 w-8 text-primary" />
-                      </div>
-                      <p className="font-semibold text-foreground">
-                        {day.isToday
-                          ? "今日のメニューは完了！"
-                          : "予定はありません"}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {day.isToday
-                          ? "素晴らしい！お疲れ様でした"
-                          : "ゆっくり休みましょう"}
-                      </p>
-                      {day.isToday && (
-                        <Button
-                          variant="outline"
-                          className="mt-5 gap-2 rounded-xl border-primary/30 text-primary hover:bg-primary/5"
-                          onClick={() => router.push("/schedule")}
-                        >
-                          スケジュールを確認
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
+        {activeDay && (
+          <div className="space-y-4">
+            {visibleSchedules.length > 0 ? (
+              <>
+                {/* Count badge */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {activeDay.isToday ? "今日" : activeDay.label}のスケジュール
+                  </span>
+                  <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1">
+                    <Flame className="h-3 w-3 text-primary" />
+                    <span className="text-xs font-medium text-primary">
+                      {visibleSchedules.length}件
+                    </span>
+                  </div>
                 </div>
-              );
-            })}
+
+                {/* Schedule cards */}
+                <div className="space-y-3">
+                  {visibleSchedules.map((schedule) => (
+                    <ScheduleCard
+                      key={schedule.routineId}
+                      schedule={schedule}
+                      day={activeDay}
+                      isPending={isPending}
+                      onComplete={onComplete}
+                      onSkip={onSkip}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              /* Empty state */
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/5">
+                  <Check className="h-8 w-8 text-primary" />
+                </div>
+                <p className="font-semibold text-foreground">
+                  {activeDay.isToday
+                    ? "今日のメニューは完了！"
+                    : "予定はありません"}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {activeDay.isToday
+                    ? "素晴らしい！お疲れ様でした"
+                    : "ゆっくり休みましょう"}
+                </p>
+                {activeDay.isToday && (
+                  <Button
+                    variant="outline"
+                    className="mt-5 gap-2 rounded-xl border-primary/30 text-primary hover:bg-primary/5"
+                    onClick={() => router.push("/schedule")}
+                  >
+                    スケジュールを確認
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
