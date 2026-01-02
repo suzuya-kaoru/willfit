@@ -1,9 +1,0 @@
--- インデックス名の命名規則統一
--- 実行日: 2026-01-03
-
--- workout_session_exercises
-ALTER TABLE workout_session_exercises RENAME INDEX idx_workout_session_exercises_session_id TO idx_workout_session_exercises_workout_session_id;
-
--- workout_record_sets
-ALTER TABLE workout_record_sets RENAME INDEX idx_workout_record_sets_exercise_id TO idx_workout_record_sets_workout_record_exercise_id;
-ALTER TABLE workout_record_sets RENAME INDEX idx_workout_record_sets_exercise_id_set_number TO idx_workout_record_sets_workout_record_exercise_id_set_number;

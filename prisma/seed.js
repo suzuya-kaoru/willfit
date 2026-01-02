@@ -208,7 +208,8 @@ const exerciseBodyParts = [
   { exerciseId: 6, bodyPartId: 4 },
 ];
 
-const workoutMenus = [
+// WorkoutTemplate (旧 WorkoutMenu)
+const workoutTemplates = [
   {
     id: 1,
     userId: USER_ID,
@@ -235,10 +236,11 @@ const workoutMenus = [
   },
 ];
 
-const menuExercises = [
+// TemplateExercise (旧 MenuExercise)
+const templateExercises = [
   {
     id: 1,
-    menuId: 1,
+    templateId: 1,
     exerciseId: 1,
     displayOrder: 1,
     createdAt: daysAgo(90),
@@ -246,7 +248,7 @@ const menuExercises = [
   },
   {
     id: 2,
-    menuId: 1,
+    templateId: 1,
     exerciseId: 2,
     displayOrder: 2,
     createdAt: daysAgo(90),
@@ -254,7 +256,7 @@ const menuExercises = [
   },
   {
     id: 3,
-    menuId: 2,
+    templateId: 2,
     exerciseId: 3,
     displayOrder: 1,
     createdAt: daysAgo(90),
@@ -262,7 +264,7 @@ const menuExercises = [
   },
   {
     id: 4,
-    menuId: 2,
+    templateId: 2,
     exerciseId: 4,
     displayOrder: 2,
     createdAt: daysAgo(90),
@@ -270,7 +272,7 @@ const menuExercises = [
   },
   {
     id: 5,
-    menuId: 3,
+    templateId: 3,
     exerciseId: 5,
     displayOrder: 1,
     createdAt: daysAgo(90),
@@ -278,7 +280,7 @@ const menuExercises = [
   },
   {
     id: 6,
-    menuId: 3,
+    templateId: 3,
     exerciseId: 6,
     displayOrder: 2,
     createdAt: daysAgo(90),
@@ -286,11 +288,12 @@ const menuExercises = [
   },
 ];
 
-const workoutSessions = [
+// WorkoutRecord (実際のワークアウト記録)
+const workoutRecords = [
   {
     id: 1,
     userId: USER_ID,
-    menuId: 1,
+    templateId: 1,
     startedAt: new Date("2025-12-01T10:00:00"),
     endedAt: new Date("2025-12-01T11:30:00"),
     condition: 8,
@@ -302,7 +305,7 @@ const workoutSessions = [
   {
     id: 2,
     userId: USER_ID,
-    menuId: 2,
+    templateId: 2,
     startedAt: new Date("2025-11-29T09:00:00"),
     endedAt: new Date("2025-11-29T10:15:00"),
     condition: 7,
@@ -313,44 +316,45 @@ const workoutSessions = [
   },
 ];
 
-function buildExerciseRecords(sessions, menuEntries) {
-  const menuMap = new Map();
-  for (const entry of menuEntries) {
-    const list = menuMap.get(entry.menuId) ?? [];
+function buildWorkoutRecordExercises(records, templateEntries) {
+  const templateMap = new Map();
+  for (const entry of templateEntries) {
+    const list = templateMap.get(entry.templateId) ?? [];
     list.push(entry);
-    menuMap.set(entry.menuId, list);
+    templateMap.set(entry.templateId, list);
   }
-  for (const list of menuMap.values()) {
+  for (const list of templateMap.values()) {
     list.sort((a, b) => a.displayOrder - b.displayOrder);
   }
 
-  const sortedSessions = [...sessions].sort((a, b) => a.id - b.id);
-  const records = [];
-  let recordId = 1;
+  const sortedRecords = [...records].sort((a, b) => a.id - b.id);
+  const exercises = [];
+  let exerciseId = 1;
 
-  for (const session of sortedSessions) {
-    const entries = menuMap.get(session.menuId) ?? [];
+  for (const record of sortedRecords) {
+    const entries = templateMap.get(record.templateId) ?? [];
     for (const entry of entries) {
-      records.push({
-        id: recordId,
-        sessionId: session.id,
+      exercises.push({
+        id: exerciseId,
+        recordId: record.id,
         exerciseId: entry.exerciseId,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
       });
-      recordId += 1;
+      exerciseId += 1;
     }
   }
 
-  return records;
+  return exercises;
 }
 
-const exerciseRecords = buildExerciseRecords(workoutSessions, menuExercises);
+const workoutRecordExercises = buildWorkoutRecordExercises(workoutRecords, templateExercises);
 
-const workoutSets = [
+// WorkoutRecordSet (旧 WorkoutSet)
+const workoutRecordSets = [
   {
     id: 1,
-    exerciseRecordId: 1,
+    workoutRecordExerciseId: 1,
     setNumber: 1,
     weight: 60,
     reps: 10,
@@ -360,7 +364,7 @@ const workoutSets = [
   },
   {
     id: 2,
-    exerciseRecordId: 1,
+    workoutRecordExerciseId: 1,
     setNumber: 2,
     weight: 60,
     reps: 10,
@@ -370,7 +374,7 @@ const workoutSets = [
   },
   {
     id: 3,
-    exerciseRecordId: 1,
+    workoutRecordExerciseId: 1,
     setNumber: 3,
     weight: 60,
     reps: 8,
@@ -380,7 +384,7 @@ const workoutSets = [
   },
   {
     id: 4,
-    exerciseRecordId: 2,
+    workoutRecordExerciseId: 2,
     setNumber: 1,
     weight: 50,
     reps: 12,
@@ -390,7 +394,7 @@ const workoutSets = [
   },
   {
     id: 5,
-    exerciseRecordId: 2,
+    workoutRecordExerciseId: 2,
     setNumber: 2,
     weight: 50,
     reps: 10,
@@ -400,7 +404,7 @@ const workoutSets = [
   },
   {
     id: 6,
-    exerciseRecordId: 3,
+    workoutRecordExerciseId: 3,
     setNumber: 1,
     weight: 80,
     reps: 8,
@@ -410,7 +414,7 @@ const workoutSets = [
   },
   {
     id: 7,
-    exerciseRecordId: 3,
+    workoutRecordExerciseId: 3,
     setNumber: 2,
     weight: 80,
     reps: 8,
@@ -473,13 +477,18 @@ const weightRecords = [
 
 async function resetDatabase() {
   // Delete in reverse order of dependency
-  await prisma.workoutSet.deleteMany();
-  await prisma.exerciseRecord.deleteMany();
+  await prisma.workoutRecordSet.deleteMany();
+  await prisma.workoutRecordExercise.deleteMany();
+  await prisma.workoutRecord.deleteMany();
+  await prisma.scheduledTask.deleteMany();
+  await prisma.scheduleRule.deleteMany();
+  await prisma.scheduleReminder.deleteMany();
+  await prisma.workoutSessionExercise.deleteMany();
   await prisma.workoutSession.deleteMany();
-  await prisma.menuExercise.deleteMany();
+  await prisma.templateExercise.deleteMany();
   await prisma.exerciseBodyPart.deleteMany();
   await prisma.weightRecord.deleteMany();
-  await prisma.workoutMenu.deleteMany();
+  await prisma.workoutTemplate.deleteMany();
   await prisma.exercise.deleteMany();
   await prisma.bodyPart.deleteMany();
   await prisma.user.deleteMany();
@@ -492,12 +501,12 @@ async function seed() {
   await prisma.bodyPart.createMany({ data: bodyParts });
   await prisma.exercise.createMany({ data: exercises });
   await prisma.exerciseBodyPart.createMany({ data: exerciseBodyParts });
-  await prisma.workoutMenu.createMany({ data: workoutMenus });
-  await prisma.menuExercise.createMany({ data: menuExercises });
+  await prisma.workoutTemplate.createMany({ data: workoutTemplates });
+  await prisma.templateExercise.createMany({ data: templateExercises });
 
-  await prisma.workoutSession.createMany({ data: workoutSessions });
-  await prisma.exerciseRecord.createMany({ data: exerciseRecords });
-  await prisma.workoutSet.createMany({ data: workoutSets });
+  await prisma.workoutRecord.createMany({ data: workoutRecords });
+  await prisma.workoutRecordExercise.createMany({ data: workoutRecordExercises });
+  await prisma.workoutRecordSet.createMany({ data: workoutRecordSets });
   await prisma.weightRecord.createMany({ data: weightRecords });
 }
 
