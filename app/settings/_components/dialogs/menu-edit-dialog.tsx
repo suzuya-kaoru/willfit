@@ -97,14 +97,14 @@ export function MenuEditDialog({
       <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto rounded-xl sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isNew ? "新規メニュー作成" : "メニューを編集"}
+            {isNew ? "新規テンプレ作成" : "テンプレを編集"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <label htmlFor="menu-name" className="text-sm font-medium">
-              メニュー名
+              テンプレ名
             </label>
             <Input
               id="menu-name"

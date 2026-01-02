@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Dumbbell, Plus, RefreshCw, X } from "lucide-react";
+import { Check, Dumbbell, Play, Plus, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -24,6 +24,7 @@ export function ScheduleDayDialog({
   onSkip,
   onReschedule,
   onAddPlan,
+  onStartWorkout,
 }: ScheduleDayDialogProps) {
   if (!date) return null;
 
@@ -60,6 +61,19 @@ export function ScheduleDayDialog({
                     onComplete={() => onComplete(id)}
                     onSkip={() => onSkip(id)}
                     onReschedule={() => onReschedule(id)}
+                    isToday={
+                      !!(
+                        date &&
+                        new Date().toDateString() === date.toDateString()
+                      )
+                    }
+                    onStartWorkout={() =>
+                      onStartWorkout?.(
+                        id,
+                        schedule.sessionPlanId,
+                        schedule.menuId,
+                      )
+                    }
                   />
                 );
               })}
@@ -73,10 +87,10 @@ export function ScheduleDayDialog({
             </p>
           )}
 
-          {/* プラン追加ボタン */}
+          {/* セッション追加ボタン */}
           <Button className="w-full" onClick={onAddPlan}>
             <Plus className="mr-2 h-4 w-4" />
-            プランを追加
+            セッションを追加
           </Button>
         </div>
       </DialogContent>
@@ -133,6 +147,8 @@ interface ScheduleCardProps {
   onComplete: () => void;
   onSkip: () => void;
   onReschedule: () => void;
+  isToday?: boolean;
+  onStartWorkout?: () => void;
 }
 
 function ScheduleCard({
@@ -140,6 +156,8 @@ function ScheduleCard({
   onComplete,
   onSkip,
   onReschedule,
+  isToday,
+  onStartWorkout,
 }: ScheduleCardProps) {
   let routineInfo = "";
 
@@ -175,15 +193,26 @@ function ScheduleCard({
           </div>
 
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="default"
-              className="flex-1"
-              onClick={onComplete}
-            >
-              <Check className="mr-1 h-4 w-4" />
-              完了
-            </Button>
+            {isToday && onStartWorkout ? (
+              <Button
+                size="sm"
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={onStartWorkout}
+              >
+                <Play className="mr-1 h-4 w-4" />
+                開始
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="default"
+                className="flex-1"
+                onClick={onComplete}
+              >
+                <Check className="mr-1 h-4 w-4" />
+                完了
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={onSkip}>
               <X className="h-4 w-4" />
             </Button>

@@ -140,6 +140,7 @@ export interface WorkoutSet extends BaseEntity {
   weight: number; // 重量（kg）- 小数点1桁
   reps: number; // 回数
   completed: boolean; // 完了フラグ
+  note?: string; // メモ
 }
 
 // =============================================================================

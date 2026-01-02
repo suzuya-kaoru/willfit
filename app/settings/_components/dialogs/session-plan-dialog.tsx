@@ -217,7 +217,7 @@ export function SessionPlanDialog({
       <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto rounded-xl sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {isNew ? "新規セッションプラン作成" : "セッションプランを編集"}
+            {isNew ? "新規セッション作成" : "セッションを編集"}
           </DialogTitle>
         </DialogHeader>
 
@@ -225,14 +225,14 @@ export function SessionPlanDialog({
           {/* 基本設定 */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="base-menu">ベースメニュー</Label>
+              <Label htmlFor="base-menu">ベーステンプレ</Label>
               <Select
                 value={menuId}
                 onValueChange={handleMenuChange}
                 disabled={!isNew}
               >
                 <SelectTrigger id="base-menu">
-                  <SelectValue placeholder="メニューを選択" />
+                  <SelectValue placeholder="テンプレを選択" />
                 </SelectTrigger>
                 <SelectContent>
                   {menus.map((m) => (
@@ -245,12 +245,12 @@ export function SessionPlanDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="plan-name">プラン名</Label>
+              <Label htmlFor="plan-name">セッション名</Label>
               <Input
                 id="plan-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="例: 胸トレ Aプラン"
+                placeholder="例: 胸トレ Aセッション"
               />
             </div>
           </div>
@@ -261,7 +261,7 @@ export function SessionPlanDialog({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="プランの詳細や目標などを入力"
+              placeholder="セッションの詳細や目標などを入力"
               className="h-20"
             />
           </div>
@@ -416,7 +416,7 @@ export function SessionPlanDialog({
                 <div className="py-8 text-center text-sm text-muted-foreground">
                   種目が設定されていません。
                   <br />
-                  メニューを選択するか、種目を追加してください。
+                  テンプレを選択するか、種目を追加してください。
                 </div>
               )}
             </div>

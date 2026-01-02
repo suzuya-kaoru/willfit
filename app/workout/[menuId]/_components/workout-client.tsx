@@ -6,6 +6,7 @@ import {
   Clock,
   Info,
   Loader2,
+  MessageSquare,
   Plus,
   Save,
 } from "lucide-react";
@@ -60,6 +61,7 @@ interface LocalSet {
   weight: number;
   reps: number;
   completed: boolean;
+  note: string;
 }
 
 // ローカル用の種目記録型
@@ -144,6 +146,7 @@ export function WorkoutClient({
           weight: target.targetWeight ?? 0,
           reps: target.targetReps ?? 0,
           completed: false,
+          note: "",
         });
       }
 
@@ -179,7 +182,7 @@ export function WorkoutClient({
     exerciseId: number,
     setId: string,
     field: keyof LocalSet,
-    value: number | boolean,
+    value: number | boolean | string,
   ) => {
     setExerciseRecords((prev) =>
       prev.map((record) => {
@@ -210,6 +213,7 @@ export function WorkoutClient({
               weight: 0,
               reps: 0,
               completed: false,
+              note: "",
             },
           ],
         };
@@ -249,6 +253,7 @@ export function WorkoutClient({
               weight: set.weight,
               reps: set.reps,
               completed: set.completed,
+              note: set.note || undefined,
             })),
           })),
         };
@@ -413,6 +418,24 @@ export function WorkoutClient({
                           className="h-6 w-6 rounded-md"
                         />
                       </div>
+                      <div className="col-span-12 mt-2">
+                        <div className="relative">
+                          <MessageSquare className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            value={set.note}
+                            onChange={(e) =>
+                              updateSet(
+                                record.exerciseId,
+                                set.id,
+                                "note",
+                                e.target.value,
+                              )
+                            }
+                            className="pl-8 text-xs h-9"
+                            placeholder="セットメモ（任意）"
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -549,7 +572,7 @@ export function WorkoutClient({
             <DialogTitle>記録なしで終了しますか？</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            完了したセットがありません。このまま保存すると「ジムに行った」記録として残ります。
+            完了したセットがありません。このまま保存すると「ジムに行った」ワークアウトとして残ります。
           </p>
           <div className="flex gap-2 pt-4">
             <Button

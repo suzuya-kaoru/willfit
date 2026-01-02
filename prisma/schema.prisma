@@ -197,6 +197,7 @@ model WorkoutSet {
   weight          Decimal      @db.Decimal(5, 1)
   reps            Int          @db.UnsignedInt
   completed       Boolean      @db.TinyInt
+  note            String?      @db.Text
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
   exerciseRecord  ExerciseRecord @relation(fields: [exerciseRecordId], references: [id], onDelete: Cascade)

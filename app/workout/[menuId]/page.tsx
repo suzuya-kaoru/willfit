@@ -100,7 +100,7 @@ export default async function ActiveWorkoutPage({
   if (Number.isNaN(menuId)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">メニューが見つかりません</p>
+        <p className="text-muted-foreground">テンプレが見つかりません</p>
       </div>
     );
   }
@@ -113,7 +113,7 @@ export default async function ActiveWorkoutPage({
   if (!menu) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">メニューが見つかりません</p>
+        <p className="text-muted-foreground">テンプレが見つかりません</p>
       </div>
     );
   }

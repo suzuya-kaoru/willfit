@@ -1657,6 +1657,7 @@ export interface SaveWorkoutSessionParams {
       weight: number;
       reps: number;
       completed: boolean;
+      note?: string;
     }[];
   }[];
 }
@@ -1704,6 +1705,7 @@ export async function createWorkoutSession(
                 weight: new Prisma.Decimal(set.weight),
                 reps: set.reps,
                 completed: set.completed,
+                note: set.note,
               })),
             },
           })),
@@ -1739,6 +1741,7 @@ export interface UpdateWorkoutSessionParams {
       weight: number;
       reps: number;
       completed: boolean;
+      note?: string;
     }[];
   }[];
 }
@@ -1783,6 +1786,7 @@ export async function updateWorkoutSession(
                 weight: new Prisma.Decimal(set.weight),
                 reps: set.reps,
                 completed: set.completed,
+                note: set.note,
               })),
             },
           })),

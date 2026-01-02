@@ -141,6 +141,15 @@ export function ScheduleClient({
     setDayDialogOpen(false);
   };
 
+  // トレーニング開始（カレンダーダイアログから）
+  const handleStartWorkout = (
+    taskId: number,
+    planId: number,
+    menuId: number,
+  ) => {
+    router.push(`/workout/${menuId}?taskId=${taskId}&planId=${planId}`);
+  };
+
   // プラン追加確定
   const handleConfirmAddPlan = async (data: PlanSelectionData) => {
     if (!selectedDate) return;
@@ -202,6 +211,7 @@ export function ScheduleClient({
         onSkip={handleSkip}
         onReschedule={handleOpenReschedule}
         onAddPlan={handleOpenPlanSelection}
+        onStartWorkout={handleStartWorkout}
       />
 
       {/* プラン選択ダイアログ */}

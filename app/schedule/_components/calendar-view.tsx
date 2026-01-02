@@ -185,7 +185,7 @@ function SelectedDaySummary({
           </div>
         ) : (
           <p className="py-4 text-center text-sm text-muted-foreground">
-            この日のトレーニング記録はありません
+            この日のワークアウトはありません
           </p>
         )}
       </CardContent>

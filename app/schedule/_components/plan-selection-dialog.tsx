@@ -90,15 +90,15 @@ export function PlanSelectionDialog({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>プランをスケジュール</DialogTitle>
+          <DialogTitle>セッションをスケジュール</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>セッションプランを選択</Label>
+            <Label>セッションを選択</Label>
             <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
               <SelectTrigger>
-                <SelectValue placeholder="プランを選択" />
+                <SelectValue placeholder="セッションを選択" />
               </SelectTrigger>
               <SelectContent>
                 {plans.map((plan) => (

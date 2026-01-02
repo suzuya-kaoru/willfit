@@ -207,7 +207,7 @@ export function CompleteClient({ session, summary }: CompleteClientProps) {
           <Button asChild variant="outline" className="w-full gap-2" size="lg">
             <Link href={`/workout/${session.menu.id}/edit/${session.id}`}>
               <Edit className="h-5 w-5" />
-              記録を編集（再開）
+              ワークアウトを編集
             </Link>
           </Button>
         </div>

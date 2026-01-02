@@ -160,16 +160,16 @@ export function SettingsClient({
               className="gap-1 text-xs sm:gap-2 sm:text-sm"
             >
               <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">プラン管理</span>
-              <span className="sm:hidden">プラン</span>
+              <span className="hidden sm:inline">セッション管理</span>
+              <span className="sm:hidden">セッション</span>
             </TabsTrigger>
             <TabsTrigger
               value="menus"
               className="gap-1 text-xs sm:gap-2 sm:text-sm"
             >
               <LayoutList className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">メニュー管理</span>
-              <span className="sm:hidden">メニュー</span>
+              <span className="hidden sm:inline">テンプレ管理</span>
+              <span className="sm:hidden">テンプレ</span>
             </TabsTrigger>
             <TabsTrigger
               value="exercises"
@@ -191,7 +191,7 @@ export function SettingsClient({
               }}
             >
               <Plus className="h-4 w-4" />
-              新規プラン作成
+              新規セッション作成
             </Button>
 
             <div className="space-y-3">
@@ -230,7 +230,7 @@ export function SettingsClient({
                   </CardHeader>
                   <CardContent>
                     <div className="mb-2 text-xs font-semibold text-muted-foreground">
-                      ベースメニュー: {plan.menu.name}
+                      ベーステンプレート: {plan.menu.name}
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {plan.exercises.map((ex, index) => (
@@ -261,7 +261,7 @@ export function SettingsClient({
               ))}
               {sessionPlans.length === 0 && (
                 <p className="py-8 text-center text-sm text-muted-foreground">
-                  セッションプランがありません。
+                  セッションがありません。
                   <br />
                   よく行うトレーニングの目標設定を保存しましょう。
                 </p>
@@ -279,7 +279,7 @@ export function SettingsClient({
               }}
             >
               <Plus className="h-4 w-4" />
-              新規メニュー作成
+              新規テンプレ作成
             </Button>
 
             <div className="space-y-3">

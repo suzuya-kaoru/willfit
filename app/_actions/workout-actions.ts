@@ -26,6 +26,7 @@ export interface SaveWorkoutSessionInput {
       weight: number;
       reps: number;
       completed: boolean;
+      note?: string;
     }[];
   }[];
 }
@@ -43,6 +44,7 @@ export interface UpdateWorkoutSessionInput {
       weight: number;
       reps: number;
       completed: boolean;
+      note?: string;
     }[];
   }[];
 }
@@ -56,6 +58,7 @@ const workoutSetSchema = z.object({
   weight: z.number().min(0),
   reps: z.number().int().min(0),
   completed: z.boolean(),
+  note: z.string().optional(),
 });
 
 const exerciseRecordSchema = z.object({

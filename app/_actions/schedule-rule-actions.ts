@@ -59,7 +59,7 @@ export interface UpdateScheduleRuleInput {
 // =============================================================================
 
 const weeklyRuleSchema = z.object({
-  sessionPlanId: z.number().int().positive("セッションプランIDは正の整数"),
+  sessionPlanId: z.number().int().positive("セッションIDは正の整数"),
   ruleType: z.literal("weekly"),
   weekdays: z
     .number()
@@ -70,7 +70,7 @@ const weeklyRuleSchema = z.object({
 });
 
 const intervalRuleSchema = z.object({
-  sessionPlanId: z.number().int().positive("セッションプランIDは正の整数"),
+  sessionPlanId: z.number().int().positive("セッションIDは正の整数"),
   ruleType: z.literal("interval"),
   intervalDays: z
     .number()
@@ -82,7 +82,7 @@ const intervalRuleSchema = z.object({
 });
 
 const onceRuleSchema = z.object({
-  sessionPlanId: z.number().int().positive("セッションプランIDは正の整数"),
+  sessionPlanId: z.number().int().positive("セッションIDは正の整数"),
   ruleType: z.literal("once"),
   startDateKey: dateKeySchema,
 });

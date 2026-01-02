@@ -114,7 +114,7 @@ function enrichSessionWithStats(
 
   return {
     ...session,
-    menuName: menu?.name ?? "不明なメニュー",
+    menuName: menu?.name ?? "不明なテンプレ",
     ...stats,
   };
 }

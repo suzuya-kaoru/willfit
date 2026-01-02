@@ -48,7 +48,7 @@ const rescheduleTaskSchema = z.object({
 });
 
 const createManualTaskSchema = z.object({
-  sessionPlanId: z.number().int().positive("セッションプランIDは正の整数"),
+  sessionPlanId: z.number().int().positive("セッションIDは正の整数"),
   scheduledDateKey: dateKeySchema,
 });
 

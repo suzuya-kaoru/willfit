@@ -51,11 +51,11 @@ const sessionPlanExerciseSchema = z.object({
 });
 
 const createSessionPlanSchema = z.object({
-  menuId: z.number().int().positive("メニューIDは正の整数"),
+  menuId: z.number().int().positive("テンプレIDは正の整数"),
   name: z
     .string()
-    .min(1, "プラン名は必須です")
-    .max(100, "プラン名は100文字以内"),
+    .min(1, "セッション名は必須です")
+    .max(100, "セッション名は100文字以内"),
   description: z.string().max(1000, "説明は1000文字以内").optional(),
   exercises: z
     .array(sessionPlanExerciseSchema)
@@ -66,8 +66,8 @@ const updateSessionPlanSchema = z.object({
   id: z.number().int().positive("IDは正の整数"),
   name: z
     .string()
-    .min(1, "プラン名は必須です")
-    .max(100, "プラン名は100文字以内"),
+    .min(1, "セッション名は必須です")
+    .max(100, "セッション名は100文字以内"),
   description: z.string().max(1000, "説明は1000文字以内").optional(),
   exercises: z
     .array(sessionPlanExerciseSchema)

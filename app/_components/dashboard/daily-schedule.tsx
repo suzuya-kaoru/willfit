@@ -157,7 +157,7 @@ export function DailySchedule({
                 </div>
                 <p className="font-semibold text-foreground">
                   {activeDay.isToday
-                    ? "今日のメニューは完了！"
+                    ? "今日のワークアウトは完了！"
                     : "予定はありません"}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">

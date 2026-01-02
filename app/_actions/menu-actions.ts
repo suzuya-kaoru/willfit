@@ -28,8 +28,8 @@ export interface UpdateMenuInput extends CreateMenuInput {
 const menuBaseSchema = z.object({
   name: z
     .string()
-    .min(1, "メニュー名は必須です")
-    .max(100, "メニュー名は100文字以内"),
+    .min(1, "テンプレ名は必須です")
+    .max(100, "テンプレ名は100文字以内"),
   exerciseIds: z.array(z.number().int().positive()),
 });
 

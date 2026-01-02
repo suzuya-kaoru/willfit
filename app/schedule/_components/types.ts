@@ -35,4 +35,5 @@ export interface ScheduleDayDialogProps {
   onSkip: (id: number) => Promise<void>;
   onReschedule: (id: number) => void;
   onAddPlan: () => void;
+  onStartWorkout?: (taskId: number, planId: number, menuId: number) => void;
 }
