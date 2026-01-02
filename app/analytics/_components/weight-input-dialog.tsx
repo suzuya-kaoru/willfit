@@ -30,12 +30,19 @@ export function WeightInputDialog({
   const [isPending, startTransition] = useTransition();
   const [weight, setWeight] = useState(currentWeight?.toString() ?? "");
   const [bodyFat, setBodyFat] = useState(currentBodyFat?.toString() ?? "");
+  const [error, setError] = useState<string | null>(null);
+  // スライダーの基準値（ダイアログを開いた時の値を固定）
+  const [weightSliderBase, setWeightSliderBase] = useState(currentWeight ?? 70);
 
   // Reset logic
   useEffect(() => {
     if (isOpen) {
-      if (currentWeight) setWeight(currentWeight.toString());
-      if (currentBodyFat) setBodyFat(currentBodyFat.toString());
+      const initialWeight = currentWeight ?? 70;
+      const initialBodyFat = currentBodyFat ?? 0;
+      setWeight(initialWeight.toString());
+      setWeightSliderBase(initialWeight);
+      setBodyFat(initialBodyFat.toString());
+      setError(null);
     }
   }, [isOpen, currentWeight, currentBodyFat]);
 
@@ -43,15 +50,35 @@ export function WeightInputDialog({
     const w = parseFloat(weight);
     const bf = bodyFat ? parseFloat(bodyFat) : undefined;
 
-    if (Number.isNaN(w) || w <= 0) return;
+    // クライアント側バリデーション
+    if (Number.isNaN(w) || w <= 0) {
+      setError("体重を正しく入力してください");
+      return;
+    }
+
+    if (w < 1 || w > 500) {
+      setError("体重は1kg〜500kgの範囲で入力してください");
+      return;
+    }
+
+    if (bf !== undefined && (bf < 0 || bf > 100)) {
+      setError("体脂肪率は0%〜100%の範囲で入力してください");
+      return;
+    }
+
+    setError(null);
 
     startTransition(async () => {
-      await createWeightRecordAction({
+      const result = await createWeightRecordAction({
         weight: w,
         bodyFat: bf,
         recordedAt: new Date(),
       });
-      onClose();
+      if (result.success) {
+        onClose();
+      } else {
+        setError(result.error ?? "保存に失敗しました");
+      }
     });
   };
 
@@ -87,17 +114,15 @@ export function WeightInputDialog({
                 </span>
               </div>
             </div>
-            {/* Quick Slider Adjustment (±2kg from value) */}
-            {weight && !Number.isNaN(parseFloat(weight)) && (
-              <Slider
-                value={[parseFloat(weight)]}
-                min={parseFloat(weight) - 2}
-                max={parseFloat(weight) + 2}
-                step={0.1}
-                onValueChange={(vals) => setWeight(vals[0].toFixed(1))}
-                className="py-2"
-              />
-            )}
+            {/* Quick Slider Adjustment (±2kg from base value) */}
+            <Slider
+              value={[weight ? parseFloat(weight) : weightSliderBase]}
+              min={weightSliderBase - 2}
+              max={weightSliderBase + 2}
+              step={0.1}
+              onValueChange={(vals) => setWeight(vals[0].toFixed(1))}
+              className="py-2"
+            />
           </div>
 
           {/* Body Fat Input */}
@@ -119,17 +144,24 @@ export function WeightInputDialog({
                 </span>
               </div>
             </div>
-            {/* Slider for Body Fat (5% - 40%) */}
+            {/* Slider for Body Fat (0% - 50%) */}
             <Slider
-              defaultValue={[currentBodyFat ?? 15]}
-              value={[bodyFat ? parseFloat(bodyFat) : (currentBodyFat ?? 15)]}
-              min={3}
-              max={40}
+              defaultValue={[currentBodyFat ?? 0]}
+              value={[bodyFat ? parseFloat(bodyFat) : (currentBodyFat ?? 0)]}
+              min={0}
+              max={50}
               step={0.1}
               onValueChange={(vals) => setBodyFat(vals[0].toFixed(1))}
               className="py-2"
             />
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
 
           <Button
             className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20"

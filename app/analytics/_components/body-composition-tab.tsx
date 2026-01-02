@@ -54,13 +54,21 @@ export function BodyCompositionTab({
       }));
   }, [weightPeriod, allWeightRecords]);
 
-  const latestRecord = allWeightRecords[0]; // Assuming sorted descending in parent or handled here?
-  // Parent passes sorted by recordedAt ASC usually? Check queries.
-  // queries.getWeightRecords sorts by recordedAt DESC.
-  // So allWeightRecords[0] is LATEST.
+  const latestRecord = allWeightRecords.at(-1);
+
+  // Find the latest body fat from history to inherit as default
+  const lastKnownBodyFat = useMemo(() => {
+    // If we have a current record with body fat, use it (editing today's record)
+    if (latestRecord?.bodyFat != null) return latestRecord.bodyFat;
+
+    // Otherwise search backwards for the last known body fat
+    // (copy array before reversing to avoid mutating props)
+    return [...allWeightRecords].reverse().find((r) => r.bodyFat != null)
+      ?.bodyFat;
+  }, [allWeightRecords, latestRecord]);
 
   const currentWeight = latestRecord?.weight;
-  const currentBodyFat = latestRecord?.bodyFat;
+  const currentBodyFat = lastKnownBodyFat;
 
   const chartColorWeight = "#4ade80"; // Green
   const chartColorBodyFat = "#facc15"; // Yellow
