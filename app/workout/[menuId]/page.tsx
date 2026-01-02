@@ -3,7 +3,7 @@ import {
   getExerciseRecordsByRecordIds,
   getMenuWithExercises,
   getSessionPlanWithDetails,
-  getWorkoutSessionsByMenuIds,
+  getWorkoutRecordsByMenuIds,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
 import type { ExerciseRecord, WorkoutSet } from "@/lib/types";
@@ -18,11 +18,11 @@ import { WorkoutClient } from "./_components/workout-client";
  */
 
 /**
- * 指定されたメニューIDの前回セッションを取得
+ * 指定されたメニューIDの前回記録を取得
  */
-async function getPreviousSession(userId: number, menuId: number) {
-  const sessions = await getWorkoutSessionsByMenuIds(userId, [menuId]);
-  return sessions[0] ?? null;
+async function getPreviousRecord(userId: number, menuId: number) {
+  const records = await getWorkoutRecordsByMenuIds(userId, [menuId]);
+  return records[0] ?? null;
 }
 
 /**
@@ -35,32 +35,32 @@ async function calculatePreviousRecords(
   exerciseIds: number[],
 ): Promise<Map<number, string>> {
   const previousRecords = new Map<number, string>();
-  const previousSession = await getPreviousSession(userId, menuId);
+  const previousWorkoutRecord = await getPreviousRecord(userId, menuId);
 
-  if (!previousSession) {
+  if (!previousWorkoutRecord) {
     return previousRecords;
   }
 
   const exerciseRecords = await getExerciseRecordsByRecordIds([
-    previousSession.id,
+    previousWorkoutRecord.id,
   ]);
-  const exerciseRecordIds = exerciseRecords.map((record: ExerciseRecord) => record.id);
+  const exerciseRecordIds = exerciseRecords.map((er: ExerciseRecord) => er.id);
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
-  const setsByRecordId = new Map<number, WorkoutSet[]>();
+  const setsByExerciseRecordId = new Map<number, WorkoutSet[]>();
   for (const set of sets) {
-    const list = setsByRecordId.get(set.exerciseRecordId) ?? [];
+    const list = setsByExerciseRecordId.get(set.exerciseRecordId) ?? [];
     list.push(set);
-    setsByRecordId.set(set.exerciseRecordId, list);
+    setsByExerciseRecordId.set(set.exerciseRecordId, list);
   }
-  const recordByExerciseId = new Map(
-    exerciseRecords.map((record: ExerciseRecord) => [record.exerciseId, record]),
+  const exerciseRecordByExerciseId = new Map(
+    exerciseRecords.map((er: ExerciseRecord) => [er.exerciseId, er]),
   );
 
   // 各種目ごとに前回記録を計算
   for (const exerciseId of exerciseIds) {
-    const record = recordByExerciseId.get(exerciseId);
-    if (!record) continue;
-    const previousSets = setsByRecordId.get(record.id) ?? [];
+    const exerciseRecord = exerciseRecordByExerciseId.get(exerciseId);
+    if (!exerciseRecord) continue;
+    const previousSets = setsByExerciseRecordId.get(exerciseRecord.id) ?? [];
 
     if (previousSets.length > 0) {
       // セットをセット番号順にソート
