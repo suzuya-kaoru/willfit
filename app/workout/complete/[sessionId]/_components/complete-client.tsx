@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { WorkoutSessionWithDetails } from "@/lib/db/queries";
+import { formatDateJaWithWeekday } from "@/lib/timezone";
 
 export interface CompleteClientProps {
   session: WorkoutSessionWithDetails;
@@ -37,14 +38,6 @@ export function CompleteClient({ session, summary }: CompleteClientProps) {
     return `${s}秒`;
   };
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("ja-JP", {
-      month: "long",
-      day: "numeric",
-      weekday: "short",
-    }).format(date);
-  };
-
   const completionRate = summary.totalSets
     ? Math.round((summary.completedSets / summary.totalSets) * 100)
     : 0;
@@ -67,7 +60,7 @@ export function CompleteClient({ session, summary }: CompleteClientProps) {
           <div className="text-center">
             <h2 className="text-xl font-bold">お疲れ様でした！</h2>
             <p className="text-sm text-muted-foreground">
-              {formatDate(session.startedAt)} • {session.menu.name}
+              {formatDateJaWithWeekday(session.startedAt)} • {session.menu.name}
             </p>
           </div>
         </div>

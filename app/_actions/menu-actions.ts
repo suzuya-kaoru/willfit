@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { prisma } from "@/lib/db/prisma";
+import {
+  createWorkoutMenu,
+  deleteWorkoutMenu,
+  updateWorkoutMenu,
+} from "@/lib/db/queries";
 
 // =============================================================================
 // 入力型定義
@@ -43,17 +47,9 @@ export async function createMenuAction(input: CreateMenuInput) {
   const data = createMenuSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  const menu = await prisma.workoutMenu.create({
-    data: {
-      userId: BigInt(userId),
-      name: data.name,
-      menuExercises: {
-        create: data.exerciseIds.map((exerciseId, index) => ({
-          exerciseId: BigInt(exerciseId),
-          displayOrder: index + 1,
-        })),
-      },
-    },
+  const menu = await createWorkoutMenu(userId, {
+    name: data.name,
+    exerciseIds: data.exerciseIds,
   });
 
   revalidatePath("/settings");
@@ -66,25 +62,11 @@ export async function createMenuAction(input: CreateMenuInput) {
 export async function updateMenuAction(input: UpdateMenuInput) {
   const data = updateMenuSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
-  const menuId = BigInt(data.id);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.menuExercise.deleteMany({
-      where: { menuId },
-    });
-
-    await tx.workoutMenu.update({
-      where: { id: menuId, userId: BigInt(userId) },
-      data: {
-        name: data.name,
-        menuExercises: {
-          create: data.exerciseIds.map((exerciseId, index) => ({
-            exerciseId: BigInt(exerciseId),
-            displayOrder: index + 1,
-          })),
-        },
-      },
-    });
+  await updateWorkoutMenu(userId, {
+    id: data.id,
+    name: data.name,
+    exerciseIds: data.exerciseIds,
   });
 
   revalidatePath("/settings");
@@ -95,10 +77,7 @@ export async function deleteMenuAction(id: number) {
   const validId = z.number().int().positive().parse(id);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  await prisma.workoutMenu.update({
-    where: { id: BigInt(validId), userId: BigInt(userId) },
-    data: { deletedAt: new Date() },
-  });
+  await deleteWorkoutMenu(userId, validId);
 
   revalidatePath("/settings");
   return { success: true };

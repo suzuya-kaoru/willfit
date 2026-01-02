@@ -1,14 +1,8 @@
-import {
-  addDays,
-  differenceInDays,
-  eachDayOfInterval,
-  getDay,
-  startOfDay,
-} from "date-fns";
+import { addDays, differenceInDays, eachDayOfInterval, getDay } from "date-fns";
 import { parseDateKey, toDateKey } from "@/lib/date-key";
 import { prisma } from "@/lib/db/prisma";
 import { isWeekdayInBitmask } from "@/lib/schedule-utils";
-import { toUtcDateOnly } from "@/lib/timezone";
+import { getStartOfDayUTC, toUtcDateOnly } from "@/lib/timezone";
 import type { ScheduleRule, ScheduleRuleType } from "@/lib/types";
 
 // =============================================================================
@@ -108,8 +102,8 @@ export const TaskSchedulerService = {
 
     // weekly / interval タイプの処理
     const interval = eachDayOfInterval({
-      start: startOfDay(fromDate),
-      end: startOfDay(effectiveToDate),
+      start: getStartOfDayUTC(fromDate),
+      end: getStartOfDayUTC(effectiveToDate),
     });
 
     const dataToCreate: {
@@ -183,7 +177,7 @@ export const TaskSchedulerService = {
     sessionPlanId: number,
     rule: ScheduleRule,
   ): Promise<void> {
-    const today = startOfDay(new Date());
+    const today = getStartOfDayUTC(new Date());
 
     // 1. 未来の未完了タスクを物理削除
     const deleteResult = await prisma.scheduledTask.deleteMany({
@@ -217,7 +211,7 @@ export const TaskSchedulerService = {
    * 未来の未完了タスクのみ削除する
    */
   async cleanupFutureTasks(ruleId: number): Promise<void> {
-    const today = startOfDay(new Date());
+    const today = getStartOfDayUTC(new Date());
     await prisma.scheduledTask.deleteMany({
       where: {
         ruleId: BigInt(ruleId),
@@ -250,7 +244,7 @@ export const TaskSchedulerService = {
    * Cronジョブ用
    */
   async generateAllUsersTasks(): Promise<void> {
-    const today = startOfDay(new Date());
+    const today = getStartOfDayUTC(new Date());
     const threeMonthsLater = addDays(today, 90);
 
     // 有効なルールを全て取得

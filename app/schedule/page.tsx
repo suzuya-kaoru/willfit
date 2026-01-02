@@ -1,4 +1,5 @@
-import { toDateKey } from "@/lib/date-key";
+import { toZonedTime } from "date-fns-tz";
+import { formatDateKey, toDateKey } from "@/lib/date-key";
 import {
   getExerciseRecordsBySessionIds,
   getMenusByIds,
@@ -8,7 +9,7 @@ import {
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
 import { weekdaysFromBitmask } from "@/lib/schedule-utils";
-import { getMonthEnd, getMonthStart } from "@/lib/timezone";
+import { APP_TIMEZONE, getMonthEndUTC, getMonthStartUTC } from "@/lib/timezone";
 import type {
   CalculatedTask,
   ExerciseRecord,
@@ -35,8 +36,8 @@ async function getSessionsByDateRange(
   year: number,
   month: number,
 ): Promise<WorkoutSession[]> {
-  const startDate = getMonthStart(year, month);
-  const endDate = getMonthEnd(year, month);
+  const startDate = getMonthStartUTC(year, month);
+  const endDate = getMonthEndUTC(year, month);
 
   return getWorkoutSessionsByDateRange(userId, startDate, endDate);
 }
@@ -120,6 +121,9 @@ function enrichSessionWithStats(
 
 /**
  * カレンダーの日付情報を生成
+ *
+ * 注意: year/month はJSTの年月として扱う。
+ * カレンダー上の日付はJSTで表示されるため、日付文字列もJST基準で生成する。
  */
 function generateCalendarDays(
   year: number,
@@ -128,6 +132,8 @@ function generateCalendarDays(
   todayDateString: string,
   schedulesMap: Map<string, CalculatedTask[]>,
 ): CalendarDay[] {
+  // JST基準で月の最初と最後の日を計算
+  // ここでは純粋にカレンダー表示用なので、UTCではなくJSTの日付として扱う
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const startPadding = firstDay.getDay();
@@ -136,7 +142,7 @@ function generateCalendarDays(
   const days: CalendarDay[] = [];
 
   // セッションを日付文字列でマッピング（高速検索用）
-  // 同日に複数セッションがある場合を考慮して配列で保持
+  // toDateKey はUTCの Date を JST の日付文字列に変換する
   const sessionsByDate = new Map<string, WorkoutSessionWithStats[]>();
   for (const session of sessions) {
     const dateStr = toDateKey(session.startedAt);
@@ -157,10 +163,10 @@ function generateCalendarDays(
     });
   }
 
-  // 実際の日付
+  // 実際の日付（JST基準の日付文字列を生成）
   for (let day = 1; day <= totalDays; day++) {
-    const date = new Date(year, month, day);
-    const dateString = toDateKey(date);
+    // JSTの日付文字列を生成（数値から直接生成）
+    const dateString = formatDateKey(year, month, day);
     const schedules = schedulesMap.get(dateString) ?? [];
     // 同日に複数セッションがある場合は最初の1つを表示（将来は複数対応可能）
     const sessionsForDate = sessionsByDate.get(dateString) ?? [];
@@ -197,24 +203,26 @@ export default async function SchedulePage({
   // ============================================================================
   const params = await searchParams;
   const userId = 1;
-  const today = new Date();
-  const year = params.year ? parseInt(params.year, 10) : today.getFullYear();
+  const now = new Date();
+  // JSTの「今日」を取得
+  const jstToday = toZonedTime(now, APP_TIMEZONE);
+  const year = params.year ? parseInt(params.year, 10) : jstToday.getFullYear();
   const month = params.month
     ? parseInt(params.month, 10) - 1 // URL は 1-based、Date は 0-based
-    : today.getMonth();
+    : jstToday.getMonth();
 
   // バリデーション
   if (Number.isNaN(year) || Number.isNaN(month) || month < 0 || month > 11) {
     // 無効なパラメータの場合は現在の年月を使用
-    const validYear = today.getFullYear();
-    const validMonth = today.getMonth();
+    const validYear = jstToday.getFullYear();
+    const validMonth = jstToday.getMonth();
     return (
       <ScheduleClient
         year={validYear}
         month={validMonth}
         calendarDays={[]}
         sessionsList={[]}
-        todayDateString={toDateKey(today)}
+        todayDateString={toDateKey(now)}
         plans={[]}
       />
     );
@@ -223,8 +231,8 @@ export default async function SchedulePage({
   // ============================================================================
   // データ取得
   // ============================================================================
-  const startDate = getMonthStart(year, month);
-  const endDate = getMonthEnd(year, month);
+  const startDate = getMonthStartUTC(year, month);
+  const endDate = getMonthEndUTC(year, month);
 
   const [sessionsInMonth, sessionPlans, scheduledTasks] = await Promise.all([
     getSessionsByDateRange(userId, year, month),
@@ -294,7 +302,7 @@ export default async function SchedulePage({
   }
 
   // カレンダーの日付情報を生成
-  const todayDateString = toDateKey(today);
+  const todayDateString = toDateKey(now);
   const calendarDays = generateCalendarDays(
     year,
     month,

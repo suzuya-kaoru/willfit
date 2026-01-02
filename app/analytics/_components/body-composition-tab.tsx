@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime } from "@/lib/timezone";
+import { formatDateTimeJST } from "@/lib/timezone";
 import type { Period } from "./types";
 import { WeightInputDialog } from "./weight-input-dialog";
 
@@ -25,6 +25,8 @@ export interface BodyCompositionTabProps {
     bodyFat?: number;
   }>;
 }
+
+import { subDays } from "date-fns";
 
 export function BodyCompositionTab({
   allWeightRecords,
@@ -37,9 +39,7 @@ export function BodyCompositionTab({
     const now = new Date();
     const periodDays =
       weightPeriod === "1m" ? 30 : weightPeriod === "3m" ? 90 : 365;
-    const cutoffDate = new Date(
-      now.getTime() - periodDays * 24 * 60 * 60 * 1000,
-    );
+    const cutoffDate = subDays(now, periodDays);
 
     return allWeightRecords
       .filter((r) => new Date(r.recordedAt) >= cutoffDate)
@@ -48,7 +48,7 @@ export function BodyCompositionTab({
           new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime(),
       )
       .map((r) => ({
-        date: formatDateTime(r.recordedAt, "M/d"),
+        date: formatDateTimeJST(r.recordedAt, "M/d"),
         weight: r.weight,
         bodyFat: r.bodyFat,
       }));

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { dateKeySchema, parseDateKey } from "@/lib/date-key";
 import {
+  deleteScheduledTask,
   rescheduleTask,
   updateScheduledTaskStatus,
   upsertScheduledTask,
@@ -181,27 +182,7 @@ export async function deleteTaskAction(taskId: number) {
   const validId = z.number().int().positive().parse(taskId);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  // pendingのタスクのみ削除可能（実績は削除不可）
-  const { prisma } = await import("@/lib/db/prisma");
-
-  const task = await prisma.scheduledTask.findFirst({
-    where: {
-      id: BigInt(validId),
-      userId: BigInt(userId),
-    },
-  });
-
-  if (!task) {
-    throw new Error("タスクが見つかりません");
-  }
-
-  if (task.status !== "pending") {
-    throw new Error("完了済みまたはスキップ済みのタスクは削除できません");
-  }
-
-  await prisma.scheduledTask.delete({
-    where: { id: BigInt(validId) },
-  });
+  await deleteScheduledTask(userId, validId);
 
   revalidatePath("/");
   revalidatePath("/schedule");

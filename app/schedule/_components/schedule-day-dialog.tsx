@@ -9,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { WEEKDAY_LABELS } from "@/lib/schedule-utils";
-import { formatTime } from "@/lib/timezone";
+import { weekdayToJapanese } from "@/lib/schedule-utils";
+import { formatDateJaWithWeekday, formatTimeJST } from "@/lib/timezone";
 import type { CalculatedTask } from "@/lib/types";
 import type { ScheduleDayDialogProps, WorkoutSessionWithStats } from "./types";
 
@@ -27,8 +27,8 @@ export function ScheduleDayDialog({
 }: ScheduleDayDialogProps) {
   if (!date) return null;
 
-  const dayOfWeek = date.getDay();
-  const dateString = `${date.getMonth() + 1}月${date.getDate()}日（${WEEKDAY_LABELS[dayOfWeek]}）`;
+  /* const dayOfWeek = date.getDay(); */
+  const dateString = formatDateJaWithWeekday(date);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -101,8 +101,8 @@ function SessionInfo({ session }: SessionInfoProps) {
               <span className="font-medium">{session.menuName}</span>
             </div>
             <span className="text-sm text-muted-foreground">
-              {formatTime(session.startedAt)} -{" "}
-              {session.endedAt ? formatTime(session.endedAt) : "-"}
+              {formatTimeJST(session.startedAt)} -{" "}
+              {session.endedAt ? formatTimeJST(session.endedAt) : "-"}
             </span>
           </div>
 
@@ -145,7 +145,7 @@ function ScheduleCard({
 
   // New Task Description logic
   if (schedule.ruleType === "weekly" && schedule.weekdays) {
-    const days = schedule.weekdays.map((d) => WEEKDAY_LABELS[d]).join("・");
+    const days = schedule.weekdays.map((d) => weekdayToJapanese(d)).join("・");
     routineInfo = `毎週 ${days}`;
   } else if (schedule.ruleType === "interval") {
     routineInfo = `${schedule.intervalDays}日ごと`;

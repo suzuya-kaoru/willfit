@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { prisma } from "@/lib/db/prisma";
+import {
+  createExercise,
+  deleteExercise,
+  updateExercise,
+} from "@/lib/db/queries";
 
 // =============================================================================
 // 入力型定義
@@ -44,18 +48,11 @@ export async function createExerciseAction(input: CreateExerciseInput) {
   const data = createExerciseSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  const exercise = await prisma.exercise.create({
-    data: {
-      userId: BigInt(userId),
-      name: data.name,
-      formNote: data.formNote || null,
-      videoUrl: data.videoUrl || null,
-      bodyParts: {
-        create: data.bodyPartIds.map((bodyPartId) => ({
-          bodyPartId: BigInt(bodyPartId),
-        })),
-      },
-    },
+  const exercise = await createExercise(userId, {
+    name: data.name,
+    bodyPartIds: data.bodyPartIds,
+    formNote: data.formNote || undefined,
+    videoUrl: data.videoUrl || undefined,
   });
 
   revalidatePath("/settings");
@@ -65,26 +62,13 @@ export async function createExerciseAction(input: CreateExerciseInput) {
 export async function updateExerciseAction(input: UpdateExerciseInput) {
   const data = updateExerciseSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
-  const exerciseId = BigInt(data.id);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.exerciseBodyPart.deleteMany({
-      where: { exerciseId },
-    });
-
-    await tx.exercise.update({
-      where: { id: exerciseId, userId: BigInt(userId) },
-      data: {
-        name: data.name,
-        formNote: data.formNote || null,
-        videoUrl: data.videoUrl || null,
-        bodyParts: {
-          create: data.bodyPartIds.map((bodyPartId) => ({
-            bodyPartId: BigInt(bodyPartId),
-          })),
-        },
-      },
-    });
+  await updateExercise(userId, {
+    id: data.id,
+    name: data.name,
+    bodyPartIds: data.bodyPartIds,
+    formNote: data.formNote || undefined,
+    videoUrl: data.videoUrl || undefined,
   });
 
   revalidatePath("/settings");
@@ -95,10 +79,7 @@ export async function deleteExerciseAction(id: number) {
   const validId = z.number().int().positive().parse(id);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  await prisma.exercise.update({
-    where: { id: BigInt(validId), userId: BigInt(userId) },
-    data: { deletedAt: new Date() },
-  });
+  await deleteExercise(userId, validId);
 
   revalidatePath("/settings");
   return { success: true };

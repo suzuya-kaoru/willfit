@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { dateKeySchema } from "@/lib/date-key";
-import { prisma } from "@/lib/db/prisma";
+import { createWorkoutSession, updateWorkoutSession } from "@/lib/db/queries";
 
 // =============================================================================
 // 入力型定義
@@ -89,12 +89,7 @@ const updateWorkoutSessionSchema = z.object({
 // Helper Functions
 // =============================================================================
 
-function toBigInt(value: number, label: string): bigint {
-  if (!Number.isInteger(value)) {
-    throw new Error(`${label} は整数である必要があります。`);
-  }
-  return BigInt(value);
-}
+// toBigInt helper is no longer needed here as it is handled in queries.ts
 
 // =============================================================================
 // Server Actions
@@ -112,51 +107,16 @@ export async function saveWorkoutSessionAction(
   const data = saveWorkoutSessionSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  const session = await prisma.$transaction(async (tx) => {
-    // 1. WorkoutSession を作成（Nested Writes で ExerciseRecord, WorkoutSet も同時作成）
-    const newSession = await tx.workoutSession.create({
-      data: {
-        userId: toBigInt(userId, "userId"),
-        menuId: toBigInt(data.menuId, "menuId"),
-        sessionPlanId: data.sessionPlanId
-          ? toBigInt(data.sessionPlanId, "sessionPlanId")
-          : null,
-        scheduledTaskId: data.scheduledTaskId
-          ? toBigInt(data.scheduledTaskId, "scheduledTaskId")
-          : null,
-        startedAt: data.startedAt,
-        endedAt: data.endedAt,
-        condition: data.condition,
-        fatigue: data.fatigue,
-        note: data.note,
-        exerciseRecords: {
-          create: data.exercises.map((ex) => ({
-            exerciseId: toBigInt(ex.exerciseId, "exerciseId"),
-            workoutSets: {
-              create: ex.sets.map((set) => ({
-                setNumber: set.setNumber,
-                weight: set.weight,
-                reps: set.reps,
-                completed: set.completed,
-              })),
-            },
-          })),
-        },
-      },
-    });
-
-    if (data.scheduledTaskId) {
-      await tx.scheduledTask.update({
-        where: { id: toBigInt(data.scheduledTaskId, "scheduledTaskId") },
-        data: {
-          status: "completed",
-          completedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
-    }
-
-    return newSession;
+  const session = await createWorkoutSession(userId, {
+    menuId: data.menuId,
+    sessionPlanId: data.sessionPlanId,
+    scheduledTaskId: data.scheduledTaskId,
+    startedAt: data.startedAt,
+    endedAt: data.endedAt,
+    condition: data.condition,
+    fatigue: data.fatigue,
+    note: data.note,
+    exercises: data.exercises,
   });
 
   revalidatePath("/");
@@ -177,51 +137,13 @@ export async function updateWorkoutSessionAction(
   const data = updateWorkoutSessionSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  await prisma.$transaction(async (tx) => {
-    // 1. セッションの存在確認と所有者チェック
-    const existingSession = await tx.workoutSession.findFirst({
-      where: {
-        id: toBigInt(data.sessionId, "sessionId"),
-        userId: toBigInt(userId, "userId"),
-      },
-    });
-
-    if (!existingSession) {
-      throw new Error("セッションが見つかりません");
-    }
-
-    // 2. 既存の ExerciseRecord を削除（Cascade で WorkoutSet も削除される）
-    await tx.exerciseRecord.deleteMany({
-      where: {
-        sessionId: toBigInt(data.sessionId, "sessionId"),
-      },
-    });
-
-    // 3. セッションを更新し、新しい ExerciseRecord, WorkoutSet を作成
-    await tx.workoutSession.update({
-      where: {
-        id: toBigInt(data.sessionId, "sessionId"),
-      },
-      data: {
-        endedAt: data.endedAt,
-        condition: data.condition,
-        fatigue: data.fatigue,
-        note: data.note,
-        exerciseRecords: {
-          create: data.exercises.map((ex) => ({
-            exerciseId: toBigInt(ex.exerciseId, "exerciseId"),
-            workoutSets: {
-              create: ex.sets.map((set) => ({
-                setNumber: set.setNumber,
-                weight: set.weight,
-                reps: set.reps,
-                completed: set.completed,
-              })),
-            },
-          })),
-        },
-      },
-    });
+  await updateWorkoutSession(userId, {
+    sessionId: data.sessionId,
+    endedAt: data.endedAt,
+    condition: data.condition,
+    fatigue: data.fatigue,
+    note: data.note,
+    exercises: data.exercises,
   });
 
   revalidatePath("/");

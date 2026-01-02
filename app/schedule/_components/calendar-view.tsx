@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MONTH_LABELS, WEEKDAY_LABELS } from "@/lib/schedule-utils";
-import { formatTime } from "@/lib/timezone";
+import { formatTimeJST } from "@/lib/timezone";
 import type { CalendarDay, WorkoutSessionWithStats } from "./types";
 
 export interface CalendarViewProps {
@@ -147,9 +147,9 @@ function SelectedDaySummary({
                 <span className="font-medium">{selectedSession.menuName}</span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {formatTime(selectedSession.startedAt)} -{" "}
+                {formatTimeJST(selectedSession.startedAt)} -{" "}
                 {selectedSession.endedAt
-                  ? formatTime(selectedSession.endedAt)
+                  ? formatTimeJST(selectedSession.endedAt)
                   : "-"}
               </span>
             </div>

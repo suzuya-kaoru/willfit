@@ -1,10 +1,12 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { prisma } from "@/lib/db/prisma";
-import { getEndOfDay, getStartOfDay } from "@/lib/timezone";
+import {
+  createOrUpdateWeightRecord,
+  deleteWeightRecord,
+} from "@/lib/db/queries";
+import { getEndOfDayUTC, getStartOfDayUTC } from "@/lib/timezone";
 
 // =============================================================================
 // 入力型定義
@@ -50,49 +52,21 @@ export async function createWeightRecordAction(
     const userId = 1; // TODO: Auth
 
     // 入力された日付の開始と終了を計算
-    const startOfDay = getStartOfDay(data.recordedAt);
-    const endOfDay = getEndOfDay(data.recordedAt);
+    const startOfDay = getStartOfDayUTC(data.recordedAt);
+    const endOfDay = getEndOfDayUTC(data.recordedAt);
 
-    // Decimal型に変換
-    const weightDecimal = new Prisma.Decimal(data.weight);
-    // 0も有効な値として扱うために null/undefined チェックに変更
-    const bodyFatDecimal =
-      data.bodyFat !== null && data.bodyFat !== undefined
-        ? new Prisma.Decimal(data.bodyFat)
-        : null;
-
-    // 同日の記録があるか確認
-    const existingRecord = await prisma.weightRecord.findFirst({
-      where: {
-        userId,
-        recordedAt: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
+    await createOrUpdateWeightRecord(
+      userId,
+      {
+        weight: data.weight,
+        bodyFat:
+          data.bodyFat !== undefined && data.bodyFat !== null
+            ? data.bodyFat
+            : undefined,
+        recordedAt: data.recordedAt,
       },
-    });
-
-    if (existingRecord) {
-      // 既存レコードがあれば更新
-      await prisma.weightRecord.update({
-        where: { id: existingRecord.id },
-        data: {
-          weight: weightDecimal,
-          bodyFat: bodyFatDecimal,
-          recordedAt: data.recordedAt,
-        },
-      });
-    } else {
-      // なければ新規作成
-      await prisma.weightRecord.create({
-        data: {
-          userId,
-          weight: weightDecimal,
-          bodyFat: bodyFatDecimal,
-          recordedAt: data.recordedAt,
-        },
-      });
-    }
+      { start: startOfDay, end: endOfDay },
+    );
 
     revalidatePath("/analytics");
     revalidatePath("/settings");
@@ -113,12 +87,7 @@ export async function deleteWeightRecordAction(id: number) {
   const validId = z.number().int().positive().parse(id);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  await prisma.weightRecord.delete({
-    where: {
-      id: validId,
-      userId,
-    },
-  });
+  await deleteWeightRecord(userId, validId);
 
   revalidatePath("/analytics");
   return { success: true };

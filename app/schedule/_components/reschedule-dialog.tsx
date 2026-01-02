@@ -1,6 +1,6 @@
 "use client";
 
-import { addDays, format, subDays } from "date-fns";
+import { addDays, subDays } from "date-fns";
 import { Calendar } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toDateKey } from "@/lib/date-key";
-import { WEEKDAY_LABELS } from "@/lib/schedule-utils";
+import { formatDateJaWithWeekday } from "@/lib/timezone";
 import type { CalculatedTask } from "@/lib/types";
 
 interface RescheduleDialogProps {
@@ -69,7 +69,7 @@ export function RescheduleDialog({
   };
 
   const formatQuickDate = (date: Date) => {
-    return `${date.getDate()}日(${WEEKDAY_LABELS[date.getDay()]})`;
+    return formatDateJaWithWeekday(date);
   };
 
   return (
@@ -84,8 +84,7 @@ export function RescheduleDialog({
           <div className="rounded-lg bg-secondary/30 p-3">
             <p className="font-medium">{schedule.menuName}</p>
             <p className="text-sm text-muted-foreground">
-              {format(fromDate, "M月d日")}（{WEEKDAY_LABELS[fromDate.getDay()]}
-              ） → ?
+              {formatDateJaWithWeekday(fromDate)} → ?
             </p>
           </div>
 
@@ -137,8 +136,7 @@ export function RescheduleDialog({
             <div className="rounded-lg bg-primary/10 p-3 text-center">
               <p className="text-sm text-muted-foreground">振替先</p>
               <p className="text-lg font-bold text-primary">
-                {format(selectedDate, "M月d日")}（
-                {WEEKDAY_LABELS[selectedDate.getDay()]}）
+                {formatDateJaWithWeekday(selectedDate)}
               </p>
             </div>
           )}

@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { toUtcDateOnly } from "@/lib/timezone";
 import type {
   BodyPart,
@@ -1397,5 +1397,397 @@ export async function deleteScheduleReminder(
 ): Promise<void> {
   await prisma.scheduleReminder.deleteMany({
     where: { sessionPlanId: toBigInt(sessionPlanId, "sessionPlanId") },
+  });
+}
+
+// =============================================================================
+// Mutation Queries (Actions から移動)
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Exercise
+// -----------------------------------------------------------------------------
+
+export interface CreateExerciseParams {
+  name: string;
+  bodyPartIds: number[];
+  formNote?: string;
+  videoUrl?: string;
+}
+
+export async function createExercise(
+  userId: number,
+  params: CreateExerciseParams,
+) {
+  const { name, bodyPartIds, formNote, videoUrl } = params;
+  return await prisma.exercise.create({
+    data: {
+      userId: toBigInt(userId, "userId"),
+      name,
+      formNote: formNote || null,
+      videoUrl: videoUrl || null,
+      bodyParts: {
+        create: bodyPartIds.map((bodyPartId) => ({
+          bodyPartId: toBigInt(bodyPartId, "bodyPartId"),
+        })),
+      },
+    },
+  });
+}
+
+export interface UpdateExerciseParams extends CreateExerciseParams {
+  id: number;
+}
+
+export async function updateExercise(
+  userId: number,
+  params: UpdateExerciseParams,
+) {
+  const { id, name, bodyPartIds, formNote, videoUrl } = params;
+  const exerciseId = toBigInt(id, "exerciseId");
+  const userBigId = toBigInt(userId, "userId");
+
+  await prisma.$transaction(async (tx) => {
+    // 関連BodyPartを一旦削除
+    await tx.exerciseBodyPart.deleteMany({
+      where: { exerciseId },
+    });
+
+    // 本体更新とBodyPart再作成
+    await tx.exercise.update({
+      where: { id: exerciseId, userId: userBigId },
+      data: {
+        name,
+        formNote: formNote || null,
+        videoUrl: videoUrl || null,
+        bodyParts: {
+          create: bodyPartIds.map((bodyPartId) => ({
+            bodyPartId: toBigInt(bodyPartId, "bodyPartId"),
+          })),
+        },
+      },
+    });
+  });
+}
+
+export async function deleteExercise(userId: number, exerciseId: number) {
+  // 論理削除
+  await prisma.exercise.update({
+    where: {
+      id: toBigInt(exerciseId, "exerciseId"),
+      userId: toBigInt(userId, "userId"),
+    },
+    data: { deletedAt: new Date() },
+  });
+}
+
+// -----------------------------------------------------------------------------
+// WorkoutMenu
+// -----------------------------------------------------------------------------
+
+export interface CreateMenuParams {
+  name: string;
+  exerciseIds: number[];
+}
+
+export async function createWorkoutMenu(
+  userId: number,
+  params: CreateMenuParams,
+) {
+  const { name, exerciseIds } = params;
+  return await prisma.workoutMenu.create({
+    data: {
+      userId: toBigInt(userId, "userId"),
+      name,
+      menuExercises: {
+        create: exerciseIds.map((exerciseId, index) => ({
+          exerciseId: toBigInt(exerciseId, "exerciseId"),
+          displayOrder: index + 1,
+        })),
+      },
+    },
+  });
+}
+
+export interface UpdateMenuParams extends CreateMenuParams {
+  id: number;
+}
+
+export async function updateWorkoutMenu(
+  userId: number,
+  params: UpdateMenuParams,
+) {
+  const { id, name, exerciseIds } = params;
+  const menuId = toBigInt(id, "menuId");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.menuExercise.deleteMany({
+      where: { menuId },
+    });
+
+    await tx.workoutMenu.update({
+      where: { id: menuId, userId: toBigInt(userId, "userId") },
+      data: {
+        name,
+        menuExercises: {
+          create: exerciseIds.map((exerciseId, index) => ({
+            exerciseId: toBigInt(exerciseId, "exerciseId"),
+            displayOrder: index + 1,
+          })),
+        },
+      },
+    });
+  });
+}
+
+export async function deleteWorkoutMenu(userId: number, menuId: number) {
+  // 論理削除
+  await prisma.workoutMenu.update({
+    where: {
+      id: toBigInt(menuId, "menuId"),
+      userId: toBigInt(userId, "userId"),
+    },
+    data: { deletedAt: new Date() },
+  });
+}
+
+// -----------------------------------------------------------------------------
+// WeightRecord
+// -----------------------------------------------------------------------------
+
+export interface SaveWeightRecordParams {
+  weight: number;
+  bodyFat?: number;
+  recordedAt: Date;
+}
+
+export async function createOrUpdateWeightRecord(
+  userId: number,
+  params: SaveWeightRecordParams,
+  dateRange: { start: Date; end: Date },
+) {
+  const { weight, bodyFat, recordedAt } = params;
+  const { start, end } = dateRange;
+  const userBigId = toBigInt(userId, "userId");
+
+  const weightDecimal = new Prisma.Decimal(weight);
+  const bodyFatDecimal =
+    bodyFat !== undefined && bodyFat !== null
+      ? new Prisma.Decimal(bodyFat)
+      : null;
+
+  const existingRecord = await prisma.weightRecord.findFirst({
+    where: {
+      userId: userBigId,
+      recordedAt: { gte: start, lte: end },
+    },
+  });
+
+  if (existingRecord) {
+    await prisma.weightRecord.update({
+      where: { id: existingRecord.id },
+      data: {
+        weight: weightDecimal,
+        bodyFat: bodyFatDecimal,
+        recordedAt,
+      },
+    });
+  } else {
+    await prisma.weightRecord.create({
+      data: {
+        userId: userBigId,
+        weight: weightDecimal,
+        bodyFat: bodyFatDecimal,
+        recordedAt,
+      },
+    });
+  }
+}
+
+export async function deleteWeightRecord(userId: number, recordId: number) {
+  await prisma.weightRecord.delete({
+    where: {
+      id: toBigInt(recordId, "recordId"),
+      userId: toBigInt(userId, "userId"),
+    },
+  });
+}
+
+// -----------------------------------------------------------------------------
+// ScheduledTask
+// -----------------------------------------------------------------------------
+
+export async function deleteScheduledTask(userId: number, taskId: number) {
+  const id = toBigInt(taskId, "taskId");
+  const userBigId = toBigInt(userId, "userId");
+
+  const task = await prisma.scheduledTask.findFirst({
+    where: { id, userId: userBigId },
+  });
+
+  if (!task) {
+    throw new Error("タスクが見つかりません");
+  }
+  if (task.status !== "pending") {
+    throw new Error("完了済みまたはスキップ済みのタスクは削除できません");
+  }
+
+  await prisma.scheduledTask.delete({
+    where: { id },
+  });
+}
+
+// -----------------------------------------------------------------------------
+// WorkoutSession
+// -----------------------------------------------------------------------------
+
+export interface SaveWorkoutSessionParams {
+  menuId: number;
+  sessionPlanId?: number;
+  scheduledTaskId?: number;
+  startedAt: Date;
+  endedAt: Date;
+  condition: number;
+  fatigue: number;
+  note: string;
+  exercises: {
+    exerciseId: number;
+    sets: {
+      setNumber: number;
+      weight: number;
+      reps: number;
+      completed: boolean;
+    }[];
+  }[];
+}
+
+export async function createWorkoutSession(
+  userId: number,
+  params: SaveWorkoutSessionParams,
+) {
+  const {
+    menuId,
+    sessionPlanId,
+    scheduledTaskId,
+    startedAt,
+    endedAt,
+    condition,
+    fatigue,
+    note,
+    exercises,
+  } = params;
+
+  const userBigId = toBigInt(userId, "userId");
+
+  return await prisma.$transaction(async (tx) => {
+    const newSession = await tx.workoutSession.create({
+      data: {
+        userId: userBigId,
+        menuId: toBigInt(menuId, "menuId"),
+        sessionPlanId: sessionPlanId
+          ? toBigInt(sessionPlanId, "sessionPlanId")
+          : null,
+        scheduledTaskId: scheduledTaskId
+          ? toBigInt(scheduledTaskId, "scheduledTaskId")
+          : null,
+        startedAt,
+        endedAt,
+        condition,
+        fatigue,
+        note,
+        exerciseRecords: {
+          create: exercises.map((ex) => ({
+            exerciseId: toBigInt(ex.exerciseId, "exerciseId"),
+            workoutSets: {
+              create: ex.sets.map((set) => ({
+                setNumber: set.setNumber,
+                weight: new Prisma.Decimal(set.weight),
+                reps: set.reps,
+                completed: set.completed,
+              })),
+            },
+          })),
+        },
+      },
+    });
+
+    if (scheduledTaskId) {
+      await tx.scheduledTask.update({
+        where: { id: toBigInt(scheduledTaskId, "scheduledTaskId") },
+        data: {
+          status: "completed",
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    return newSession;
+  });
+}
+
+export interface UpdateWorkoutSessionParams {
+  sessionId: number;
+  endedAt: Date;
+  condition: number;
+  fatigue: number;
+  note: string;
+  exercises: {
+    exerciseId: number;
+    sets: {
+      setNumber: number;
+      weight: number;
+      reps: number;
+      completed: boolean;
+    }[];
+  }[];
+}
+
+export async function updateWorkoutSession(
+  userId: number,
+  params: UpdateWorkoutSessionParams,
+) {
+  const { sessionId, endedAt, condition, fatigue, note, exercises } = params;
+  const sessionBigId = toBigInt(sessionId, "sessionId");
+  const userBigId = toBigInt(userId, "userId");
+
+  await prisma.$transaction(async (tx) => {
+    const existingSession = await tx.workoutSession.findFirst({
+      where: {
+        id: sessionBigId,
+        userId: userBigId,
+      },
+    });
+
+    if (!existingSession) {
+      throw new Error("セッションが見つかりません");
+    }
+
+    await tx.exerciseRecord.deleteMany({
+      where: { sessionId: sessionBigId },
+    });
+
+    await tx.workoutSession.update({
+      where: { id: sessionBigId },
+      data: {
+        endedAt,
+        condition,
+        fatigue,
+        note,
+        exerciseRecords: {
+          create: exercises.map((ex) => ({
+            exerciseId: toBigInt(ex.exerciseId, "exerciseId"),
+            workoutSets: {
+              create: ex.sets.map((set) => ({
+                setNumber: set.setNumber,
+                weight: new Prisma.Decimal(set.weight),
+                reps: set.reps,
+                completed: set.completed,
+              })),
+            },
+          })),
+        },
+      },
+    });
   });
 }

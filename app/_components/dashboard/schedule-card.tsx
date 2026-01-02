@@ -62,7 +62,9 @@ export function ScheduleCard({
       {/* Start button */}
       <Button
         onClick={() =>
-          router.push(`/workout/${schedule.menuId}?taskId=${schedule.taskId}`)
+          router.push(
+            `/workout/${schedule.menuId}?taskId=${schedule.taskId}&planId=${schedule.sessionPlanId}`,
+          )
         }
         className="mt-4 w-full gap-2 rounded-xl font-semibold shadow-lg shadow-primary/20"
         size="lg"

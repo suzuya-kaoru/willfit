@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDateTime } from "@/lib/timezone";
+import { formatDateTimeJST } from "@/lib/timezone";
 import type { ExerciseWithBodyParts } from "@/lib/types";
 import type { ExerciseDataPoint, Metric, PersonalBest } from "./types";
 
@@ -178,7 +178,7 @@ export function ExerciseProgressTab({
                     {pb.weight} kg
                   </span>
                   <p className="text-xs text-muted-foreground">
-                    {formatDateTime(pb.date, "M/d")}
+                    {formatDateTimeJST(pb.date, "M/d")}
                   </p>
                 </div>
               </div>

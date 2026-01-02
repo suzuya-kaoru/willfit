@@ -40,9 +40,9 @@ services:
     tty: true
     environment:
       NODE_ENV: development
-      TZ: Asia/Tokyo
+      TZ: UTC
       NEXT_PUBLIC_TIMEZONE: Asia/Tokyo
-      PRISMA_DATABASE_URL: mysql://docker:docker@db:3306/willfit?timezone=Asia/Tokyo
+      PRISMA_DATABASE_URL: mysql://docker:docker@db:3306/willfit
     restart: always
     depends_on:
       - db
@@ -68,7 +68,7 @@ services:
       MYSQL_DATABASE: willfit
       MYSQL_USER: docker
       MYSQL_PASSWORD: docker
-      TZ: "Asia/Tokyo"
+      TZ: "UTC"
     volumes:
       - ./docker/mysql/conf.d:/etc/mysql/conf.d:ro
       - ./docker/mysql/dump:/docker-entrypoint-initdb.d

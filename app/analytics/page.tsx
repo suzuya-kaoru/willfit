@@ -7,7 +7,7 @@ import {
   getWorkoutSessions,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
-import { formatDateTime } from "@/lib/timezone";
+import { formatDateTimeJST } from "@/lib/timezone";
 import type {
   ExerciseRecord,
   ExerciseWithBodyParts,
@@ -66,7 +66,7 @@ function calculateExerciseData(
       );
 
       return {
-        date: formatDateTime(session.startedAt, "M/d"),
+        date: formatDateTimeJST(session.startedAt, "M/d"),
         weight: maxWeight,
         "1rm": Math.round(estimated1RM * 10) / 10,
         volume: totalVolume,

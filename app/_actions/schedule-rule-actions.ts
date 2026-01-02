@@ -1,6 +1,6 @@
 "use server";
 
-import { addDays, startOfDay } from "date-fns";
+import { addDays } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { dateKeySchema, parseDateKey } from "@/lib/date-key";
@@ -11,6 +11,7 @@ import {
   updateScheduleRule,
 } from "@/lib/db/queries";
 import { TaskSchedulerService } from "@/lib/services/scheduler";
+import { getStartOfDayUTC } from "@/lib/timezone";
 import type { ScheduleRule } from "@/lib/types";
 
 // =============================================================================
@@ -179,7 +180,7 @@ export async function createScheduleRuleAction(input: CreateScheduleRuleInput) {
   };
 
   // 初回生成: 今日から90日後まで
-  const today = startOfDay(new Date());
+  const today = getStartOfDayUTC(new Date());
   await TaskSchedulerService.generateTasks(
     userId,
     rule.id,

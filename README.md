@@ -142,6 +142,15 @@ PRISMA_DATABASE_URL=mysql://docker:docker@db:3306/willfit
 
 # ローカル接続用（Prisma Studio など）
 # PRISMA_DATABASE_URL=mysql://docker:docker@127.0.0.1:3306/willfit
+
+> [!NOTE]
+> **Timezone Policy (UTC Standard)**
+>
+> 1. **Server Environment**: The server runtime (Node.js/Next.js) and Database run in UTC (`TZ=UTC`).
+> 2. **Current Time**: `new Date()` always returns the current time in UTC. Do not use custom wrappers.
+> 3. **Client Display**: Convert UTC to `Asia/Tokyo` (JST) only for display purposes using `formatInTimeZone`.
+> 4. **DB DATE Type**: Column types defined as `DATE` are treated as "JST Date stored as UTC 00:00:00". Use `toUtcDateOnly` helper when saving.
+
 ```
 
 ## 📊 データベース
