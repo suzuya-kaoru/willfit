@@ -12,12 +12,12 @@ import {
 import { weekdayToJapanese } from "@/lib/schedule-utils";
 import { formatDateJaWithWeekday, formatTimeJST } from "@/lib/timezone";
 import type { CalculatedTask } from "@/lib/types";
-import type { ScheduleDayDialogProps, WorkoutSessionWithStats } from "./types";
+import type { ScheduleDayDialogProps, WorkoutRecordWithStats } from "./types";
 
 export function ScheduleDayDialog({
   isOpen,
   date,
-  session,
+  record,
   schedules,
   onClose,
   onComplete,
@@ -39,8 +39,8 @@ export function ScheduleDayDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* セッション情報 */}
-          {session && <SessionInfo session={session} />}
+          {/* 記録情報 */}
+          {record && <RecordInfo record={record} />}
 
           {/* スケジュール一覧 */}
           {schedules.length > 0 && (
@@ -81,7 +81,7 @@ export function ScheduleDayDialog({
           )}
 
           {/* 空の状態 */}
-          {!session && schedules.length === 0 && (
+          {!record && schedules.length === 0 && (
             <p className="py-4 text-center text-sm text-muted-foreground">
               この日の予定はありません
             </p>
@@ -98,11 +98,11 @@ export function ScheduleDayDialog({
   );
 }
 
-interface SessionInfoProps {
-  session: WorkoutSessionWithStats;
+interface RecordInfoProps {
+  record: WorkoutRecordWithStats;
 }
 
-function SessionInfo({ session }: SessionInfoProps) {
+function RecordInfo({ record }: RecordInfoProps) {
   return (
     <Card className="border-primary/20 bg-primary/5">
       <CardContent className="p-4">
@@ -112,26 +112,26 @@ function SessionInfo({ session }: SessionInfoProps) {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                 <Dumbbell className="h-4 w-4 text-primary" />
               </div>
-              <span className="font-medium">{session.menuName}</span>
+              <span className="font-medium">{record.menuName}</span>
             </div>
             <span className="text-sm text-muted-foreground">
-              {formatTimeJST(session.startedAt)} -{" "}
-              {session.endedAt ? formatTimeJST(session.endedAt) : "-"}
+              {formatTimeJST(record.startedAt)} -{" "}
+              {record.endedAt ? formatTimeJST(record.endedAt) : "-"}
             </span>
           </div>
 
           <div className="grid grid-cols-3 gap-2 rounded-lg bg-background/50 p-3">
             <div className="text-center">
-              <p className="text-lg font-bold">{session.exerciseCount}</p>
+              <p className="text-lg font-bold">{record.exerciseCount}</p>
               <p className="text-xs text-muted-foreground">種目</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold">{session.setCount}</p>
+              <p className="text-lg font-bold">{record.setCount}</p>
               <p className="text-xs text-muted-foreground">セット</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold">
-                {(session.volume / 1000).toFixed(1)}
+                {(record.volume / 1000).toFixed(1)}
               </p>
               <p className="text-xs text-muted-foreground">ton</p>
             </div>
