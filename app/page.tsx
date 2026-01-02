@@ -9,8 +9,9 @@ import { toZonedTime } from "date-fns-tz";
 import { parseDateKey, toDateKey } from "@/lib/date-key";
 import {
   getScheduledTasksWithPlanByDateRange,
-  getWorkoutSessionsByDateRange,
+  getWorkoutRecordsByDateRange,
 } from "@/lib/db/queries";
+import type { ScheduledTaskWithPlan, WorkoutRecord } from "@/lib/types";
 import { APP_TIMEZONE, toUtcDateTimeFromJstString } from "@/lib/timezone";
 import { DashboardClient } from "./_components/dashboard-client";
 
@@ -78,31 +79,31 @@ export default async function DashboardPage() {
   const dailySessionEnd = new Date(dayAfterTomorrowStart.getTime() - 1);
 
   // データ取得
-  const [scheduledTasks, dailySessions, weeklySessions] = await Promise.all([
+  const [scheduledTasks, dailyRecords, weeklyRecords] = await Promise.all([
     getScheduledTasksWithPlanByDateRange(
       userId,
       dailySessionStart,
       dailySessionEnd,
     ),
-    getWorkoutSessionsByDateRange(userId, dailySessionStart, dailySessionEnd),
-    getWorkoutSessionsByDateRange(
+    getWorkoutRecordsByDateRange(userId, dailySessionStart, dailySessionEnd),
+    getWorkoutRecordsByDateRange(
       userId,
       weekStart,
       new Date(addDays(todayStart, 1).getTime() - 1),
     ),
   ]);
 
-  // セッションを日付ごとにマッピング
-  const dailySessionsByDateKey = new Map<string, typeof dailySessions>();
-  for (const session of dailySessions) {
-    const dateKey = toDateKey(session.startedAt);
-    const list = dailySessionsByDateKey.get(dateKey) ?? [];
-    list.push(session);
-    dailySessionsByDateKey.set(dateKey, list);
+  // 記録を日付ごとにマッピング
+  const dailyRecordsByDateKey = new Map<string, WorkoutRecord[]>();
+  for (const record of dailyRecords) {
+    const dateKey = toDateKey(record.startedAt);
+    const list = dailyRecordsByDateKey.get(dateKey) ?? [];
+    list.push(record);
+    dailyRecordsByDateKey.set(dateKey, list);
   }
 
   // スケジュールを日付ごとにマッピング
-  const tasksByDateKey = new Map<string, typeof scheduledTasks>();
+  const tasksByDateKey = new Map<string, ScheduledTaskWithPlan[]>();
   for (const task of scheduledTasks) {
     const dateKey = toDateKey(task.scheduledDate);
     const list = tasksByDateKey.get(dateKey) ?? [];
@@ -121,19 +122,19 @@ export default async function DashboardPage() {
     // その日のスケジュールをDBから取得
     const dbTasks = tasksByDateKey.get(dateKey) ?? [];
 
-    // その日すでに実施済みのメニューを除外（WorkoutSessionベース）
+    // その日すでに実施済みのメニューを除外（WorkoutRecordベース）
     // NOTE: 新システムでは sessionPlanId をチェックすべき
-    const daySessions = dailySessionsByDateKey.get(dateKey) ?? [];
-    // sessionPlanIdを持つセッションのセット
+    const dayRecords = dailyRecordsByDateKey.get(dateKey) ?? [];
+    // sessionPlanIdを持つ記録のセット
     const completedPlanIds = new Set(
-      daySessions
-        .map((s) => (s.sessionPlanId ? Number(s.sessionPlanId) : null))
+      dayRecords
+        .map((r: WorkoutRecord) => (r.sessionPlanId ? Number(r.sessionPlanId) : null))
         .filter(Boolean),
     );
 
     // 未完了(pending)かつ未実施のスケジュールのみ残す
-    const remainingTasks = dbTasks.filter((task) => {
-      // すでにセッションがあれば除外
+    const remainingTasks = dbTasks.filter((task: ScheduledTaskWithPlan) => {
+      // すでに記録があれば除外
       if (completedPlanIds.has(Number(task.sessionPlanId))) return false;
 
       // ステータスチェック
@@ -144,7 +145,7 @@ export default async function DashboardPage() {
       return true;
     });
 
-    const schedules = remainingTasks.map((task) => {
+    const schedules = remainingTasks.map((task: ScheduledTaskWithPlan) => {
       return {
         taskId: Number(task.id),
         sessionPlanId: Number(task.sessionPlanId),
@@ -198,9 +199,9 @@ export default async function DashboardPage() {
     const targetTasks = dayTasks.filter((s) => s.status !== "rescheduled");
     weeklyGoal += targetTasks.length;
 
-    // その日にセッション履歴があるか
-    const dayHasSession = weeklySessions.some(
-      (s) => toDateKey(s.startedAt) === dayDateString,
+    // その日に記録履歴があるか
+    const dayHasRecord = weeklyRecords.some(
+      (r: WorkoutRecord) => toDateKey(r.startedAt) === dayDateString,
     );
 
     // 完了数（skippedも含む）
@@ -223,7 +224,7 @@ export default async function DashboardPage() {
         status = "incomplete";
       }
     } else {
-      if (dayHasSession) {
+      if (dayHasRecord) {
         status = "completed";
       }
     }

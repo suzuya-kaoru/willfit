@@ -5,7 +5,7 @@ import {
   getMenusByIds,
   getScheduledTasksWithPlanByDateRange,
   getSessionPlans,
-  getWorkoutSessionsByDateRange,
+  getWorkoutRecordsByDateRange,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
 import { weekdaysFromBitmask } from "@/lib/schedule-utils";
@@ -13,33 +13,33 @@ import { APP_TIMEZONE, getMonthEndUTC, getMonthStartUTC } from "@/lib/timezone";
 import type {
   CalculatedTask,
   ExerciseRecord,
-  WorkoutSession,
+  WorkoutRecord,
   WorkoutSet,
 } from "@/lib/types";
 import { ScheduleClient } from "./_components/schedule-client";
-import type { CalendarDay, WorkoutSessionWithStats } from "./_components/types";
+import type { CalendarDay, WorkoutRecordWithStats } from "./_components/types";
 
 /**
  * ============================================================================
  * Server Component: データ取得と計算（サーバー側で実行）
  * ============================================================================
  *
- * DBアクセス層を使用して、セッション・セット・メニュー情報を取得する。
+ * DBアクセス層を使用して、記録・セット・メニュー情報を取得する。
  * 集計ロジックはサーバー側に保持し、UIは表示専用にする。
  */
 
 /**
- * 指定された年月のセッションを取得（Asia/Tokyo）
+ * 指定された年月の記録を取得（Asia/Tokyo）
  */
-async function getSessionsByDateRange(
+async function getRecordsByDateRange(
   userId: number,
   year: number,
   month: number,
-): Promise<WorkoutSession[]> {
+): Promise<WorkoutRecord[]> {
   const startDate = getMonthStartUTC(year, month);
   const endDate = getMonthEndUTC(year, month);
 
-  return getWorkoutSessionsByDateRange(userId, startDate, endDate);
+  return getWorkoutRecordsByDateRange(userId, startDate, endDate);
 }
 
 function buildExerciseRecordsByRecordId(
@@ -67,12 +67,12 @@ function buildSetsByExerciseRecordId(
 }
 
 /**
- * セッションの統計情報を計算
- * sessionIdベースでexercise_record_idを算出し、それに紐づくセットを集計
+ * 記録の統計情報を計算
+ * recordIdベースでexercise_record_idを算出し、それに紐づくセットを集計
  * この関数は DB 移行後もサーバー側で実行される
  */
-function calculateSessionStats(
-  session: WorkoutSession,
+function calculateRecordStats(
+  workoutRecord: WorkoutRecord,
   exerciseRecordsByRecordId: Map<number, ExerciseRecord[]>,
   setsByExerciseRecordId: Map<number, WorkoutSet[]>,
 ): {
@@ -80,40 +80,40 @@ function calculateSessionStats(
   setCount: number;
   exerciseCount: number;
 } {
-  const records = exerciseRecordsByRecordId.get(session.id) ?? [];
-  const recordIds = records.map((record) => record.id);
-  const sessionSets = recordIds.flatMap(
-    (recordId) => setsByExerciseRecordId.get(recordId) ?? [],
+  const exerciseRecords = exerciseRecordsByRecordId.get(workoutRecord.id) ?? [];
+  const exerciseRecordIds = exerciseRecords.map((er) => er.id);
+  const recordSets = exerciseRecordIds.flatMap(
+    (erId) => setsByExerciseRecordId.get(erId) ?? [],
   );
 
-  const volume = sessionSets.reduce((total, set) => {
+  const volume = recordSets.reduce((total, set) => {
     return total + set.weight * set.reps;
   }, 0);
 
-  const setCount = sessionSets.length;
-  const exerciseCount = records.length;
+  const setCount = recordSets.length;
+  const exerciseCount = exerciseRecords.length;
 
   return { volume, setCount, exerciseCount };
 }
 
 /**
- * セッションに統計情報とメニュー名を付与
+ * 記録に統計情報とメニュー名を付与
  */
-function enrichSessionWithStats(
-  session: WorkoutSession,
+function enrichRecordWithStats(
+  workoutRecord: WorkoutRecord,
   menusById: Map<number, { name: string }>,
   exerciseRecordsByRecordId: Map<number, ExerciseRecord[]>,
   setsByExerciseRecordId: Map<number, WorkoutSet[]>,
-): WorkoutSessionWithStats {
-  const menu = menusById.get(session.menuId);
-  const stats = calculateSessionStats(
-    session,
+): WorkoutRecordWithStats {
+  const menu = menusById.get(workoutRecord.menuId);
+  const stats = calculateRecordStats(
+    workoutRecord,
     exerciseRecordsByRecordId,
     setsByExerciseRecordId,
   );
 
   return {
-    ...session,
+    ...workoutRecord,
     menuName: menu?.name ?? "不明なテンプレ",
     ...stats,
   };
@@ -128,7 +128,7 @@ function enrichSessionWithStats(
 function generateCalendarDays(
   year: number,
   month: number,
-  sessions: WorkoutSessionWithStats[],
+  records: WorkoutRecordWithStats[],
   todayDateString: string,
   schedulesMap: Map<string, CalculatedTask[]>,
 ): CalendarDay[] {
@@ -141,14 +141,14 @@ function generateCalendarDays(
 
   const days: CalendarDay[] = [];
 
-  // セッションを日付文字列でマッピング（高速検索用）
+  // 記録を日付文字列でマッピング（高速検索用）
   // toDateKey はUTCの Date を JST の日付文字列に変換する
-  const sessionsByDate = new Map<string, WorkoutSessionWithStats[]>();
-  for (const session of sessions) {
-    const dateStr = toDateKey(session.startedAt);
-    const existing = sessionsByDate.get(dateStr) ?? [];
-    existing.push(session);
-    sessionsByDate.set(dateStr, existing);
+  const recordsByDate = new Map<string, WorkoutRecordWithStats[]>();
+  for (const record of records) {
+    const dateStr = toDateKey(record.startedAt);
+    const existing = recordsByDate.get(dateStr) ?? [];
+    existing.push(record);
+    recordsByDate.set(dateStr, existing);
   }
 
   // 空セル（月初めのパディング）
@@ -156,7 +156,7 @@ function generateCalendarDays(
     days.push({
       day: null,
       dateString: "",
-      session: null,
+      record: null,
       schedules: [],
       isScheduled: false,
       isToday: false,
@@ -168,14 +168,14 @@ function generateCalendarDays(
     // JSTの日付文字列を生成（数値から直接生成）
     const dateString = formatDateKey(year, month, day);
     const schedules = schedulesMap.get(dateString) ?? [];
-    // 同日に複数セッションがある場合は最初の1つを表示（将来は複数対応可能）
-    const sessionsForDate = sessionsByDate.get(dateString) ?? [];
-    const session = sessionsForDate.length > 0 ? sessionsForDate[0] : null;
+    // 同日に複数記録がある場合は最初の1つを表示（将来は複数対応可能）
+    const recordsForDate = recordsByDate.get(dateString) ?? [];
+    const record = recordsForDate.length > 0 ? recordsForDate[0] : null;
 
     days.push({
       day,
       dateString,
-      session,
+      record,
       schedules,
       isScheduled: schedules.length > 0,
       isToday: dateString === todayDateString,
@@ -234,18 +234,18 @@ export default async function SchedulePage({
   const startDate = getMonthStartUTC(year, month);
   const endDate = getMonthEndUTC(year, month);
 
-  const [sessionsInMonth, sessionPlans, scheduledTasks] = await Promise.all([
-    getSessionsByDateRange(userId, year, month),
+  const [recordsInMonth, sessionPlans, scheduledTasks] = await Promise.all([
+    getRecordsByDateRange(userId, year, month),
     getSessionPlans(userId),
     getScheduledTasksWithPlanByDateRange(userId, startDate, endDate),
   ]);
 
-  const recordIds = sessionsInMonth.map((session) => session.id);
-  const exerciseRecords = await getExerciseRecordsByRecordIds(recordIds);
-  const exerciseRecordIds = exerciseRecords.map((record: ExerciseRecord) => record.id);
+  const workoutRecordIds = recordsInMonth.map((record) => record.id);
+  const exerciseRecords = await getExerciseRecordsByRecordIds(workoutRecordIds);
+  const exerciseRecordIds = exerciseRecords.map((er: ExerciseRecord) => er.id);
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
   const menusByIds = await getMenusByIds(userId, [
-    ...new Set(sessionsInMonth.map((session) => session.menuId)),
+    ...new Set(recordsInMonth.map((record) => record.menuId)),
   ]);
   const menusById = new Map(menusByIds.map((menu) => [menu.id, menu]));
   const exerciseRecordsByRecordId =
@@ -255,22 +255,21 @@ export default async function SchedulePage({
   // ============================================================================
   // データ計算（サーバー側で実行）
   // ============================================================================
-  const sessionsWithStats: WorkoutSessionWithStats[] = sessionsInMonth.map(
-    (session) =>
-      enrichSessionWithStats(
-        session,
+  const recordsWithStats: WorkoutRecordWithStats[] = recordsInMonth.map(
+    (record) =>
+      enrichRecordWithStats(
+        record,
         menusById,
         exerciseRecordsByRecordId,
         setsByExerciseRecordId,
       ),
   );
 
-  // セッション一覧（新しい順にソート）
-  const sessionsList = [...sessionsWithStats].sort(
+  // 記録一覧（新しい順にソート）
+  const recordsList = [...recordsWithStats].sort(
     (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
   );
 
-  // 各日付のスケジュールを計算
   // 各日付のスケジュールを計算
   const schedulesMap = new Map<string, CalculatedTask[]>();
 
@@ -278,7 +277,7 @@ export default async function SchedulePage({
     const dateKey = toDateKey(task.scheduledDate);
     const existing = schedulesMap.get(dateKey) ?? [];
 
-    if (task.status === "completed") continue; // セッション履歴として表示されるためスキップ？
+    if (task.status === "completed") continue; // 記録履歴として表示されるためスキップ
 
     const mappedTask: CalculatedTask = {
       taskId: Number(task.id),
@@ -306,7 +305,7 @@ export default async function SchedulePage({
   const calendarDays = generateCalendarDays(
     year,
     month,
-    sessionsWithStats,
+    recordsWithStats,
     todayDateString,
     schedulesMap,
   );
@@ -319,7 +318,7 @@ export default async function SchedulePage({
       year={year}
       month={month}
       calendarDays={calendarDays}
-      sessionsList={sessionsList}
+      recordsList={recordsList}
       todayDateString={todayDateString}
       plans={sessionPlans}
     />
