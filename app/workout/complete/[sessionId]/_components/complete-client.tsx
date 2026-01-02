@@ -11,11 +11,11 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import type { WorkoutSessionWithDetails } from "@/lib/db/queries";
+import type { WorkoutRecordWithDetails } from "@/lib/db/queries";
 import { formatDateJaWithWeekday } from "@/lib/timezone";
 
 export interface CompleteClientProps {
-  session: WorkoutSessionWithDetails;
+  workoutRecord: WorkoutRecordWithDetails;
   summary: {
     totalSets: number;
     completedSets: number;
@@ -24,7 +24,10 @@ export interface CompleteClientProps {
   };
 }
 
-export function CompleteClient({ session, summary }: CompleteClientProps) {
+export function CompleteClient({
+  workoutRecord,
+  summary,
+}: CompleteClientProps) {
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -60,7 +63,8 @@ export function CompleteClient({ session, summary }: CompleteClientProps) {
           <div className="text-center">
             <h2 className="text-xl font-bold">お疲れ様でした！</h2>
             <p className="text-sm text-muted-foreground">
-              {formatDateJaWithWeekday(session.startedAt)} • {session.menu.name}
+              {formatDateJaWithWeekday(workoutRecord.startedAt)} •{" "}
+              {workoutRecord.menu.name}
             </p>
           </div>
         </div>
@@ -121,11 +125,11 @@ export function CompleteClient({ session, summary }: CompleteClientProps) {
                   <div className="h-2 flex-1 rounded-full bg-secondary">
                     <div
                       className="h-2 rounded-full bg-primary"
-                      style={{ width: `${session.condition * 10}%` }}
+                      style={{ width: `${workoutRecord.condition * 10}%` }}
                     />
                   </div>
                   <span className="text-sm font-medium">
-                    {session.condition}/10
+                    {workoutRecord.condition}/10
                   </span>
                 </div>
               </div>
@@ -135,21 +139,21 @@ export function CompleteClient({ session, summary }: CompleteClientProps) {
                   <div className="h-2 flex-1 rounded-full bg-secondary">
                     <div
                       className="h-2 rounded-full bg-orange-500"
-                      style={{ width: `${session.fatigue * 10}%` }}
+                      style={{ width: `${workoutRecord.fatigue * 10}%` }}
                     />
                   </div>
                   <span className="text-sm font-medium">
-                    {session.fatigue}/10
+                    {workoutRecord.fatigue}/10
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Note */}
-            {session.note && (
+            {workoutRecord.note && (
               <div>
                 <span className="text-sm text-muted-foreground">メモ</span>
-                <p className="mt-1 text-sm">{session.note}</p>
+                <p className="mt-1 text-sm">{workoutRecord.note}</p>
               </div>
             )}
 
@@ -157,40 +161,56 @@ export function CompleteClient({ session, summary }: CompleteClientProps) {
             <div>
               <span className="text-sm text-muted-foreground">種目</span>
               <ul className="mt-2 space-y-2">
-                {session.exerciseRecords.map((er) => {
-                  const completedCount = er.sets.filter(
-                    (s) => s.completed,
-                  ).length;
-                  const maxWeight = Math.max(...er.sets.map((s) => s.weight));
-                  return (
-                    <li
-                      key={er.id}
-                      className="flex items-center justify-between rounded-lg bg-secondary/30 px-3 py-2"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {er.exercise.name}
-                        </span>
-                        <div className="flex gap-1">
-                          {er.exercise.bodyParts.slice(0, 2).map((part) => (
-                            <span
-                              key={part.id}
-                              className="rounded bg-secondary px-1.5 py-0.5 text-xs"
-                            >
-                              {part.name}
-                            </span>
-                          ))}
+                {workoutRecord.exerciseRecords.map(
+                  (er: {
+                    id: number;
+                    exerciseId: number;
+                    exercise: {
+                      name: string;
+                      bodyParts: { id: number; name: string }[];
+                    };
+                    sets: {
+                      completed: boolean;
+                      weight: number;
+                      reps: number;
+                    }[];
+                  }) => {
+                    const completedCount = er.sets.filter(
+                      (s) => s.completed,
+                    ).length;
+                    const maxWeight = Math.max(...er.sets.map((s) => s.weight));
+                    return (
+                      <li
+                        key={er.id}
+                        className="flex items-center justify-between rounded-lg bg-secondary/30 px-3 py-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">
+                            {er.exercise.name}
+                          </span>
+                          <div className="flex gap-1">
+                            {er.exercise.bodyParts
+                              .slice(0, 2)
+                              .map((part: { id: number; name: string }) => (
+                                <span
+                                  key={part.id}
+                                  className="rounded bg-secondary px-1.5 py-0.5 text-xs"
+                                >
+                                  {part.name}
+                                </span>
+                              ))}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right text-xs text-muted-foreground">
-                        <div>
-                          {completedCount}/{er.sets.length}セット
+                        <div className="text-right text-xs text-muted-foreground">
+                          <div>
+                            {completedCount}/{er.sets.length}セット
+                          </div>
+                          {maxWeight > 0 && <div>最大 {maxWeight}kg</div>}
                         </div>
-                        {maxWeight > 0 && <div>最大 {maxWeight}kg</div>}
-                      </div>
-                    </li>
-                  );
-                })}
+                      </li>
+                    );
+                  },
+                )}
               </ul>
             </div>
           </CardContent>
@@ -205,7 +225,9 @@ export function CompleteClient({ session, summary }: CompleteClientProps) {
             </Link>
           </Button>
           <Button asChild variant="outline" className="w-full gap-2" size="lg">
-            <Link href={`/workout/${session.menu.id}/edit/${session.id}`}>
+            <Link
+              href={`/workout/${workoutRecord.menu.id}/edit/${workoutRecord.id}`}
+            >
               <Edit className="h-5 w-5" />
               ワークアウトを編集
             </Link>

@@ -14,8 +14,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
-  type UpdateWorkoutSessionInput,
-  updateWorkoutSessionAction,
+  type UpdateWorkoutRecordInput,
+  updateWorkoutRecordAction,
 } from "@/app/_actions/workout-actions";
 import {
   Accordion,
@@ -35,7 +35,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
-import type { WorkoutSessionWithDetails } from "@/lib/db/queries";
+import type { WorkoutRecordWithDetails } from "@/lib/db/queries";
 import type {
   ExerciseWithBodyParts,
   WorkoutMenuWithExercises,
@@ -60,29 +60,42 @@ interface LocalExerciseRecord {
 
 export interface WorkoutEditClientProps {
   menu: WorkoutMenuWithExercises;
-  session: WorkoutSessionWithDetails;
+  workoutRecord: WorkoutRecordWithDetails;
 }
 
 /**
  * トレーニング編集クライアント
  * 既存セッションを編集して再保存する
  */
-export function WorkoutEditClient({ menu, session }: WorkoutEditClientProps) {
+export function WorkoutEditClient({
+  menu,
+  workoutRecord,
+}: WorkoutEditClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [elapsedTime, setElapsedTime] = useState(0);
   const [exerciseRecords, setExerciseRecords] = useState<LocalExerciseRecord[]>(
     [],
   );
-  const [condition, setCondition] = useState(session.condition);
-  const [fatigue, setFatigue] = useState(session.fatigue);
-  const [note, setNote] = useState(session.note);
+  const [condition, setCondition] = useState(workoutRecord.condition);
+  const [fatigue, setFatigue] = useState(workoutRecord.fatigue);
+  const [note, setNote] = useState(workoutRecord.note);
   const [showEndDialog, setShowEndDialog] = useState(false);
 
-  // Initialize from existing session
+  // Initialize from existing record
   useEffect(() => {
-    const records: LocalExerciseRecord[] = session.exerciseRecords.map(
-      (er) => ({
+    const records: LocalExerciseRecord[] = workoutRecord.exerciseRecords.map(
+      (er: {
+        exerciseId: number;
+        exercise: ExerciseWithBodyParts;
+        sets: {
+          setNumber: number;
+          weight: number;
+          reps: number;
+          completed: boolean;
+          note?: string;
+        }[];
+      }) => ({
         exerciseId: er.exerciseId,
         exercise: er.exercise,
         sets: er.sets.map((set) => ({
@@ -97,14 +110,15 @@ export function WorkoutEditClient({ menu, session }: WorkoutEditClientProps) {
     );
     setExerciseRecords(records);
 
-    // Calculate elapsed time from session
-    if (session.endedAt) {
+    // Calculate elapsed time from record
+    if (workoutRecord.endedAt) {
       const elapsed = Math.floor(
-        (session.endedAt.getTime() - session.startedAt.getTime()) / 1000,
+        (workoutRecord.endedAt.getTime() - workoutRecord.startedAt.getTime()) /
+          1000,
       );
       setElapsedTime(elapsed);
     }
-  }, [session]);
+  }, [workoutRecord]);
 
   // Timer (継続カウント)
   useEffect(() => {
@@ -170,8 +184,8 @@ export function WorkoutEditClient({ menu, session }: WorkoutEditClientProps) {
   const handleSave = () => {
     startTransition(async () => {
       try {
-        const input: UpdateWorkoutSessionInput = {
-          sessionId: session.id,
+        const input: UpdateWorkoutRecordInput = {
+          recordId: workoutRecord.id,
           endedAt: new Date(),
           condition,
           fatigue,
@@ -188,11 +202,11 @@ export function WorkoutEditClient({ menu, session }: WorkoutEditClientProps) {
           })),
         };
 
-        await updateWorkoutSessionAction(input);
+        await updateWorkoutRecordAction(input);
         toast.success("ワークアウトを更新しました");
-        router.push(`/workout/complete/${session.id}`);
+        router.push(`/workout/complete/${workoutRecord.id}`);
       } catch (error) {
-        console.error("Failed to update workout session:", error);
+        console.error("Failed to update workout record:", error);
         toast.error("更新に失敗しました。もう一度お試しください。");
       }
     });

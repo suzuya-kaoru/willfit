@@ -11,8 +11,8 @@ import {
   getScheduledTasksWithPlanByDateRange,
   getWorkoutRecordsByDateRange,
 } from "@/lib/db/queries";
-import type { ScheduledTaskWithPlan, WorkoutRecord } from "@/lib/types";
 import { APP_TIMEZONE, toUtcDateTimeFromJstString } from "@/lib/timezone";
+import type { ScheduledTaskWithPlan, WorkoutRecord } from "@/lib/types";
 import { DashboardClient } from "./_components/dashboard-client";
 
 /**
@@ -128,7 +128,9 @@ export default async function DashboardPage() {
     // sessionPlanIdを持つ記録のセット
     const completedPlanIds = new Set(
       dayRecords
-        .map((r: WorkoutRecord) => (r.sessionPlanId ? Number(r.sessionPlanId) : null))
+        .map((r: WorkoutRecord) =>
+          r.sessionPlanId ? Number(r.sessionPlanId) : null,
+        )
         .filter(Boolean),
     );
 

@@ -221,7 +221,7 @@ export default async function SchedulePage({
         year={validYear}
         month={validMonth}
         calendarDays={[]}
-        sessionsList={[]}
+        recordsList={[]}
         todayDateString={toDateKey(now)}
         plans={[]}
       />

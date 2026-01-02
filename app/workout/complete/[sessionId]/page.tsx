@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
-import { getWorkoutSessionWithDetails } from "@/lib/db/queries";
+import { getWorkoutRecordWithDetails } from "@/lib/db/queries";
 import { CompleteClient } from "./_components/complete-client";
+
+interface ExerciseRecordForStats {
+  sets: { completed: boolean; weight: number; reps: number }[];
+}
 
 /**
  * Server Component: トレーニング完了画面
- * セッション詳細を取得してサマリーを表示
+ * 記録詳細を取得してサマリーを表示
  */
 export default async function WorkoutCompletePage({
   params,
@@ -13,45 +17,48 @@ export default async function WorkoutCompletePage({
 }) {
   const userId = 1; // TODO: 認証実装後に動的取得
   const { sessionId } = await params;
-  const sessionIdNum = Number.parseInt(sessionId, 10);
+  const recordIdNum = Number.parseInt(sessionId, 10);
 
-  if (Number.isNaN(sessionIdNum)) {
+  if (Number.isNaN(recordIdNum)) {
     notFound();
   }
 
-  const session = await getWorkoutSessionWithDetails(userId, sessionIdNum);
+  const workoutRecord = await getWorkoutRecordWithDetails(userId, recordIdNum);
 
-  if (!session) {
+  if (!workoutRecord) {
     notFound();
   }
 
   // サマリー計算
-  const totalSets = session.exerciseRecords.reduce(
-    (acc, er) => acc + er.sets.length,
+  const totalSets = workoutRecord.exerciseRecords.reduce(
+    (acc: number, er: ExerciseRecordForStats) => acc + er.sets.length,
     0,
   );
-  const completedSets = session.exerciseRecords.reduce(
-    (acc, er) => acc + er.sets.filter((s) => s.completed).length,
+  const completedSets = workoutRecord.exerciseRecords.reduce(
+    (acc: number, er: ExerciseRecordForStats) =>
+      acc + er.sets.filter((s) => s.completed).length,
     0,
   );
-  const totalVolume = session.exerciseRecords.reduce(
-    (acc, er) =>
+  const totalVolume = workoutRecord.exerciseRecords.reduce(
+    (acc: number, er: ExerciseRecordForStats) =>
       acc +
       er.sets.reduce(
-        (setAcc, s) => (s.completed ? setAcc + s.weight * s.reps : setAcc),
+        (setAcc: number, s) =>
+          s.completed ? setAcc + s.weight * s.reps : setAcc,
         0,
       ),
     0,
   );
-  const duration = session.endedAt
+  const duration = workoutRecord.endedAt
     ? Math.floor(
-        (session.endedAt.getTime() - session.startedAt.getTime()) / 1000,
+        (workoutRecord.endedAt.getTime() - workoutRecord.startedAt.getTime()) /
+          1000,
       )
     : 0;
 
   return (
     <CompleteClient
-      session={session}
+      workoutRecord={workoutRecord}
       summary={{
         totalSets,
         completedSets,

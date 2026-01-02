@@ -14,8 +14,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
-  type SaveWorkoutSessionInput,
-  saveWorkoutSessionAction,
+  type SaveWorkoutRecordInput,
+  saveWorkoutRecordAction,
 } from "@/app/_actions/workout-actions";
 import {
   Accordion,
@@ -236,7 +236,7 @@ export function WorkoutClient({
   const executeSave = () => {
     startTransition(async () => {
       try {
-        const input: SaveWorkoutSessionInput = {
+        const input: SaveWorkoutRecordInput = {
           menuId: menu.id,
           sessionPlanId: sessionPlan?.id ? Number(sessionPlan.id) : undefined,
           scheduledTaskId: scheduledTaskId,
@@ -258,11 +258,11 @@ export function WorkoutClient({
           })),
         };
 
-        const result = await saveWorkoutSessionAction(input);
+        const result = await saveWorkoutRecordAction(input);
         toast.success("トレーニングを保存しました");
-        router.push(`/workout/complete/${result.sessionId}`);
+        router.push(`/workout/complete/${result.recordId}`);
       } catch (error) {
-        console.error("Failed to save workout session:", error);
+        console.error("Failed to save workout record:", error);
         toast.error("保存に失敗しました。もう一度お試しください。");
       }
     });
