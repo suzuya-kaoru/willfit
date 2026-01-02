@@ -22,7 +22,7 @@ import type {
   WeightRecord,
   WorkoutMenu,
   WorkoutMenuWithExercises,
-  WorkoutSession,
+  WorkoutRecord,
   WorkoutSet,
 } from "@/lib/types";
 import { prisma } from "./prisma";
@@ -177,7 +177,7 @@ function mapMenuExercise(row: {
   };
 }
 
-function mapSession(row: {
+function mapWorkoutRecord(row: {
   id: bigint;
   userId: bigint;
   menuId: bigint;
@@ -188,7 +188,7 @@ function mapSession(row: {
   note: string;
   createdAt: Date;
   updatedAt: Date;
-}): WorkoutSession {
+}): WorkoutRecord {
   return {
     id: toSafeNumber(row.id, "workout_records.id"),
     userId: toSafeNumber(row.userId, "workout_records.user_id"),
@@ -205,14 +205,14 @@ function mapSession(row: {
 
 function mapExerciseRecord(row: {
   id: bigint;
-  sessionId: bigint;
+  recordId: bigint;
   exerciseId: bigint;
   createdAt: Date;
   updatedAt: Date;
 }): ExerciseRecord {
   return {
     id: toSafeNumber(row.id, "exercise_records.id"),
-    sessionId: toSafeNumber(row.sessionId, "exercise_records.session_id"),
+    recordId: toSafeNumber(row.recordId, "exercise_records.record_id"),
     exerciseId: toSafeNumber(row.exerciseId, "exercise_records.exercise_id"),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -431,19 +431,19 @@ export async function getMenuExercisesByMenuIds(
   return rows.map(mapMenuExercise);
 }
 
-export async function getWorkoutSessionsByDateRange(
+export async function getWorkoutRecordsByDateRange(
   userId: number,
   startDate: Date,
   endDate: Date,
-): Promise<WorkoutSession[]> {
-  const rows = await prisma.workoutSession.findMany({
+): Promise<WorkoutRecord[]> {
+  const rows = await prisma.workoutRecord.findMany({
     where: {
       userId: toBigInt(userId, "userId"),
       startedAt: { gte: startDate, lte: endDate },
     },
     orderBy: { startedAt: "desc" },
   });
-  return rows.map(mapSession);
+  return rows.map(mapWorkoutRecord);
 }
 
 /**
@@ -459,7 +459,7 @@ export async function getMonthlyStats(
   const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
   // 指定期間のセッションを取得
-  const sessions = await prisma.workoutSession.findMany({
+  const sessions = await prisma.workoutRecord.findMany({
     where: {
       userId: toBigInt(userId, "userId"),
       startedAt: { gte: startDate, lte: endDate },
@@ -467,7 +467,7 @@ export async function getMonthlyStats(
     select: { id: true },
   });
 
-  const sessionIds = sessions.map((s) => s.id);
+  const sessionIds = sessions.map((s: { id: bigint }) => s.id);
 
   if (sessionIds.length === 0) {
     return { totalVolume: 0, workoutCount: 0 };
@@ -479,7 +479,7 @@ export async function getMonthlyStats(
   const workoutSets = await prisma.workoutSet.findMany({
     where: {
       exerciseRecord: {
-        sessionId: { in: sessionIds },
+        recordId: { in: sessionIds },
       },
       completed: true,
     },
@@ -500,37 +500,37 @@ export async function getMonthlyStats(
   };
 }
 
-export async function getWorkoutSessionsByMenuIds(
+export async function getWorkoutRecordsByMenuIds(
   userId: number,
   menuIds: number[],
-): Promise<WorkoutSession[]> {
+): Promise<WorkoutRecord[]> {
   if (menuIds.length === 0) return [];
-  const rows = await prisma.workoutSession.findMany({
+  const rows = await prisma.workoutRecord.findMany({
     where: {
       userId: toBigInt(userId, "userId"),
       menuId: { in: toBigIntArray(menuIds, "menuIds") },
     },
     orderBy: { startedAt: "desc" },
   });
-  return rows.map(mapSession);
+  return rows.map(mapWorkoutRecord);
 }
 
-export async function getWorkoutSessions(
+export async function getWorkoutRecords(
   userId: number,
-): Promise<WorkoutSession[]> {
-  const rows = await prisma.workoutSession.findMany({
+): Promise<WorkoutRecord[]> {
+  const rows = await prisma.workoutRecord.findMany({
     where: { userId: toBigInt(userId, "userId") },
     orderBy: { startedAt: "desc" },
   });
-  return rows.map(mapSession);
+  return rows.map(mapWorkoutRecord);
 }
 
-export async function getExerciseRecordsBySessionIds(
-  sessionIds: number[],
+export async function getExerciseRecordsByRecordIds(
+  recordIds: number[],
 ): Promise<ExerciseRecord[]> {
-  if (sessionIds.length === 0) return [];
+  if (recordIds.length === 0) return [];
   const rows = await prisma.exerciseRecord.findMany({
-    where: { sessionId: { in: toBigIntArray(sessionIds, "sessionIds") } },
+    where: { recordId: { in: toBigIntArray(recordIds, "recordIds") } },
   });
   return rows.map(mapExerciseRecord);
 }
@@ -561,9 +561,9 @@ export async function getWeightRecords(
 }
 
 /**
- * セッション詳細を取得（種目・セット情報含む）
+ * トレーニング記録詳細を取得（種目・セット情報含む）
  */
-export interface WorkoutSessionWithDetails extends WorkoutSession {
+export interface WorkoutRecordWithDetails extends WorkoutRecord {
   menu: {
     id: number;
     name: string;
@@ -576,13 +576,13 @@ export interface WorkoutSessionWithDetails extends WorkoutSession {
   }[];
 }
 
-export async function getWorkoutSessionWithDetails(
+export async function getWorkoutRecordWithDetails(
   userId: number,
-  sessionId: number,
-): Promise<WorkoutSessionWithDetails | null> {
-  const row = await prisma.workoutSession.findFirst({
+  recordId: number,
+): Promise<WorkoutRecordWithDetails | null> {
+  const row = await prisma.workoutRecord.findFirst({
     where: {
-      id: toBigInt(sessionId, "sessionId"),
+      id: toBigInt(recordId, "recordId"),
       userId: toBigInt(userId, "userId"),
     },
     include: {
@@ -608,7 +608,7 @@ export async function getWorkoutSessionWithDetails(
   if (!row) return null;
 
   return {
-    ...mapSession(row),
+    ...mapWorkoutRecord(row),
     menu: {
       id: toSafeNumber(row.menu.id, "workout_menus.id"),
       name: row.menu.name,
@@ -1638,10 +1638,10 @@ export async function deleteScheduledTask(userId: number, taskId: number) {
 }
 
 // -----------------------------------------------------------------------------
-// WorkoutSession
+// WorkoutRecord
 // -----------------------------------------------------------------------------
 
-export interface SaveWorkoutSessionParams {
+export interface SaveWorkoutRecordParams {
   menuId: number;
   sessionPlanId?: number;
   scheduledTaskId?: number;
@@ -1662,9 +1662,9 @@ export interface SaveWorkoutSessionParams {
   }[];
 }
 
-export async function createWorkoutSession(
+export async function createWorkoutRecord(
   userId: number,
-  params: SaveWorkoutSessionParams,
+  params: SaveWorkoutRecordParams,
 ) {
   const {
     menuId,
@@ -1681,7 +1681,7 @@ export async function createWorkoutSession(
   const userBigId = toBigInt(userId, "userId");
 
   return await prisma.$transaction(async (tx) => {
-    const newSession = await tx.workoutSession.create({
+    const newRecord = await tx.workoutRecord.create({
       data: {
         userId: userBigId,
         menuId: toBigInt(menuId, "menuId"),
@@ -1724,12 +1724,12 @@ export async function createWorkoutSession(
       });
     }
 
-    return newSession;
+    return newRecord;
   });
 }
 
-export interface UpdateWorkoutSessionParams {
-  sessionId: number;
+export interface UpdateWorkoutRecordParams {
+  recordId: number;
   endedAt: Date;
   condition: number;
   fatigue: number;
@@ -1746,32 +1746,32 @@ export interface UpdateWorkoutSessionParams {
   }[];
 }
 
-export async function updateWorkoutSession(
+export async function updateWorkoutRecord(
   userId: number,
-  params: UpdateWorkoutSessionParams,
+  params: UpdateWorkoutRecordParams,
 ) {
-  const { sessionId, endedAt, condition, fatigue, note, exercises } = params;
-  const sessionBigId = toBigInt(sessionId, "sessionId");
+  const { recordId, endedAt, condition, fatigue, note, exercises } = params;
+  const recordBigId = toBigInt(recordId, "recordId");
   const userBigId = toBigInt(userId, "userId");
 
   await prisma.$transaction(async (tx) => {
-    const existingSession = await tx.workoutSession.findFirst({
+    const existingRecord = await tx.workoutRecord.findFirst({
       where: {
-        id: sessionBigId,
+        id: recordBigId,
         userId: userBigId,
       },
     });
 
-    if (!existingSession) {
-      throw new Error("セッションが見つかりません");
+    if (!existingRecord) {
+      throw new Error("記録が見つかりません");
     }
 
     await tx.exerciseRecord.deleteMany({
-      where: { sessionId: sessionBigId },
+      where: { recordId: recordBigId },
     });
 
-    await tx.workoutSession.update({
-      where: { id: sessionBigId },
+    await tx.workoutRecord.update({
+      where: { id: recordBigId },
       data: {
         endedAt,
         condition,

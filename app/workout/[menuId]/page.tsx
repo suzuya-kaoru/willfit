@@ -1,11 +1,12 @@
 import { toDateKey } from "@/lib/date-key";
 import {
-  getExerciseRecordsBySessionIds,
+  getExerciseRecordsByRecordIds,
   getMenuWithExercises,
   getSessionPlanWithDetails,
   getWorkoutSessionsByMenuIds,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
+import type { ExerciseRecord, WorkoutSet } from "@/lib/types";
 import { WorkoutClient } from "./_components/workout-client";
 
 /**
@@ -40,19 +41,19 @@ async function calculatePreviousRecords(
     return previousRecords;
   }
 
-  const exerciseRecords = await getExerciseRecordsBySessionIds([
+  const exerciseRecords = await getExerciseRecordsByRecordIds([
     previousSession.id,
   ]);
-  const exerciseRecordIds = exerciseRecords.map((record) => record.id);
+  const exerciseRecordIds = exerciseRecords.map((record: ExerciseRecord) => record.id);
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
-  const setsByRecordId = new Map<number, typeof sets>();
+  const setsByRecordId = new Map<number, WorkoutSet[]>();
   for (const set of sets) {
     const list = setsByRecordId.get(set.exerciseRecordId) ?? [];
     list.push(set);
     setsByRecordId.set(set.exerciseRecordId, list);
   }
   const recordByExerciseId = new Map(
-    exerciseRecords.map((record) => [record.exerciseId, record]),
+    exerciseRecords.map((record: ExerciseRecord) => [record.exerciseId, record]),
   );
 
   // 各種目ごとに前回記録を計算

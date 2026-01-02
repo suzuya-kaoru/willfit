@@ -1,7 +1,7 @@
 import { toZonedTime } from "date-fns-tz";
 import { formatDateKey, toDateKey } from "@/lib/date-key";
 import {
-  getExerciseRecordsBySessionIds,
+  getExerciseRecordsByRecordIds,
   getMenusByIds,
   getScheduledTasksWithPlanByDateRange,
   getSessionPlans,
@@ -42,14 +42,14 @@ async function getSessionsByDateRange(
   return getWorkoutSessionsByDateRange(userId, startDate, endDate);
 }
 
-function buildExerciseRecordsBySessionId(
+function buildExerciseRecordsByRecordId(
   records: ExerciseRecord[],
 ): Map<number, ExerciseRecord[]> {
   const map = new Map<number, ExerciseRecord[]>();
   for (const record of records) {
-    const list = map.get(record.sessionId) ?? [];
+    const list = map.get(record.recordId) ?? [];
     list.push(record);
-    map.set(record.sessionId, list);
+    map.set(record.recordId, list);
   }
   return map;
 }
@@ -73,14 +73,14 @@ function buildSetsByExerciseRecordId(
  */
 function calculateSessionStats(
   session: WorkoutSession,
-  exerciseRecordsBySessionId: Map<number, ExerciseRecord[]>,
+  exerciseRecordsByRecordId: Map<number, ExerciseRecord[]>,
   setsByExerciseRecordId: Map<number, WorkoutSet[]>,
 ): {
   volume: number;
   setCount: number;
   exerciseCount: number;
 } {
-  const records = exerciseRecordsBySessionId.get(session.id) ?? [];
+  const records = exerciseRecordsByRecordId.get(session.id) ?? [];
   const recordIds = records.map((record) => record.id);
   const sessionSets = recordIds.flatMap(
     (recordId) => setsByExerciseRecordId.get(recordId) ?? [],
@@ -102,13 +102,13 @@ function calculateSessionStats(
 function enrichSessionWithStats(
   session: WorkoutSession,
   menusById: Map<number, { name: string }>,
-  exerciseRecordsBySessionId: Map<number, ExerciseRecord[]>,
+  exerciseRecordsByRecordId: Map<number, ExerciseRecord[]>,
   setsByExerciseRecordId: Map<number, WorkoutSet[]>,
 ): WorkoutSessionWithStats {
   const menu = menusById.get(session.menuId);
   const stats = calculateSessionStats(
     session,
-    exerciseRecordsBySessionId,
+    exerciseRecordsByRecordId,
     setsByExerciseRecordId,
   );
 
@@ -240,16 +240,16 @@ export default async function SchedulePage({
     getScheduledTasksWithPlanByDateRange(userId, startDate, endDate),
   ]);
 
-  const sessionIds = sessionsInMonth.map((session) => session.id);
-  const exerciseRecords = await getExerciseRecordsBySessionIds(sessionIds);
-  const exerciseRecordIds = exerciseRecords.map((record) => record.id);
+  const recordIds = sessionsInMonth.map((session) => session.id);
+  const exerciseRecords = await getExerciseRecordsByRecordIds(recordIds);
+  const exerciseRecordIds = exerciseRecords.map((record: ExerciseRecord) => record.id);
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
   const menusByIds = await getMenusByIds(userId, [
     ...new Set(sessionsInMonth.map((session) => session.menuId)),
   ]);
   const menusById = new Map(menusByIds.map((menu) => [menu.id, menu]));
-  const exerciseRecordsBySessionId =
-    buildExerciseRecordsBySessionId(exerciseRecords);
+  const exerciseRecordsByRecordId =
+    buildExerciseRecordsByRecordId(exerciseRecords);
   const setsByExerciseRecordId = buildSetsByExerciseRecordId(sets);
 
   // ============================================================================
@@ -260,7 +260,7 @@ export default async function SchedulePage({
       enrichSessionWithStats(
         session,
         menusById,
-        exerciseRecordsBySessionId,
+        exerciseRecordsByRecordId,
         setsByExerciseRecordId,
       ),
   );

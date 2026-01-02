@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { dateKeySchema } from "@/lib/date-key";
-import { createWorkoutSession, updateWorkoutSession } from "@/lib/db/queries";
+import { createWorkoutRecord, updateWorkoutRecord } from "@/lib/db/queries";
 
 // =============================================================================
 // 入力型定義
 // =============================================================================
 
-export interface SaveWorkoutSessionInput {
+export interface SaveWorkoutRecordInput {
   menuId: number;
   sessionPlanId?: number; // 新規追加
   scheduledTaskId?: number; // 新規追加
@@ -31,8 +31,8 @@ export interface SaveWorkoutSessionInput {
   }[];
 }
 
-export interface UpdateWorkoutSessionInput {
-  sessionId: number;
+export interface UpdateWorkoutRecordInput {
+  recordId: number;
   endedAt: Date;
   condition: number;
   fatigue: number;
@@ -66,7 +66,7 @@ const exerciseRecordSchema = z.object({
   sets: z.array(workoutSetSchema).min(1),
 });
 
-const saveWorkoutSessionSchema = z.object({
+const saveWorkoutRecordSchema = z.object({
   menuId: z.number().int().positive(),
   sessionPlanId: z.number().int().positive().optional(),
   scheduledTaskId: z.number().int().positive().optional(),
@@ -79,8 +79,8 @@ const saveWorkoutSessionSchema = z.object({
   exercises: z.array(exerciseRecordSchema).min(1),
 });
 
-const updateWorkoutSessionSchema = z.object({
-  sessionId: z.number().int().positive(),
+const updateWorkoutRecordSchema = z.object({
+  recordId: z.number().int().positive(),
   endedAt: z.date(),
   condition: z.number().int().min(1).max(10),
   fatigue: z.number().int().min(1).max(10),
@@ -99,18 +99,18 @@ const updateWorkoutSessionSchema = z.object({
 // =============================================================================
 
 /**
- * トレーニングセッションを保存
+ * トレーニング記録を保存
  *
- * - WorkoutSession, ExerciseRecord, WorkoutSet を一括保存
+ * - WorkoutRecord, ExerciseRecord, WorkoutSet を一括保存
  * - 該当日のDailySchedule または ScheduledTask をcompletedに更新
  */
-export async function saveWorkoutSessionAction(
-  input: SaveWorkoutSessionInput,
-): Promise<{ success: true; sessionId: number }> {
-  const data = saveWorkoutSessionSchema.parse(input);
+export async function saveWorkoutRecordAction(
+  input: SaveWorkoutRecordInput,
+): Promise<{ success: true; recordId: number }> {
+  const data = saveWorkoutRecordSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  const session = await createWorkoutSession(userId, {
+  const record = await createWorkoutRecord(userId, {
     menuId: data.menuId,
     sessionPlanId: data.sessionPlanId,
     scheduledTaskId: data.scheduledTaskId,
@@ -125,23 +125,23 @@ export async function saveWorkoutSessionAction(
   revalidatePath("/");
   revalidatePath("/schedule");
 
-  return { success: true, sessionId: Number(session.id) };
+  return { success: true, recordId: Number(record.id) };
 }
 
 /**
- * トレーニングセッションを更新（編集・再開用）
+ * トレーニング記録を更新（編集・再開用）
  *
  * - 既存の ExerciseRecord, WorkoutSet を削除して再作成
- * - セッションのメタ情報を更新
+ * - 記録のメタ情報を更新
  */
-export async function updateWorkoutSessionAction(
-  input: UpdateWorkoutSessionInput,
+export async function updateWorkoutRecordAction(
+  input: UpdateWorkoutRecordInput,
 ): Promise<{ success: true }> {
-  const data = updateWorkoutSessionSchema.parse(input);
+  const data = updateWorkoutRecordSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  await updateWorkoutSession(userId, {
-    sessionId: data.sessionId,
+  await updateWorkoutRecord(userId, {
+    recordId: data.recordId,
     endedAt: data.endedAt,
     condition: data.condition,
     fatigue: data.fatigue,

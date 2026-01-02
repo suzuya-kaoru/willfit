@@ -1,4 +1,4 @@
-import type { CalculatedTask, WorkoutSession } from "@/lib/types";
+import type { CalculatedTask, WorkoutRecord } from "@/lib/types";
 
 /**
  * カレンダーの日付情報
@@ -6,16 +6,16 @@ import type { CalculatedTask, WorkoutSession } from "@/lib/types";
 export interface CalendarDay {
   day: number | null;
   dateString: string;
-  session: WorkoutSessionWithStats | null;
+  record: WorkoutRecordWithStats | null;
   schedules: CalculatedTask[];
   isScheduled: boolean;
   isToday: boolean;
 }
 
 /**
- * セッション統計情報付きセッション
+ * トレーニング記録統計情報付き
  */
-export interface WorkoutSessionWithStats extends WorkoutSession {
+export interface WorkoutRecordWithStats extends WorkoutRecord {
   menuName: string;
   volume: number;
   setCount: number;
@@ -28,7 +28,7 @@ export interface WorkoutSessionWithStats extends WorkoutSession {
 export interface ScheduleDayDialogProps {
   isOpen: boolean;
   date: Date | null;
-  session: WorkoutSessionWithStats | null;
+  record: WorkoutRecordWithStats | null;
   schedules: CalculatedTask[];
   onClose: () => void;
   onComplete: (id: number) => Promise<void>;

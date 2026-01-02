@@ -1,17 +1,17 @@
 import { toDateKey } from "@/lib/date-key";
 import {
-  getExerciseRecordsBySessionIds,
+  getExerciseRecordsByRecordIds,
   getExercisesWithBodyParts,
   getMonthlyStats,
   getWeightRecords,
-  getWorkoutSessions,
+  getWorkoutRecords,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
 import { formatDateTimeJST } from "@/lib/timezone";
 import type {
   ExerciseRecord,
   ExerciseWithBodyParts,
-  WorkoutSession,
+  WorkoutRecord,
   WorkoutSet,
 } from "@/lib/types";
 import {
@@ -39,14 +39,14 @@ import {
  * 将来的に集計が重くなった場合は、DB側の集計クエリへの移行を検討。
  */
 function calculateExerciseData(
-  sessions: WorkoutSession[],
+  records: WorkoutRecord[],
   exerciseRecordKeyMap: Map<string, ExerciseRecord>,
   setsByExerciseRecordId: Map<number, WorkoutSet[]>,
   exerciseId: number,
 ): ExerciseDataPoint[] {
-  const sessionData = sessions
-    .map((session) => {
-      const record = exerciseRecordKeyMap.get(`${session.id}:${exerciseId}`);
+  const recordData = records
+    .map((workoutRecord) => {
+      const record = exerciseRecordKeyMap.get(`${workoutRecord.id}:${exerciseId}`);
       if (!record) return null;
 
       const exerciseSets = setsByExerciseRecordId.get(record.id) ?? [];
@@ -66,7 +66,7 @@ function calculateExerciseData(
       );
 
       return {
-        date: formatDateTimeJST(session.startedAt, "M/d"),
+        date: formatDateTimeJST(workoutRecord.startedAt, "M/d"),
         weight: maxWeight,
         "1rm": Math.round(estimated1RM * 10) / 10,
         volume: totalVolume,
@@ -74,7 +74,7 @@ function calculateExerciseData(
     })
     .filter((d): d is ExerciseDataPoint => d !== null);
 
-  return sessionData;
+  return recordData;
 }
 
 /**
@@ -87,7 +87,7 @@ function calculatePersonalBests(
   exercises: ExerciseWithBodyParts[],
   exerciseRecords: ExerciseRecord[],
   setsByExerciseRecordId: Map<number, WorkoutSet[]>,
-  sessionDateById: Map<number, Date>,
+  recordDateById: Map<number, Date>,
 ): PersonalBest[] {
   const bests: PersonalBest[] = [];
 
@@ -101,12 +101,12 @@ function calculatePersonalBests(
     );
     for (const record of recordsForExercise) {
       const sessionSets = setsByExerciseRecordId.get(record.id) ?? [];
-      const sessionDate = sessionDateById.get(record.sessionId);
+      const recordDate = recordDateById.get(record.recordId);
       for (const set of sessionSets) {
         if (set.weight > maxWeight) {
           maxWeight = set.weight;
-          if (sessionDate) {
-            bestDate = toDateKey(sessionDate);
+          if (recordDate) {
+            bestDate = toDateKey(recordDate);
           }
         }
       }
@@ -132,17 +132,17 @@ function calculatePersonalBests(
 export default async function AnalyticsPage() {
   const userId = 1;
   const now = new Date();
-  const [weightRecords, sessions, exercises, monthlyStats] = await Promise.all([
+  const [weightRecords, workoutRecords, exercises, monthlyStats] = await Promise.all([
     getWeightRecords(userId),
-    getWorkoutSessions(userId),
+    getWorkoutRecords(userId),
     getExercisesWithBodyParts(userId),
     getMonthlyStats(userId, now.getFullYear(), now.getMonth()),
   ]);
-  const sessionsAsc = [...sessions].sort(
+  const recordsAsc = [...workoutRecords].sort(
     (a, b) => a.startedAt.getTime() - b.startedAt.getTime(),
   );
-  const sessionIds = sessions.map((session) => session.id);
-  const exerciseRecords = await getExerciseRecordsBySessionIds(sessionIds);
+  const recordIds = workoutRecords.map((record: WorkoutRecord) => record.id);
+  const exerciseRecords = await getExerciseRecordsByRecordIds(recordIds);
   const exerciseRecordIds = exerciseRecords.map((record) => record.id);
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
   const setsByExerciseRecordId = new Map<number, WorkoutSet[]>();
@@ -154,12 +154,12 @@ export default async function AnalyticsPage() {
   const exerciseRecordKeyMap = new Map<string, ExerciseRecord>();
   for (const record of exerciseRecords) {
     exerciseRecordKeyMap.set(
-      `${record.sessionId}:${record.exerciseId}`,
+      `${record.recordId}:${record.exerciseId}`,
       record,
     );
   }
-  const sessionDateById = new Map(
-    sessions.map((session) => [session.id, session.startedAt]),
+  const recordDateById = new Map<number, Date>(
+    workoutRecords.map((record: WorkoutRecord) => [record.id, record.startedAt]),
   );
 
   // 計算処理（サーバー側で実行）
@@ -168,7 +168,7 @@ export default async function AnalyticsPage() {
   const exerciseDataByExerciseId: Record<number, ExerciseDataPoint[]> = {};
   for (const exercise of exercises) {
     const data = calculateExerciseData(
-      sessionsAsc,
+      recordsAsc,
       exerciseRecordKeyMap,
       setsByExerciseRecordId,
       exercise.id,
@@ -179,7 +179,7 @@ export default async function AnalyticsPage() {
     exercises,
     exerciseRecords,
     setsByExerciseRecordId,
-    sessionDateById,
+    recordDateById,
   );
 
   // クライアント側に渡すデータを準備

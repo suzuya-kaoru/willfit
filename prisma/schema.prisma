@@ -57,7 +57,7 @@ model User {
   deletedAt        DateTime?            @map("deleted_at")
   exercises        Exercise[]
   workoutMenus     WorkoutMenu[]
-  workoutRecords   WorkoutSession[]
+  workoutRecords   WorkoutRecord[]
   weightRecords    WeightRecord[]
 
 
@@ -124,7 +124,7 @@ model WorkoutMenu {
   deletedAt     DateTime?       @map("deleted_at")
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   menuExercises MenuExercise[]
-  workoutRecords WorkoutSession[]
+  workoutRecords WorkoutRecord[]
 
   sessionPlans  SessionPlan[]
 
@@ -149,7 +149,7 @@ model MenuExercise {
   @@map("menu_exercises")
 }
 
-model WorkoutSession {
+model WorkoutRecord {
   id              BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
   userId          BigInt          @map("user_id") @db.UnsignedBigInt
   menuId          BigInt          @map("menu_id") @db.UnsignedBigInt
@@ -177,15 +177,15 @@ model WorkoutSession {
 
 model ExerciseRecord {
   id          BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
-  sessionId   BigInt       @map("session_id") @db.UnsignedBigInt
+  recordId    BigInt       @map("session_id") @db.UnsignedBigInt
   exerciseId  BigInt       @map("exercise_id") @db.UnsignedBigInt
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
-  session     WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  record      WorkoutRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
   exercise    Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
   workoutSets WorkoutSet[]
 
-  @@index([sessionId], map: "idx_exercise_records_session_id")
+  @@index([recordId], map: "idx_exercise_records_session_id")
   @@index([exerciseId], map: "idx_exercise_records_exercise_id")
   @@map("exercise_records")
 }
@@ -249,7 +249,7 @@ model SessionPlan {
   scheduleRules   ScheduleRule[]
   scheduledTasks  ScheduledTask[]
   reminders       ScheduleReminder[]
-  workoutSessions WorkoutSession[]
+  workoutRecords WorkoutRecord[]
 
   @@index([userId], map: "idx_session_plans_user_id")
   @@index([userId, deletedAt], map: "idx_session_plans_user_deleted")
@@ -330,7 +330,7 @@ model ScheduledTask {
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   rule           ScheduleRule?   @relation(fields: [ruleId], references: [id], onDelete: SetNull)
   sessionPlan    SessionPlan     @relation(fields: [sessionPlanId], references: [id], onDelete: Cascade)
-  workoutSession WorkoutSession?
+  workoutRecord WorkoutRecord?
 
   @@unique([userId, sessionPlanId, scheduledDate], map: "uk_scheduled_tasks_user_plan_date")
   @@index([userId, scheduledDate], map: "idx_scheduled_tasks_user_date")

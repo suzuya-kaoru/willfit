@@ -102,14 +102,14 @@ export interface MenuExercise extends BaseEntity {
 }
 
 // =============================================================================
-// セッション関連
+// 実績層（Record）
 // =============================================================================
 
 /**
- * トレーニング記録（ドメインでは Session と呼称）
+ * トレーニング記録
  * @table workout_records
  */
-export interface WorkoutSession extends BaseEntity {
+export interface WorkoutRecord extends BaseEntity {
   userId: number; // FK → users.id
   menuId: number; // FK → workout_menus.id
   sessionPlanId?: number; // FK → session_plans.id（新スケジュール機能）
@@ -118,7 +118,7 @@ export interface WorkoutSession extends BaseEntity {
   endedAt?: Date; // 終了日時
   condition: number; // 体調（1-10）
   fatigue: number; // 疲労感（1-10）
-  note: string; // メモ（ドメイン: session note）
+  note: string; // メモ
 }
 
 /**
@@ -126,7 +126,7 @@ export interface WorkoutSession extends BaseEntity {
  * @table exercise_records
  */
 export interface ExerciseRecord extends BaseEntity {
-  sessionId: number; // FK → workout_records.id
+  recordId: number; // FK → workout_records.id
   exerciseId: number; // FK → exercises.id
 }
 
@@ -341,9 +341,9 @@ export interface WorkoutMenuWithExercises extends WorkoutMenu {
 }
 
 /**
- * セッション（メニュー・記録付き）
+ * トレーニング記録（メニュー・記録付き）
  */
-export interface WorkoutSessionWithDetails extends WorkoutSession {
+export interface WorkoutRecordWithDetails extends WorkoutRecord {
   menu: WorkoutMenu;
   exerciseRecords: ExerciseRecordWithDetails[];
 }
@@ -361,7 +361,7 @@ export interface ExerciseRecordWithDetails extends ExerciseRecord {
  * 前回記録（動的計算用）
  */
 export interface PreviousRecord {
-  sessionId: number;
+  recordId: number;
   date: Date;
   sets: {
     weight: number;
