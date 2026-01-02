@@ -17,7 +17,7 @@
 | トレーニング実行 | `/workout/[menuId]` | セット入力、タイマー |
 | スケジュール | `/schedule` | カレンダー、リスト表示 |
 | 分析 | `/analytics` | 体重推移、種目別成長 |
-| 設定 | `/settings` | メニュー・種目・体重管理 |
+| 設定 | `/settings` | セッション管理・テンプレ管理・種目管理 |
 
 ## 🚀 クイックスタート
 
@@ -142,16 +142,15 @@ PRISMA_DATABASE_URL=mysql://docker:docker@db:3306/willfit
 
 # ローカル接続用（Prisma Studio など）
 # PRISMA_DATABASE_URL=mysql://docker:docker@127.0.0.1:3306/willfit
+```
 
 > [!NOTE]
 > **Timezone Policy (UTC Standard)**
 >
-> 1. **Server Environment**: The server runtime (Node.js/Next.js) and Database run in UTC (`TZ=UTC`).
-> 2. **Current Time**: `new Date()` always returns the current time in UTC. Do not use custom wrappers.
-> 3. **Client Display**: Convert UTC to `Asia/Tokyo` (JST) only for display purposes using `formatInTimeZone`.
-> 4. **DB DATE Type**: Column types defined as `DATE` are treated as "JST Date stored as UTC 00:00:00". Use `toUtcDateOnly` helper when saving.
-
-```
+> 1. **Server Environment**: サーバー（Node.js/Next.js）とDBはUTC (`TZ=UTC`) で動作
+> 2. **Current Time**: `new Date()` は常にUTCを返す
+> 3. **Client Display**: 表示時のみJST（Asia/Tokyo）に変換
+> 4. **DB DATE Type**: DATE型は「JST日付をUTC 00:00で保存」として扱う
 
 ## 📊 データベース
 
@@ -161,11 +160,13 @@ PRISMA_DATABASE_URL=mysql://docker:docker@db:3306/willfit
 |----------|------|
 | users | ユーザー |
 | exercises | 種目 |
-| workout_menus | トレーニングメニュー |
-| workout_records | セッション記録 |
-| workout_set_records | セットごとの記録 |
+| workout_templates | トレーニングテンプレート |
+| workout_sessions | ワークアウトセッション |
+| workout_records | トレーニング記録 |
+| workout_record_exercises | 種目ごとの記録 |
+| workout_record_sets | セットごとの記録 |
 | weight_records | 体重記録 |
-| session_plans | セッションプラン |
+| schedule_rules | スケジュールルール |
 | scheduled_tasks | スケジュールタスク |
 
 > [!IMPORTANT]

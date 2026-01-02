@@ -200,8 +200,8 @@ model WorkoutRecordSet {
   updatedAt       DateTime     @updatedAt @map("updated_at")
   workoutRecordExercise  WorkoutRecordExercise @relation(fields: [workoutRecordExerciseId], references: [id], onDelete: Cascade)
 
-  @@index([workoutRecordExerciseId], map: "idx_workout_record_sets_exercise_id")
-  @@index([workoutRecordExerciseId, setNumber], map: "idx_workout_record_sets_exercise_id_set_number")
+  @@index([workoutRecordExerciseId], map: "idx_workout_record_sets_workout_record_exercise_id")
+  @@index([workoutRecordExerciseId, setNumber], map: "idx_workout_record_sets_workout_record_exercise_id_set_number")
   @@map("workout_record_sets")
 }
 
@@ -266,7 +266,7 @@ model WorkoutSessionExercise {
   exercise    Exercise    @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@unique([workoutSessionId, exerciseId], map: "uk_workout_session_exercises_session_exercise")
-  @@index([workoutSessionId], map: "idx_workout_session_exercises_session_id")
+  @@index([workoutSessionId], map: "idx_workout_session_exercises_workout_session_id")
   @@map("workout_session_exercises")
 }
 
