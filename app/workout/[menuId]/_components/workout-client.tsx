@@ -37,8 +37,8 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   ExerciseWithBodyParts,
-  SessionPlanWithRules,
-  WorkoutMenuWithExercises,
+  WorkoutSessionWithRules,
+  WorkoutTemplateWithExercises,
 } from "@/lib/types";
 
 /**
@@ -76,10 +76,10 @@ interface LocalExerciseRecord {
  * Workout Client Component Props
  */
 export interface WorkoutClientProps {
-  menu: WorkoutMenuWithExercises;
+  template: WorkoutTemplateWithExercises;
   previousRecords: Map<number, string>; // exerciseId -> previousRecord string
   scheduledDateKey: string; // スケジュールの日付キー（YYYY-MM-DD）
-  sessionPlan: SessionPlanWithRules | null; // 適用するプラン
+  workoutSession: WorkoutSessionWithRules | null; // 適用するセッション
   scheduledTaskId?: number; // 完了対象のタスクID
 }
 
@@ -88,10 +88,10 @@ export interface WorkoutClientProps {
  * インタラクティブな操作（タイマー、セット入力、保存）を担当
  */
 export function WorkoutClient({
-  menu,
+  template,
   previousRecords,
   scheduledDateKey,
-  sessionPlan,
+  workoutSession,
   scheduledTaskId,
 }: WorkoutClientProps) {
   const router = useRouter();
@@ -117,8 +117,8 @@ export function WorkoutClient({
       targetReps?: number;
     }[] = [];
 
-    if (sessionPlan) {
-      targetExercises = sessionPlan.exercises
+    if (workoutSession) {
+      targetExercises = workoutSession.exercises
         .sort((a, b) => a.displayOrder - b.displayOrder)
         .map((pe) => ({
           exerciseId: pe.exerciseId,
@@ -128,7 +128,7 @@ export function WorkoutClient({
           targetReps: pe.targetReps,
         }));
     } else {
-      targetExercises = menu.exercises.map((e) => ({
+      targetExercises = template.exercises.map((e) => ({
         exerciseId: e.id,
         exercise: e, // include bodyParts
       }));
@@ -158,7 +158,7 @@ export function WorkoutClient({
       };
     });
     setExerciseRecords(records);
-  }, [menu, previousRecords, sessionPlan]);
+  }, [template, previousRecords, workoutSession]);
 
   // Timer
   useEffect(() => {
@@ -237,8 +237,8 @@ export function WorkoutClient({
     startTransition(async () => {
       try {
         const input: SaveWorkoutRecordInput = {
-          menuId: menu.id,
-          sessionPlanId: sessionPlan?.id ? Number(sessionPlan.id) : undefined,
+          templateId: template.id,
+          workoutSessionId: workoutSession?.id ? Number(workoutSession.id) : undefined,
           scheduledTaskId: scheduledTaskId,
           scheduledDateKey,
           startedAt: startedAtRef.current,
@@ -295,7 +295,7 @@ export function WorkoutClient({
             </button>
             <div>
               <h1 className="text-sm font-semibold leading-tight">
-                {menu.name}
+                {template.name}
               </h1>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />

@@ -19,14 +19,14 @@ import type { ScheduleRule } from "@/lib/types";
 // =============================================================================
 
 export interface CreateWeeklyRuleInput {
-  sessionPlanId: number;
+  workoutSessionId: number;
   ruleType: "weekly";
   weekdays: number; // ビットマスク
   endDateKey?: string;
 }
 
 export interface CreateIntervalRuleInput {
-  sessionPlanId: number;
+  workoutSessionId: number;
   ruleType: "interval";
   intervalDays: number;
   startDateKey: string;
@@ -34,7 +34,7 @@ export interface CreateIntervalRuleInput {
 }
 
 export interface CreateOnceRuleInput {
-  sessionPlanId: number;
+  workoutSessionId: number;
   ruleType: "once";
   startDateKey: string;
 }
@@ -59,7 +59,7 @@ export interface UpdateScheduleRuleInput {
 // =============================================================================
 
 const weeklyRuleSchema = z.object({
-  sessionPlanId: z.number().int().positive("セッションIDは正の整数"),
+  workoutSessionId: z.number().int().positive("セッションIDは正の整数"),
   ruleType: z.literal("weekly"),
   weekdays: z
     .number()
@@ -70,7 +70,7 @@ const weeklyRuleSchema = z.object({
 });
 
 const intervalRuleSchema = z.object({
-  sessionPlanId: z.number().int().positive("セッションIDは正の整数"),
+  workoutSessionId: z.number().int().positive("セッションIDは正の整数"),
   ruleType: z.literal("interval"),
   intervalDays: z
     .number()
@@ -82,7 +82,7 @@ const intervalRuleSchema = z.object({
 });
 
 const onceRuleSchema = z.object({
-  sessionPlanId: z.number().int().positive("セッションIDは正の整数"),
+  workoutSessionId: z.number().int().positive("セッションIDは正の整数"),
   ruleType: z.literal("once"),
   startDateKey: dateKeySchema,
 });
@@ -149,7 +149,7 @@ export async function createScheduleRuleAction(input: CreateScheduleRuleInput) {
 
   const rule = await createScheduleRule({
     userId,
-    sessionPlanId: data.sessionPlanId,
+    workoutSessionId: data.workoutSessionId,
     ruleType: data.ruleType,
     weekdays: data.ruleType === "weekly" ? data.weekdays : undefined,
     intervalDays: data.ruleType === "interval" ? data.intervalDays : undefined,
@@ -167,7 +167,7 @@ export async function createScheduleRuleAction(input: CreateScheduleRuleInput) {
   const mappedRule: ScheduleRule = {
     id: rule.id,
     userId: rule.userId,
-    sessionPlanId: rule.sessionPlanId,
+    workoutSessionId: rule.workoutSessionId,
     ruleType: rule.ruleType,
     weekdays: rule.weekdays ?? undefined,
     intervalDays: rule.intervalDays ?? undefined,
@@ -184,7 +184,7 @@ export async function createScheduleRuleAction(input: CreateScheduleRuleInput) {
   await TaskSchedulerService.generateTasks(
     userId,
     rule.id,
-    rule.sessionPlanId,
+    rule.workoutSessionId,
     mappedRule,
     today,
     addDays(today, 90),
@@ -223,7 +223,7 @@ export async function updateScheduleRuleAction(input: UpdateScheduleRuleInput) {
   const mappedRule: ScheduleRule = {
     id: updatedRule.id,
     userId: updatedRule.userId,
-    sessionPlanId: updatedRule.sessionPlanId,
+    workoutSessionId: updatedRule.workoutSessionId,
     ruleType: updatedRule.ruleType,
     weekdays: updatedRule.weekdays ?? undefined,
     intervalDays: updatedRule.intervalDays ?? undefined,
@@ -238,7 +238,7 @@ export async function updateScheduleRuleAction(input: UpdateScheduleRuleInput) {
   await TaskSchedulerService.syncRuleTasks(
     userId,
     data.ruleId,
-    updatedRule.sessionPlanId,
+    updatedRule.workoutSessionId,
     mappedRule,
   );
 

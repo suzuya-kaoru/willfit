@@ -6,7 +6,7 @@ import { getStartOfDayUTC, toUtcDateOnly } from "@/lib/timezone";
 import type { ScheduleRule, ScheduleRuleType } from "@/lib/types";
 
 // =============================================================================
-// 新スケジュール機能（SessionPlan ベース）
+// スケジュール機能（WorkoutSession ベース）
 // =============================================================================
 
 /**
@@ -42,7 +42,7 @@ function isRuleScheduledDate(rule: ScheduleRule, date: Date): boolean {
 }
 
 /**
- * 新スケジュール機能用のタスク生成サービス
+ * スケジュール機能用のタスク生成サービス
  */
 export const TaskSchedulerService = {
   /**
@@ -51,7 +51,7 @@ export const TaskSchedulerService = {
    *
    * @param userId ユーザーID
    * @param ruleId ルールID
-   * @param sessionPlanId セッションプランID
+   * @param workoutSessionId ワークアウトセッションID
    * @param rule スケジュールルール（DBから取得済み）
    * @param fromDate 開始日
    * @param toDate 終了日
@@ -59,7 +59,7 @@ export const TaskSchedulerService = {
   async generateTasks(
     userId: number,
     ruleId: number,
-    sessionPlanId: number,
+    workoutSessionId: number,
     rule: ScheduleRule,
     fromDate: Date,
     toDate: Date,
@@ -77,9 +77,9 @@ export const TaskSchedulerService = {
         // 既存チェック
         const existing = await prisma.scheduledTask.findUnique({
           where: {
-            userId_sessionPlanId_scheduledDate: {
+            userId_workoutSessionId_scheduledDate: {
               userId: BigInt(userId),
-              sessionPlanId: BigInt(sessionPlanId),
+              workoutSessionId: BigInt(workoutSessionId),
               scheduledDate: toUtcDateOnly(onceDate),
             },
           },
@@ -89,7 +89,7 @@ export const TaskSchedulerService = {
             data: {
               userId: BigInt(userId),
               ruleId: BigInt(ruleId),
-              sessionPlanId: BigInt(sessionPlanId),
+              workoutSessionId: BigInt(workoutSessionId),
               scheduledDate: toUtcDateOnly(onceDate),
               status: "pending",
             },
@@ -109,7 +109,7 @@ export const TaskSchedulerService = {
     const dataToCreate: {
       userId: number;
       ruleId: number;
-      sessionPlanId: number;
+      workoutSessionId: number;
       scheduledDate: Date;
     }[] = [];
 
@@ -120,7 +120,7 @@ export const TaskSchedulerService = {
       dataToCreate.push({
         userId,
         ruleId,
-        sessionPlanId,
+        workoutSessionId,
         scheduledDate: toUtcDateOnly(date),
       });
     }
@@ -131,7 +131,7 @@ export const TaskSchedulerService = {
     const existingTasks = await prisma.scheduledTask.findMany({
       where: {
         userId: BigInt(userId),
-        sessionPlanId: BigInt(sessionPlanId),
+        workoutSessionId: BigInt(workoutSessionId),
         scheduledDate: {
           in: dataToCreate.map((d) => d.scheduledDate),
         },
@@ -153,7 +153,7 @@ export const TaskSchedulerService = {
         data: finalCreates.map((d) => ({
           userId: BigInt(d.userId),
           ruleId: BigInt(d.ruleId),
-          sessionPlanId: BigInt(d.sessionPlanId),
+          workoutSessionId: BigInt(d.workoutSessionId),
           scheduledDate: d.scheduledDate,
           status: "pending" as const,
         })),
@@ -174,7 +174,7 @@ export const TaskSchedulerService = {
   async syncRuleTasks(
     userId: number,
     ruleId: number,
-    sessionPlanId: number,
+    workoutSessionId: number,
     rule: ScheduleRule,
   ): Promise<void> {
     const today = getStartOfDayUTC(new Date());
@@ -199,7 +199,7 @@ export const TaskSchedulerService = {
     await this.generateTasks(
       userId,
       ruleId,
-      sessionPlanId,
+      workoutSessionId,
       rule,
       today,
       threeMonthsLater,
@@ -226,13 +226,13 @@ export const TaskSchedulerService = {
    */
   async createManualTask(
     userId: number,
-    sessionPlanId: number,
+    workoutSessionId: number,
     scheduledDate: Date,
   ): Promise<void> {
     await prisma.scheduledTask.create({
       data: {
         userId: BigInt(userId),
-        sessionPlanId: BigInt(sessionPlanId),
+        workoutSessionId: BigInt(workoutSessionId),
         scheduledDate: toUtcDateOnly(scheduledDate),
         status: "pending",
       },
@@ -259,7 +259,7 @@ export const TaskSchedulerService = {
       const mappedRule: ScheduleRule = {
         id: Number(rule.id),
         userId: Number(rule.userId),
-        sessionPlanId: Number(rule.sessionPlanId),
+        workoutSessionId: Number(rule.workoutSessionId),
         ruleType: rule.ruleType as ScheduleRuleType,
         weekdays: rule.weekdays ?? undefined,
         intervalDays: rule.intervalDays ?? undefined,
@@ -274,7 +274,7 @@ export const TaskSchedulerService = {
       await this.generateTasks(
         Number(rule.userId),
         Number(rule.id),
-        Number(rule.sessionPlanId),
+        Number(rule.workoutSessionId),
         mappedRule,
         today,
         threeMonthsLater,

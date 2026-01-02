@@ -38,10 +38,10 @@ export function ScheduleCard({
 
   return (
     <div className="rounded-2xl border border-border/50 bg-linear-to-br from-card to-muted/30 p-4 shadow-sm">
-      {/* Menu name & routine info */}
+      {/* Template name & routine info */}
       <div className="flex items-start justify-between">
         <h3 className="text-base font-bold text-foreground">
-          {schedule.menuName}
+          {schedule.templateName}
         </h3>
         <div className="flex items-center gap-1.5">
           {schedule.isFromReschedule && (
@@ -63,7 +63,7 @@ export function ScheduleCard({
       <Button
         onClick={() =>
           router.push(
-            `/workout/${schedule.menuId}?taskId=${schedule.taskId}&planId=${schedule.sessionPlanId}`,
+            `/workout/${schedule.templateId}?taskId=${schedule.taskId}&planId=${schedule.workoutSessionId}`,
           )
         }
         className="mt-4 w-full gap-2 rounded-xl font-semibold shadow-lg shadow-primary/20"

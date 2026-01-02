@@ -2,9 +2,9 @@ import { toZonedTime } from "date-fns-tz";
 import { formatDateKey, toDateKey } from "@/lib/date-key";
 import {
   getExerciseRecordsByRecordIds,
-  getMenusByIds,
-  getScheduledTasksWithPlanByDateRange,
-  getSessionPlans,
+  getTemplatesByIds,
+  getScheduledTasksWithSessionByDateRange,
+  getWorkoutSessions,
   getWorkoutRecordsByDateRange,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
@@ -12,9 +12,9 @@ import { weekdaysFromBitmask } from "@/lib/schedule-utils";
 import { APP_TIMEZONE, getMonthEndUTC, getMonthStartUTC } from "@/lib/timezone";
 import type {
   CalculatedTask,
-  ExerciseRecord,
+  WorkoutRecordExercise,
   WorkoutRecord,
-  WorkoutSet,
+  WorkoutRecordSet,
 } from "@/lib/types";
 import { ScheduleClient } from "./_components/schedule-client";
 import type { CalendarDay, WorkoutRecordWithStats } from "./_components/types";
@@ -43,9 +43,9 @@ async function getRecordsByDateRange(
 }
 
 function buildExerciseRecordsByRecordId(
-  records: ExerciseRecord[],
-): Map<number, ExerciseRecord[]> {
-  const map = new Map<number, ExerciseRecord[]>();
+  records: WorkoutRecordExercise[],
+): Map<number, WorkoutRecordExercise[]> {
+  const map = new Map<number, WorkoutRecordExercise[]>();
   for (const record of records) {
     const list = map.get(record.recordId) ?? [];
     list.push(record);
@@ -54,14 +54,14 @@ function buildExerciseRecordsByRecordId(
   return map;
 }
 
-function buildSetsByExerciseRecordId(
-  sets: WorkoutSet[],
-): Map<number, WorkoutSet[]> {
-  const map = new Map<number, WorkoutSet[]>();
+function buildSetsByWorkoutRecordExerciseId(
+  sets: WorkoutRecordSet[],
+): Map<number, WorkoutRecordSet[]> {
+  const map = new Map<number, WorkoutRecordSet[]>();
   for (const set of sets) {
-    const list = map.get(set.exerciseRecordId) ?? [];
+    const list = map.get(set.workoutRecordExerciseId) ?? [];
     list.push(set);
-    map.set(set.exerciseRecordId, list);
+    map.set(set.workoutRecordExerciseId, list);
   }
   return map;
 }
@@ -73,8 +73,8 @@ function buildSetsByExerciseRecordId(
  */
 function calculateRecordStats(
   workoutRecord: WorkoutRecord,
-  exerciseRecordsByRecordId: Map<number, ExerciseRecord[]>,
-  setsByExerciseRecordId: Map<number, WorkoutSet[]>,
+  exerciseRecordsByRecordId: Map<number, WorkoutRecordExercise[]>,
+  setsByWorkoutRecordExerciseId: Map<number, WorkoutRecordSet[]>,
 ): {
   volume: number;
   setCount: number;
@@ -83,7 +83,7 @@ function calculateRecordStats(
   const exerciseRecords = exerciseRecordsByRecordId.get(workoutRecord.id) ?? [];
   const exerciseRecordIds = exerciseRecords.map((er) => er.id);
   const recordSets = exerciseRecordIds.flatMap(
-    (erId) => setsByExerciseRecordId.get(erId) ?? [],
+    (erId) => setsByWorkoutRecordExerciseId.get(erId) ?? [],
   );
 
   const volume = recordSets.reduce((total, set) => {
@@ -101,20 +101,20 @@ function calculateRecordStats(
  */
 function enrichRecordWithStats(
   workoutRecord: WorkoutRecord,
-  menusById: Map<number, { name: string }>,
-  exerciseRecordsByRecordId: Map<number, ExerciseRecord[]>,
-  setsByExerciseRecordId: Map<number, WorkoutSet[]>,
+  templatesById: Map<number, { name: string }>,
+  exerciseRecordsByRecordId: Map<number, WorkoutRecordExercise[]>,
+  setsByWorkoutRecordExerciseId: Map<number, WorkoutRecordSet[]>,
 ): WorkoutRecordWithStats {
-  const menu = menusById.get(workoutRecord.menuId);
+  const template = templatesById.get(workoutRecord.templateId);
   const stats = calculateRecordStats(
     workoutRecord,
     exerciseRecordsByRecordId,
-    setsByExerciseRecordId,
+    setsByWorkoutRecordExerciseId,
   );
 
   return {
     ...workoutRecord,
-    menuName: menu?.name ?? "不明なテンプレ",
+    menuName: template?.name ?? "不明なテンプレート",
     ...stats,
   };
 }
@@ -234,23 +234,23 @@ export default async function SchedulePage({
   const startDate = getMonthStartUTC(year, month);
   const endDate = getMonthEndUTC(year, month);
 
-  const [recordsInMonth, sessionPlans, scheduledTasks] = await Promise.all([
+  const [recordsInMonth, workoutSessions, scheduledTasks] = await Promise.all([
     getRecordsByDateRange(userId, year, month),
-    getSessionPlans(userId),
-    getScheduledTasksWithPlanByDateRange(userId, startDate, endDate),
+    getWorkoutSessions(userId),
+    getScheduledTasksWithSessionByDateRange(userId, startDate, endDate),
   ]);
 
   const workoutRecordIds = recordsInMonth.map((record) => record.id);
   const exerciseRecords = await getExerciseRecordsByRecordIds(workoutRecordIds);
-  const exerciseRecordIds = exerciseRecords.map((er: ExerciseRecord) => er.id);
+  const exerciseRecordIds = exerciseRecords.map((er: WorkoutRecordExercise) => er.id);
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
-  const menusByIds = await getMenusByIds(userId, [
-    ...new Set(recordsInMonth.map((record) => record.menuId)),
+  const templatesByIds = await getTemplatesByIds(userId, [
+    ...new Set(recordsInMonth.map((record) => record.templateId)),
   ]);
-  const menusById = new Map(menusByIds.map((menu) => [menu.id, menu]));
+  const templatesById = new Map(templatesByIds.map((template) => [template.id, template]));
   const exerciseRecordsByRecordId =
     buildExerciseRecordsByRecordId(exerciseRecords);
-  const setsByExerciseRecordId = buildSetsByExerciseRecordId(sets);
+  const setsByWorkoutRecordExerciseId = buildSetsByWorkoutRecordExerciseId(sets);
 
   // ============================================================================
   // データ計算（サーバー側で実行）
@@ -259,9 +259,9 @@ export default async function SchedulePage({
     (record) =>
       enrichRecordWithStats(
         record,
-        menusById,
+        templatesById,
         exerciseRecordsByRecordId,
-        setsByExerciseRecordId,
+        setsByWorkoutRecordExerciseId,
       ),
   );
 
@@ -281,10 +281,10 @@ export default async function SchedulePage({
 
     const mappedTask: CalculatedTask = {
       taskId: Number(task.id),
-      sessionPlanId: Number(task.sessionPlanId),
-      sessionPlanName: task.sessionPlan.name,
-      menuId: Number(task.sessionPlan.menuId),
-      menuName: task.sessionPlan.menu.name,
+      workoutSessionId: Number(task.workoutSessionId),
+      workoutSessionName: task.workoutSession.name,
+      templateId: Number(task.workoutSession.templateId),
+      templateName: task.workoutSession.template.name,
       ruleId: task.ruleId ? Number(task.ruleId) : undefined,
       ruleType: task.rule?.ruleType,
       weekdays:
@@ -320,7 +320,7 @@ export default async function SchedulePage({
       calendarDays={calendarDays}
       recordsList={recordsList}
       todayDateString={todayDateString}
-      plans={sessionPlans}
+      plans={workoutSessions}
     />
   );
 }

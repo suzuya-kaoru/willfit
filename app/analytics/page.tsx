@@ -9,10 +9,10 @@ import {
 } from "@/lib/db/queries";
 import { formatDateTimeJST } from "@/lib/timezone";
 import type {
-  ExerciseRecord,
+  WorkoutRecordExercise,
   ExerciseWithBodyParts,
   WorkoutRecord,
-  WorkoutSet,
+  WorkoutRecordSet,
 } from "@/lib/types";
 import {
   AnalyticsClient,
@@ -40,8 +40,8 @@ import {
  */
 function calculateExerciseData(
   records: WorkoutRecord[],
-  exerciseRecordKeyMap: Map<string, ExerciseRecord>,
-  setsByExerciseRecordId: Map<number, WorkoutSet[]>,
+  exerciseRecordKeyMap: Map<string, WorkoutRecordExercise>,
+  setsByWorkoutRecordExerciseId: Map<number, WorkoutRecordSet[]>,
   exerciseId: number,
 ): ExerciseDataPoint[] {
   const recordData = records
@@ -51,7 +51,7 @@ function calculateExerciseData(
       );
       if (!record) return null;
 
-      const exerciseSets = setsByExerciseRecordId.get(record.id) ?? [];
+      const exerciseSets = setsByWorkoutRecordExerciseId.get(record.id) ?? [];
 
       if (exerciseSets.length === 0) return null;
 
@@ -87,8 +87,8 @@ function calculateExerciseData(
  */
 function calculatePersonalBests(
   exercises: ExerciseWithBodyParts[],
-  exerciseRecords: ExerciseRecord[],
-  setsByExerciseRecordId: Map<number, WorkoutSet[]>,
+  exerciseRecords: WorkoutRecordExercise[],
+  setsByWorkoutRecordExerciseId: Map<number, WorkoutRecordSet[]>,
   recordDateById: Map<number, Date>,
 ): PersonalBest[] {
   const bests: PersonalBest[] = [];
@@ -102,7 +102,7 @@ function calculatePersonalBests(
       (record) => record.exerciseId === exercise.id,
     );
     for (const record of recordsForExercise) {
-      const sessionSets = setsByExerciseRecordId.get(record.id) ?? [];
+      const sessionSets = setsByWorkoutRecordExerciseId.get(record.id) ?? [];
       const recordDate = recordDateById.get(record.recordId);
       for (const set of sessionSets) {
         if (set.weight > maxWeight) {
@@ -148,13 +148,13 @@ export default async function AnalyticsPage() {
   const exerciseRecords = await getExerciseRecordsByRecordIds(recordIds);
   const exerciseRecordIds = exerciseRecords.map((record) => record.id);
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
-  const setsByExerciseRecordId = new Map<number, WorkoutSet[]>();
+  const setsByWorkoutRecordExerciseId = new Map<number, WorkoutRecordSet[]>();
   for (const set of sets) {
-    const list = setsByExerciseRecordId.get(set.exerciseRecordId) ?? [];
+    const list = setsByWorkoutRecordExerciseId.get(set.workoutRecordExerciseId) ?? [];
     list.push(set);
-    setsByExerciseRecordId.set(set.exerciseRecordId, list);
+    setsByWorkoutRecordExerciseId.set(set.workoutRecordExerciseId, list);
   }
-  const exerciseRecordKeyMap = new Map<string, ExerciseRecord>();
+  const exerciseRecordKeyMap = new Map<string, WorkoutRecordExercise>();
   for (const record of exerciseRecords) {
     exerciseRecordKeyMap.set(`${record.recordId}:${record.exerciseId}`, record);
   }
@@ -173,7 +173,7 @@ export default async function AnalyticsPage() {
     const data = calculateExerciseData(
       recordsAsc,
       exerciseRecordKeyMap,
-      setsByExerciseRecordId,
+      setsByWorkoutRecordExerciseId,
       exercise.id,
     );
     exerciseDataByExerciseId[exercise.id] = data;
@@ -181,7 +181,7 @@ export default async function AnalyticsPage() {
   const personalBests = calculatePersonalBests(
     exercises,
     exerciseRecords,
-    setsByExerciseRecordId,
+    setsByWorkoutRecordExerciseId,
     recordDateById,
   );
 

@@ -3,9 +3,9 @@
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
-  CreateMenuInput,
-  UpdateMenuInput,
-} from "@/app/_actions/menu-actions";
+  CreateTemplateInput,
+  UpdateTemplateInput,
+} from "@/app/_actions/template-actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,43 +17,43 @@ import {
 import { Input } from "@/components/ui/input";
 import type {
   ExerciseWithBodyParts,
-  WorkoutMenuWithExercises,
+  WorkoutTemplateWithExercises,
 } from "@/lib/types";
 
 // ダイアログからの入力型（新規: id なし、更新: id あり）
-export type MenuDialogInput = CreateMenuInput | UpdateMenuInput;
+export type TemplateDialogInput = CreateTemplateInput | UpdateTemplateInput;
 
-export interface MenuEditDialogProps {
-  menu: WorkoutMenuWithExercises | null;
+export interface TemplateEditDialogProps {
+  template: WorkoutTemplateWithExercises | null;
   isOpen: boolean;
   isNew: boolean;
   exercises: ExerciseWithBodyParts[];
   onClose: () => void;
-  onSave: (input: MenuDialogInput) => Promise<void>;
+  onSave: (input: TemplateDialogInput) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
 }
 
-export function MenuEditDialog({
-  menu,
+export function TemplateEditDialog({
+  template,
   isOpen,
   isNew,
   exercises,
   onClose,
   onSave,
   onDelete,
-}: MenuEditDialogProps) {
+}: TemplateEditDialogProps) {
   const [name, setName] = useState("");
   const [selectedExercises, setSelectedExercises] = useState<
     ExerciseWithBodyParts[]
   >([]);
 
-  // Reset form when dialog opens/menu changes
+  // Reset form when dialog opens/template changes
   useEffect(() => {
     if (isOpen) {
-      setName(menu?.name ?? "");
-      setSelectedExercises(menu?.exercises ?? []);
+      setName(template?.name ?? "");
+      setSelectedExercises(template?.exercises ?? []);
     }
-  }, [isOpen, menu]);
+  }, [isOpen, template]);
 
   const handleSave = async () => {
     if (!name.trim()) return;
@@ -64,8 +64,8 @@ export function MenuEditDialog({
     };
 
     // 更新時は id を含める
-    if (menu?.id) {
-      await onSave({ ...baseInput, id: menu.id });
+    if (template?.id) {
+      await onSave({ ...baseInput, id: template.id });
     } else {
       await onSave(baseInput);
     }
@@ -103,11 +103,11 @@ export function MenuEditDialog({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <label htmlFor="menu-name" className="text-sm font-medium">
+            <label htmlFor="template-name" className="text-sm font-medium">
               テンプレ名
             </label>
             <Input
-              id="menu-name"
+              id="template-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Day1 胸・背中"
@@ -192,8 +192,8 @@ export function MenuEditDialog({
             <Button
               variant="destructive"
               onClick={async () => {
-                if (menu?.id) {
-                  await onDelete(menu.id);
+                if (template?.id) {
+                  await onDelete(template.id);
                   onClose();
                 }
               }}
@@ -213,3 +213,8 @@ export function MenuEditDialog({
     </Dialog>
   );
 }
+
+// 後方互換性エイリアス
+export type MenuDialogInput = TemplateDialogInput;
+export type MenuEditDialogProps = TemplateEditDialogProps;
+export const MenuEditDialog = TemplateEditDialog;

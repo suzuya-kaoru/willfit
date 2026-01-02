@@ -70,8 +70,8 @@ export function ScheduleDayDialog({
                     onStartWorkout={() =>
                       onStartWorkout?.(
                         id,
-                        schedule.sessionPlanId,
-                        schedule.menuId,
+                        schedule.workoutSessionId,
+                        schedule.templateId,
                       )
                     }
                   />
@@ -173,7 +173,7 @@ function ScheduleCard({
     routineInfo = "手動追加";
   }
 
-  const menuName = schedule.sessionPlanName || schedule.menuName;
+  const menuName = schedule.workoutSessionName || schedule.templateName;
   const isRescheduled = schedule.isFromReschedule;
 
   return (

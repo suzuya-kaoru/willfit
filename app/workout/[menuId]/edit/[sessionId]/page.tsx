@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import {
-  getMenuWithExercises,
+  getTemplateWithExercises,
   getWorkoutRecordWithDetails,
 } from "@/lib/db/queries";
 import { WorkoutEditClient } from "./_components/workout-edit-client";
@@ -15,27 +15,27 @@ export default async function WorkoutEditPage({
   params: Promise<{ menuId: string; sessionId: string }>;
 }) {
   const userId = 1; // TODO: 認証実装後に動的取得
-  const { menuId, sessionId } = await params;
-  const menuIdNum = Number.parseInt(menuId, 10);
+  const { menuId: templateIdStr, sessionId } = await params;
+  const templateIdNum = Number.parseInt(templateIdStr, 10);
   const recordIdNum = Number.parseInt(sessionId, 10);
 
-  if (Number.isNaN(menuIdNum) || Number.isNaN(recordIdNum)) {
+  if (Number.isNaN(templateIdNum) || Number.isNaN(recordIdNum)) {
     notFound();
   }
 
-  const [menu, workoutRecord] = await Promise.all([
-    getMenuWithExercises(userId, menuIdNum),
+  const [template, workoutRecord] = await Promise.all([
+    getTemplateWithExercises(userId, templateIdNum),
     getWorkoutRecordWithDetails(userId, recordIdNum),
   ]);
 
-  if (!menu || !workoutRecord) {
+  if (!template || !workoutRecord) {
     notFound();
   }
 
-  // 記録のメニューIDが一致するか確認
-  if (workoutRecord.menuId !== menuIdNum) {
+  // 記録のテンプレートIDが一致するか確認
+  if (workoutRecord.templateId !== templateIdNum) {
     notFound();
   }
 
-  return <WorkoutEditClient menu={menu} workoutRecord={workoutRecord} />;
+  return <WorkoutEditClient template={template} workoutRecord={workoutRecord} />;
 }

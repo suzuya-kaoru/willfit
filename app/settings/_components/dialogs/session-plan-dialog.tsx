@@ -3,10 +3,10 @@
 import { ArrowDown, ArrowUp, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
-  CreateSessionPlanInput,
-  SessionPlanExerciseInput,
-  UpdateSessionPlanInput,
-} from "@/app/_actions/session-plan-actions";
+  CreateWorkoutSessionInput,
+  WorkoutSessionExerciseInput,
+  UpdateWorkoutSessionInput,
+} from "@/app/_actions/workout-session-actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,57 +27,57 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type {
   ExerciseWithBodyParts,
-  SessionPlanWithExercises,
-  WorkoutMenuWithExercises,
+  WorkoutSessionWithExercises,
+  WorkoutTemplateWithExercises,
 } from "@/lib/types";
 
-export type SessionPlanDialogInput =
-  | CreateSessionPlanInput
-  | UpdateSessionPlanInput;
+export type WorkoutSessionDialogInput =
+  | CreateWorkoutSessionInput
+  | UpdateWorkoutSessionInput;
 
-export interface SessionPlanDialogProps {
-  plan: SessionPlanWithExercises | null;
+export interface WorkoutSessionDialogProps {
+  session: WorkoutSessionWithExercises | null;
   isOpen: boolean;
   isNew: boolean;
-  menus: WorkoutMenuWithExercises[];
+  templates: WorkoutTemplateWithExercises[];
   allExercises: ExerciseWithBodyParts[];
   onClose: () => void;
-  onSave: (input: SessionPlanDialogInput) => Promise<void>;
+  onSave: (input: WorkoutSessionDialogInput) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
 }
 
 // 編集用の拡張型
-interface EditingExercise extends SessionPlanExerciseInput {
+interface EditingExercise extends WorkoutSessionExerciseInput {
   _id: string; // for UI key
   name: string; // 表示用
   bodyPartNames: string[]; // 表示用
 }
 
-export function SessionPlanDialog({
-  plan,
+export function WorkoutSessionDialog({
+  session,
   isOpen,
   isNew,
-  menus,
+  templates,
   allExercises,
   onClose,
   onSave,
   onDelete,
-}: SessionPlanDialogProps) {
+}: WorkoutSessionDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [menuId, setMenuId] = useState<string>("");
+  const [templateId, setTemplateId] = useState<string>("");
   const [exercises, setExercises] = useState<EditingExercise[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ダイアログが開かれたとき、またはplanが変更されたときに初期化
+  // ダイアログが開かれたとき、またはsessionが変更されたときに初期化
   useEffect(() => {
     if (isOpen) {
-      if (plan) {
-        setName(plan.name);
-        setDescription(plan.description ?? "");
-        setMenuId(plan.menuId.toString());
+      if (session) {
+        setName(session.name);
+        setDescription(session.description ?? "");
+        setTemplateId(session.templateId.toString());
         setExercises(
-          plan.exercises.map((ex) => ({
+          session.exercises.map((ex) => ({
             _id: crypto.randomUUID(),
             exerciseId: ex.exerciseId,
             displayOrder: ex.displayOrder,
@@ -93,23 +93,23 @@ export function SessionPlanDialog({
       } else {
         setName("");
         setDescription("");
-        setMenuId("");
+        setTemplateId("");
         setExercises([]);
       }
     }
-  }, [isOpen, plan]);
+  }, [isOpen, session]);
 
-  // メニュー選択時の処理（新規作成時のみ、または意図的な上書き）
-  const handleMenuChange = (id: string) => {
-    setMenuId(id);
-    const selectedMenu = menus.find((m) => m.id.toString() === id);
-    if (selectedMenu) {
-      // メニュー名が未入力なら自動設定
+  // テンプレート選択時の処理（新規作成時のみ、または意図的な上書き）
+  const handleTemplateChange = (id: string) => {
+    setTemplateId(id);
+    const selectedTemplate = templates.find((m) => m.id.toString() === id);
+    if (selectedTemplate) {
+      // テンプレート名が未入力なら自動設定
       if (!name) {
-        setName(selectedMenu.name);
+        setName(selectedTemplate.name);
       }
-      // メニューの種目をコピー
-      const newExercises: EditingExercise[] = selectedMenu.exercises.map(
+      // テンプレートの種目をコピー
+      const newExercises: EditingExercise[] = selectedTemplate.exercises.map(
         (ex, index) => ({
           _id: crypto.randomUUID(),
           exerciseId: ex.id,
@@ -128,11 +128,11 @@ export function SessionPlanDialog({
   };
 
   const handleSave = async () => {
-    if (!name.trim() || !menuId || exercises.length === 0) return;
+    if (!name.trim() || !templateId || exercises.length === 0) return;
     setIsSubmitting(true);
 
     try {
-      const exerciseInputs: SessionPlanExerciseInput[] = exercises.map(
+      const exerciseInputs: WorkoutSessionExerciseInput[] = exercises.map(
         (ex, index) => ({
           exerciseId: ex.exerciseId,
           displayOrder: index + 1,
@@ -144,16 +144,16 @@ export function SessionPlanDialog({
         }),
       );
 
-      if (plan?.id) {
+      if (session?.id) {
         await onSave({
-          id: plan.id,
+          id: session.id,
           name: name.trim(),
           description: description.trim() || undefined,
           exercises: exerciseInputs,
         });
       } else {
         await onSave({
-          menuId: parseInt(menuId, 10),
+          templateId: parseInt(templateId, 10),
           name: name.trim(),
           description: description.trim() || undefined,
           exercises: exerciseInputs,
@@ -204,7 +204,7 @@ export function SessionPlanDialog({
 
   const updateExercise = (
     index: number,
-    field: keyof SessionPlanExerciseInput,
+    field: keyof WorkoutSessionExerciseInput,
     value: string | number,
   ) => {
     setExercises((prev) =>
@@ -225,17 +225,17 @@ export function SessionPlanDialog({
           {/* 基本設定 */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="base-menu">ベーステンプレ</Label>
+              <Label htmlFor="base-template">ベーステンプレ</Label>
               <Select
-                value={menuId}
-                onValueChange={handleMenuChange}
+                value={templateId}
+                onValueChange={handleTemplateChange}
                 disabled={!isNew}
               >
-                <SelectTrigger id="base-menu">
+                <SelectTrigger id="base-template">
                   <SelectValue placeholder="テンプレを選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  {menus.map((m) => (
+                  {templates.map((m) => (
                     <SelectItem key={m.id} value={m.id.toString()}>
                       {m.name}
                     </SelectItem>
@@ -245,9 +245,9 @@ export function SessionPlanDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="plan-name">セッション名</Label>
+              <Label htmlFor="session-name">セッション名</Label>
               <Input
-                id="plan-name"
+                id="session-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="例: 胸トレ Aセッション"
@@ -429,9 +429,9 @@ export function SessionPlanDialog({
               variant="destructive"
               disabled={isSubmitting}
               onClick={async () => {
-                if (plan?.id) {
+                if (session?.id) {
                   setIsSubmitting(true);
-                  await onDelete(plan.id);
+                  await onDelete(session.id);
                   setIsSubmitting(false);
                   onClose();
                 }
@@ -447,7 +447,10 @@ export function SessionPlanDialog({
           <Button
             onClick={handleSave}
             disabled={
-              !name.trim() || !menuId || exercises.length === 0 || isSubmitting
+              !name.trim() ||
+              !templateId ||
+              exercises.length === 0 ||
+              isSubmitting
             }
           >
             {isSubmitting ? "保存中..." : "保存"}
@@ -457,3 +460,8 @@ export function SessionPlanDialog({
     </Dialog>
   );
 }
+
+// 後方互換性エイリアス
+export type SessionPlanDialogInput = WorkoutSessionDialogInput;
+export type SessionPlanDialogProps = WorkoutSessionDialogProps;
+export const SessionPlanDialog = WorkoutSessionDialog;

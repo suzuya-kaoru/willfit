@@ -26,7 +26,7 @@ enum DailyScheduleStatus {
 }
 
 // ========================================
-// 新スケジュール機能用 Enum
+// スケジュール機能用 Enum
 // ========================================
 
 enum ScheduleRuleType {
@@ -56,13 +56,12 @@ model User {
   updatedAt        DateTime             @updatedAt @map("updated_at")
   deletedAt        DateTime?            @map("deleted_at")
   exercises        Exercise[]
-  workoutMenus     WorkoutMenu[]
+  workoutTemplates WorkoutTemplate[]
   workoutRecords   WorkoutRecord[]
   weightRecords    WeightRecord[]
 
-
-  // 新スケジュール機能
-  sessionPlans      SessionPlan[]
+  // スケジュール機能
+  workoutSessions   WorkoutSession[]
   scheduleRules     ScheduleRule[]
   scheduledTasks    ScheduledTask[]
   scheduleReminders ScheduleReminder[]
@@ -95,9 +94,9 @@ model Exercise {
   deletedAt      DateTime?          @map("deleted_at")
   user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   bodyParts      ExerciseBodyPart[]
-  exerciseRecords ExerciseRecord[]
-  menuExercises  MenuExercise[]
-  sessionPlanExercises SessionPlanExercise[]
+  workoutRecordExercises WorkoutRecordExercise[]
+  templateExercises  TemplateExercise[]
+  workoutSessionExercises WorkoutSessionExercise[]
 
   @@index([userId], map: "idx_exercises_user_id")
   @@index([userId, deletedAt], map: "idx_exercises_user_id_deleted_at")
@@ -115,7 +114,7 @@ model ExerciseBodyPart {
   @@map("exercise_body_parts")
 }
 
-model WorkoutMenu {
+model WorkoutTemplate {
   id            BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
   userId        BigInt          @map("user_id") @db.UnsignedBigInt
   name          String          @db.VarChar(100)
@@ -123,37 +122,36 @@ model WorkoutMenu {
   updatedAt     DateTime        @updatedAt @map("updated_at")
   deletedAt     DateTime?       @map("deleted_at")
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  menuExercises MenuExercise[]
+  templateExercises TemplateExercise[]
   workoutRecords WorkoutRecord[]
+  workoutSessions  WorkoutSession[]
 
-  sessionPlans  SessionPlan[]
-
-  @@index([userId], map: "idx_workout_menus_user_id")
-  @@index([userId, deletedAt], map: "idx_workout_menus_user_id_deleted_at")
-  @@map("workout_menus")
+  @@index([userId], map: "idx_workout_templates_user_id")
+  @@index([userId, deletedAt], map: "idx_workout_templates_user_id_deleted_at")
+  @@map("workout_templates")
 }
 
-model MenuExercise {
+model TemplateExercise {
   id           BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
-  menuId       BigInt       @map("menu_id") @db.UnsignedBigInt
+  templateId   BigInt       @map("template_id") @db.UnsignedBigInt
   exerciseId   BigInt       @map("exercise_id") @db.UnsignedBigInt
   displayOrder Int          @map("display_order") @db.UnsignedInt
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
-  menu         WorkoutMenu  @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  template     WorkoutTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
   exercise     Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
-  @@index([menuId], map: "idx_menu_exercises_menu_id")
-  @@index([menuId, displayOrder], map: "idx_menu_exercises_menu_id_display_order")
-  @@unique([menuId, exerciseId], map: "uk_menu_exercises_menu_id_exercise_id")
-  @@map("menu_exercises")
+  @@index([templateId], map: "idx_template_exercises_template_id")
+  @@index([templateId, displayOrder], map: "idx_template_exercises_template_id_display_order")
+  @@unique([templateId, exerciseId], map: "uk_template_exercises_template_id_exercise_id")
+  @@map("template_exercises")
 }
 
 model WorkoutRecord {
   id              BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
   userId          BigInt          @map("user_id") @db.UnsignedBigInt
-  menuId          BigInt          @map("menu_id") @db.UnsignedBigInt
-  sessionPlanId   BigInt?         @map("session_plan_id") @db.UnsignedBigInt
+  templateId      BigInt          @map("template_id") @db.UnsignedBigInt
+  workoutSessionId BigInt?        @map("workout_session_id") @db.UnsignedBigInt
   scheduledTaskId BigInt?         @unique @map("scheduled_task_id") @db.UnsignedBigInt
   startedAt       DateTime        @map("started_at")
   endedAt         DateTime?       @map("ended_at")
@@ -163,36 +161,36 @@ model WorkoutRecord {
   createdAt       DateTime        @default(now()) @map("created_at")
   updatedAt       DateTime        @updatedAt @map("updated_at")
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  menu            WorkoutMenu     @relation(fields: [menuId], references: [id], onDelete: Restrict)
-  sessionPlan     SessionPlan?    @relation(fields: [sessionPlanId], references: [id], onDelete: SetNull)
+  template        WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  workoutSession  WorkoutSession? @relation(fields: [workoutSessionId], references: [id], onDelete: SetNull)
   scheduledTask   ScheduledTask?  @relation(fields: [scheduledTaskId], references: [id], onDelete: SetNull)
-  exerciseRecords ExerciseRecord[]
+  workoutRecordExercises WorkoutRecordExercise[]
 
   @@index([userId], map: "idx_workout_records_user_id")
   @@index([userId, startedAt], map: "idx_workout_records_user_id_started_at")
-  @@index([menuId], map: "idx_workout_records_menu_id")
-  @@index([sessionPlanId], map: "idx_workout_records_session_plan_id")
+  @@index([templateId], map: "idx_workout_records_template_id")
+  @@index([workoutSessionId], map: "idx_workout_records_workout_session_id")
   @@map("workout_records")
 }
 
-model ExerciseRecord {
+model WorkoutRecordExercise {
   id          BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
-  recordId    BigInt       @map("session_id") @db.UnsignedBigInt
+  recordId    BigInt       @map("record_id") @db.UnsignedBigInt
   exerciseId  BigInt       @map("exercise_id") @db.UnsignedBigInt
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
   record      WorkoutRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
   exercise    Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
-  workoutSets WorkoutSet[]
+  workoutRecordSets WorkoutRecordSet[]
 
-  @@index([recordId], map: "idx_exercise_records_session_id")
-  @@index([exerciseId], map: "idx_exercise_records_exercise_id")
-  @@map("exercise_records")
+  @@index([recordId], map: "idx_workout_record_exercises_record_id")
+  @@index([exerciseId], map: "idx_workout_record_exercises_exercise_id")
+  @@map("workout_record_exercises")
 }
 
-model WorkoutSet {
+model WorkoutRecordSet {
   id              BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
-  exerciseRecordId BigInt      @map("exercise_record_id") @db.UnsignedBigInt
+  workoutRecordExerciseId BigInt @map("workout_record_exercise_id") @db.UnsignedBigInt
   setNumber       Int          @map("set_number") @db.UnsignedInt
   weight          Decimal      @db.Decimal(5, 1)
   reps            Int          @db.UnsignedInt
@@ -200,11 +198,11 @@ model WorkoutSet {
   note            String?      @db.Text
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
-  exerciseRecord  ExerciseRecord @relation(fields: [exerciseRecordId], references: [id], onDelete: Cascade)
+  workoutRecordExercise  WorkoutRecordExercise @relation(fields: [workoutRecordExerciseId], references: [id], onDelete: Cascade)
 
-  @@index([exerciseRecordId], map: "idx_workout_set_records_exercise_record_id")
-  @@index([exerciseRecordId, setNumber], map: "idx_workout_set_records_exercise_record_id_set_number")
-  @@map("workout_set_records")
+  @@index([workoutRecordExerciseId], map: "idx_workout_record_sets_exercise_id")
+  @@index([workoutRecordExerciseId, setNumber], map: "idx_workout_record_sets_exercise_id_set_number")
+  @@map("workout_record_sets")
 }
 
 model WeightRecord {
@@ -224,19 +222,13 @@ model WeightRecord {
 }
 
 // ========================================
-// ルーティンスケジュール機能
+// スケジュール機能（WorkoutSession ベース）
 // ========================================
 
-
-
-// ========================================
-// 新スケジュール機能（SessionPlan ベース）
-// ========================================
-
-model SessionPlan {
+model WorkoutSession {
   id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
   userId      BigInt    @map("user_id") @db.UnsignedBigInt
-  menuId      BigInt    @map("menu_id") @db.UnsignedBigInt
+  templateId  BigInt    @map("template_id") @db.UnsignedBigInt
   name        String    @db.VarChar(100)
   description String?   @db.Text
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -244,22 +236,22 @@ model SessionPlan {
   deletedAt   DateTime? @map("deleted_at")
 
   user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  menu            WorkoutMenu           @relation(fields: [menuId], references: [id], onDelete: Restrict)
-  exercises       SessionPlanExercise[]
+  template        WorkoutTemplate       @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  exercises       WorkoutSessionExercise[]
   scheduleRules   ScheduleRule[]
   scheduledTasks  ScheduledTask[]
   reminders       ScheduleReminder[]
-  workoutRecords WorkoutRecord[]
+  workoutRecords  WorkoutRecord[]
 
-  @@index([userId], map: "idx_session_plans_user_id")
-  @@index([userId, deletedAt], map: "idx_session_plans_user_deleted")
-  @@index([menuId], map: "idx_session_plans_menu_id")
-  @@map("session_plans")
+  @@index([userId], map: "idx_workout_sessions_user_id")
+  @@index([userId, deletedAt], map: "idx_workout_sessions_user_deleted")
+  @@index([templateId], map: "idx_workout_sessions_template_id")
+  @@map("workout_sessions")
 }
 
-model SessionPlanExercise {
+model WorkoutSessionExercise {
   id            BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  sessionPlanId BigInt   @map("session_plan_id") @db.UnsignedBigInt
+  workoutSessionId BigInt @map("workout_session_id") @db.UnsignedBigInt
   exerciseId    BigInt   @map("exercise_id") @db.UnsignedBigInt
   displayOrder  Int      @map("display_order") @db.UnsignedInt
   targetWeight  Decimal? @map("target_weight") @db.Decimal(5, 1)
@@ -270,18 +262,18 @@ model SessionPlanExercise {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  sessionPlan SessionPlan @relation(fields: [sessionPlanId], references: [id], onDelete: Cascade)
+  workoutSession WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
   exercise    Exercise    @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
-  @@unique([sessionPlanId, exerciseId], map: "uk_session_plan_exercises_plan_exercise")
-  @@index([sessionPlanId], map: "idx_session_plan_exercises_plan_id")
-  @@map("session_plan_exercises")
+  @@unique([workoutSessionId, exerciseId], map: "uk_workout_session_exercises_session_exercise")
+  @@index([workoutSessionId], map: "idx_workout_session_exercises_session_id")
+  @@map("workout_session_exercises")
 }
 
 model ScheduleRule {
   id            BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
   userId        BigInt           @map("user_id") @db.UnsignedBigInt
-  sessionPlanId BigInt           @map("session_plan_id") @db.UnsignedBigInt
+  workoutSessionId BigInt        @map("workout_session_id") @db.UnsignedBigInt
   ruleType      ScheduleRuleType @map("rule_type")
 
   // weekly用: ビットマスク (日=1, 月=2, 火=4, 水=8, 木=16, 金=32, 土=64)
@@ -302,12 +294,12 @@ model ScheduleRule {
   deletedAt DateTime? @map("deleted_at")
 
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionPlan    SessionPlan     @relation(fields: [sessionPlanId], references: [id], onDelete: Cascade)
+  workoutSession WorkoutSession  @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
   scheduledTasks ScheduledTask[]
 
   @@index([userId], map: "idx_schedule_rules_user_id")
   @@index([userId, deletedAt], map: "idx_schedule_rules_user_deleted")
-  @@index([sessionPlanId], map: "idx_schedule_rules_session_plan_id")
+  @@index([workoutSessionId], map: "idx_schedule_rules_workout_session_id")
   @@map("schedule_rules")
 }
 
@@ -315,7 +307,7 @@ model ScheduledTask {
   id            BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
   userId        BigInt              @map("user_id") @db.UnsignedBigInt
   ruleId        BigInt?             @map("rule_id") @db.UnsignedBigInt
-  sessionPlanId BigInt              @map("session_plan_id") @db.UnsignedBigInt
+  workoutSessionId BigInt           @map("workout_session_id") @db.UnsignedBigInt
   scheduledDate DateTime            @map("scheduled_date") @db.Date
   status        ScheduledTaskStatus @default(pending)
 
@@ -329,20 +321,20 @@ model ScheduledTask {
 
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   rule           ScheduleRule?   @relation(fields: [ruleId], references: [id], onDelete: SetNull)
-  sessionPlan    SessionPlan     @relation(fields: [sessionPlanId], references: [id], onDelete: Cascade)
-  workoutRecord WorkoutRecord?
+  workoutSession WorkoutSession  @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
+  workoutRecord  WorkoutRecord?
 
-  @@unique([userId, sessionPlanId, scheduledDate], map: "uk_scheduled_tasks_user_plan_date")
+  @@unique([userId, workoutSessionId, scheduledDate], map: "uk_scheduled_tasks_user_session_date")
   @@index([userId, scheduledDate], map: "idx_scheduled_tasks_user_date")
   @@index([ruleId], map: "idx_scheduled_tasks_rule_id")
-  @@index([sessionPlanId], map: "idx_scheduled_tasks_session_plan_id")
+  @@index([workoutSessionId], map: "idx_scheduled_tasks_workout_session_id")
   @@map("scheduled_tasks")
 }
 
 model ScheduleReminder {
   id             BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
   userId         BigInt       @map("user_id") @db.UnsignedBigInt
-  sessionPlanId  BigInt       @map("session_plan_id") @db.UnsignedBigInt
+  workoutSessionId BigInt     @map("workout_session_id") @db.UnsignedBigInt
   reminderType   ReminderType @map("reminder_type")
   offsetMinutes  Int?         @map("offset_minutes") @db.UnsignedSmallInt
   fixedTimeOfDay DateTime?    @map("fixed_time_of_day") @db.Time(0)
@@ -351,10 +343,10 @@ model ScheduleReminder {
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionPlan SessionPlan @relation(fields: [sessionPlanId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutSession WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "idx_schedule_reminders_user_id")
-  @@index([sessionPlanId], map: "idx_schedule_reminders_session_plan_id")
+  @@index([workoutSessionId], map: "idx_schedule_reminders_workout_session_id")
   @@map("schedule_reminders")
 }

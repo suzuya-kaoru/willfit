@@ -10,9 +10,9 @@ import { createWorkoutRecord, updateWorkoutRecord } from "@/lib/db/queries";
 // =============================================================================
 
 export interface SaveWorkoutRecordInput {
-  menuId: number;
-  sessionPlanId?: number; // 新規追加
-  scheduledTaskId?: number; // 新規追加
+  templateId: number;
+  workoutSessionId?: number;
+  scheduledTaskId?: number;
   scheduledDateKey: string; // スケジュールの日付キー（YYYY-MM-DD）
   startedAt: Date;
   endedAt: Date;
@@ -53,7 +53,7 @@ export interface UpdateWorkoutRecordInput {
 // バリデーションスキーマ
 // =============================================================================
 
-const workoutSetSchema = z.object({
+const workoutRecordSetSchema = z.object({
   setNumber: z.number().int().positive(),
   weight: z.number().min(0),
   reps: z.number().int().min(0),
@@ -61,14 +61,14 @@ const workoutSetSchema = z.object({
   note: z.string().optional(),
 });
 
-const exerciseRecordSchema = z.object({
+const workoutRecordExerciseSchema = z.object({
   exerciseId: z.number().int().positive(),
-  sets: z.array(workoutSetSchema).min(1),
+  sets: z.array(workoutRecordSetSchema).min(1),
 });
 
 const saveWorkoutRecordSchema = z.object({
-  menuId: z.number().int().positive(),
-  sessionPlanId: z.number().int().positive().optional(),
+  templateId: z.number().int().positive(),
+  workoutSessionId: z.number().int().positive().optional(),
   scheduledTaskId: z.number().int().positive().optional(),
   scheduledDateKey: dateKeySchema,
   startedAt: z.date(),
@@ -76,7 +76,7 @@ const saveWorkoutRecordSchema = z.object({
   condition: z.number().int().min(1).max(10),
   fatigue: z.number().int().min(1).max(10),
   note: z.string(),
-  exercises: z.array(exerciseRecordSchema).min(1),
+  exercises: z.array(workoutRecordExerciseSchema).min(1),
 });
 
 const updateWorkoutRecordSchema = z.object({
@@ -85,14 +85,8 @@ const updateWorkoutRecordSchema = z.object({
   condition: z.number().int().min(1).max(10),
   fatigue: z.number().int().min(1).max(10),
   note: z.string(),
-  exercises: z.array(exerciseRecordSchema).min(1),
+  exercises: z.array(workoutRecordExerciseSchema).min(1),
 });
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-// toBigInt helper is no longer needed here as it is handled in queries.ts
 
 // =============================================================================
 // Server Actions
@@ -101,8 +95,8 @@ const updateWorkoutRecordSchema = z.object({
 /**
  * トレーニング記録を保存
  *
- * - WorkoutRecord, ExerciseRecord, WorkoutSet を一括保存
- * - 該当日のDailySchedule または ScheduledTask をcompletedに更新
+ * - WorkoutRecord, WorkoutRecordExercise, WorkoutRecordSet を一括保存
+ * - 該当日の ScheduledTask をcompletedに更新
  */
 export async function saveWorkoutRecordAction(
   input: SaveWorkoutRecordInput,
@@ -111,8 +105,8 @@ export async function saveWorkoutRecordAction(
   const userId = 1; // TODO: 認証実装後に動的取得
 
   const record = await createWorkoutRecord(userId, {
-    menuId: data.menuId,
-    sessionPlanId: data.sessionPlanId,
+    templateId: data.templateId,
+    workoutSessionId: data.workoutSessionId,
     scheduledTaskId: data.scheduledTaskId,
     startedAt: data.startedAt,
     endedAt: data.endedAt,
@@ -131,7 +125,7 @@ export async function saveWorkoutRecordAction(
 /**
  * トレーニング記録を更新（編集・再開用）
  *
- * - 既存の ExerciseRecord, WorkoutSet を削除して再作成
+ * - 既存の WorkoutRecordExercise, WorkoutRecordSet を削除して再作成
  * - 記録のメタ情報を更新
  */
 export async function updateWorkoutRecordAction(

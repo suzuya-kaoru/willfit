@@ -64,7 +64,7 @@ export function CompleteClient({
             <h2 className="text-xl font-bold">お疲れ様でした！</h2>
             <p className="text-sm text-muted-foreground">
               {formatDateJaWithWeekday(workoutRecord.startedAt)} •{" "}
-              {workoutRecord.menu.name}
+              {workoutRecord.template.name}
             </p>
           </div>
         </div>
@@ -161,7 +161,7 @@ export function CompleteClient({
             <div>
               <span className="text-sm text-muted-foreground">種目</span>
               <ul className="mt-2 space-y-2">
-                {workoutRecord.exerciseRecords.map(
+                {workoutRecord.workoutRecordExercises.map(
                   (er: {
                     id: number;
                     exerciseId: number;
@@ -226,7 +226,7 @@ export function CompleteClient({
           </Button>
           <Button asChild variant="outline" className="w-full gap-2" size="lg">
             <Link
-              href={`/workout/${workoutRecord.menu.id}/edit/${workoutRecord.id}`}
+              href={`/workout/${workoutRecord.template.id}/edit/${workoutRecord.id}`}
             >
               <Edit className="h-5 w-5" />
               ワークアウトを編集

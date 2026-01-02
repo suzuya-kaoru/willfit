@@ -20,19 +20,19 @@ import {
   updateExerciseAction,
 } from "@/app/_actions/exercise-actions";
 import {
-  type CreateMenuInput,
-  createMenuAction,
-  deleteMenuAction,
-  type UpdateMenuInput,
-  updateMenuAction,
-} from "@/app/_actions/menu-actions";
+  type CreateTemplateInput,
+  createTemplateAction,
+  deleteTemplateAction,
+  type UpdateTemplateInput,
+  updateTemplateAction,
+} from "@/app/_actions/template-actions";
 import {
-  type CreateSessionPlanInput,
-  createSessionPlanAction,
-  deleteSessionPlanAction,
-  type UpdateSessionPlanInput,
-  updateSessionPlanAction,
-} from "@/app/_actions/session-plan-actions";
+  type CreateWorkoutSessionInput,
+  createWorkoutSessionAction,
+  deleteWorkoutSessionAction,
+  type UpdateWorkoutSessionInput,
+  updateWorkoutSessionAction,
+} from "@/app/_actions/workout-session-actions";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { Badge } from "@/components/ui/badge";
@@ -43,44 +43,44 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type {
   BodyPart,
   ExerciseWithBodyParts,
-  SessionPlanWithExercises,
-  WorkoutMenuWithExercises,
+  WorkoutSessionWithExercises,
+  WorkoutTemplateWithExercises,
 } from "@/lib/types";
 import {
   ExerciseEditDialog,
-  MenuEditDialog,
-  SessionPlanDialog,
+  TemplateEditDialog,
+  WorkoutSessionDialog,
 } from "./dialogs";
 
 export interface SettingsClientProps {
   initialExercises: ExerciseWithBodyParts[];
-  initialMenus: WorkoutMenuWithExercises[];
-  initialSessionPlans: SessionPlanWithExercises[];
+  initialTemplates: WorkoutTemplateWithExercises[];
+  initialWorkoutSessions: WorkoutSessionWithExercises[];
   initialBodyParts: BodyPart[];
 }
 
 export function SettingsClient({
   initialExercises,
-  initialMenus,
-  initialSessionPlans,
+  initialTemplates,
+  initialWorkoutSessions,
   initialBodyParts,
 }: SettingsClientProps) {
-  // propsを直接使用（冗長なuseState+useEffectを削除）
+  // propsを直接使用
   const exercises = initialExercises;
-  const menus = initialMenus;
-  const sessionPlans = initialSessionPlans;
+  const templates = initialTemplates;
+  const workoutSessions = initialWorkoutSessions;
   const bodyParts = initialBodyParts;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [editingExercise, setEditingExercise] =
     useState<ExerciseWithBodyParts | null>(null);
-  const [editingMenu, setEditingMenu] =
-    useState<WorkoutMenuWithExercises | null>(null);
-  const [editingPlan, setEditingPlan] =
-    useState<SessionPlanWithExercises | null>(null);
+  const [editingTemplate, setEditingTemplate] =
+    useState<WorkoutTemplateWithExercises | null>(null);
+  const [editingSession, setEditingSession] =
+    useState<WorkoutSessionWithExercises | null>(null);
   const [isAddingExercise, setIsAddingExercise] = useState(false);
-  const [isAddingMenu, setIsAddingMenu] = useState(false);
-  const [isAddingPlan, setIsAddingPlan] = useState(false);
+  const [isAddingTemplate, setIsAddingTemplate] = useState(false);
+  const [isAddingSession, setIsAddingSession] = useState(false);
   const router = useRouter();
 
   // Filter exercises by search query
@@ -110,41 +110,43 @@ export function SettingsClient({
     router.refresh();
   };
 
-  // Menu CRUD
-  const handleSaveMenu = async (input: CreateMenuInput | UpdateMenuInput) => {
-    if (isAddingMenu) {
-      await createMenuAction(input);
+  // Template CRUD
+  const handleSaveTemplate = async (
+    input: CreateTemplateInput | UpdateTemplateInput,
+  ) => {
+    if (isAddingTemplate) {
+      await createTemplateAction(input);
       router.refresh();
-      setIsAddingMenu(false);
+      setIsAddingTemplate(false);
     } else if ("id" in input) {
-      await updateMenuAction(input);
+      await updateTemplateAction(input);
       router.refresh();
-      setEditingMenu(null);
+      setEditingTemplate(null);
     }
   };
 
-  const handleDeleteMenu = async (id: number) => {
-    await deleteMenuAction(id);
+  const handleDeleteTemplate = async (id: number) => {
+    await deleteTemplateAction(id);
     router.refresh();
   };
 
-  // Session Plan CRUD
-  const handleSavePlan = async (
-    input: CreateSessionPlanInput | UpdateSessionPlanInput,
+  // WorkoutSession CRUD
+  const handleSaveSession = async (
+    input: CreateWorkoutSessionInput | UpdateWorkoutSessionInput,
   ) => {
-    if (isAddingPlan) {
-      await createSessionPlanAction(input as CreateSessionPlanInput);
+    if (isAddingSession) {
+      await createWorkoutSessionAction(input as CreateWorkoutSessionInput);
       router.refresh();
-      setIsAddingPlan(false);
+      setIsAddingSession(false);
     } else if ("id" in input) {
-      await updateSessionPlanAction(input as UpdateSessionPlanInput);
+      await updateWorkoutSessionAction(input as UpdateWorkoutSessionInput);
       router.refresh();
-      setEditingPlan(null);
+      setEditingSession(null);
     }
   };
 
-  const handleDeletePlan = async (id: number) => {
-    await deleteSessionPlanAction(id);
+  const handleDeleteSession = async (id: number) => {
+    await deleteWorkoutSessionAction(id);
     router.refresh();
   };
 
@@ -164,7 +166,7 @@ export function SettingsClient({
               <span className="sm:hidden">セッション</span>
             </TabsTrigger>
             <TabsTrigger
-              value="menus"
+              value="templates"
               className="gap-1 text-xs sm:gap-2 sm:text-sm"
             >
               <LayoutList className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -181,13 +183,13 @@ export function SettingsClient({
             </TabsTrigger>
           </TabsList>
 
-          {/* Session Plan Management Tab */}
+          {/* Session Management Tab */}
           <TabsContent value="session-plans" className="space-y-4">
             <Button
               className="w-full gap-2"
               onClick={() => {
-                setIsAddingPlan(true);
-                setEditingPlan(null);
+                setIsAddingSession(true);
+                setEditingSession(null);
               }}
             >
               <Plus className="h-4 w-4" />
@@ -195,14 +197,16 @@ export function SettingsClient({
             </Button>
 
             <div className="space-y-3">
-              {sessionPlans.map((plan) => (
-                <Card key={plan.id} className="overflow-hidden">
+              {workoutSessions.map((session) => (
+                <Card key={session.id} className="overflow-hidden">
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <div>
-                      <CardTitle className="text-base">{plan.name}</CardTitle>
-                      {plan.description && (
+                      <CardTitle className="text-base">
+                        {session.name}
+                      </CardTitle>
+                      {session.description && (
                         <p className="line-clamp-1 text-xs text-muted-foreground">
-                          {plan.description}
+                          {session.description}
                         </p>
                       )}
                     </div>
@@ -212,8 +216,8 @@ export function SettingsClient({
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => {
-                          setEditingPlan(plan);
-                          setIsAddingPlan(false);
+                          setEditingSession(session);
+                          setIsAddingSession(false);
                         }}
                       >
                         <Pencil className="h-4 w-4" />
@@ -222,7 +226,7 @@ export function SettingsClient({
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDeletePlan(plan.id)}
+                        onClick={() => handleDeleteSession(session.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -230,10 +234,10 @@ export function SettingsClient({
                   </CardHeader>
                   <CardContent>
                     <div className="mb-2 text-xs font-semibold text-muted-foreground">
-                      ベーステンプレート: {plan.menu.name}
+                      ベーステンプレート: {session.template.name}
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      {plan.exercises.map((ex, index) => (
+                      {session.exercises.map((ex, index) => (
                         <div
                           key={ex.id}
                           className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1"
@@ -251,7 +255,7 @@ export function SettingsClient({
                         </div>
                       ))}
                     </div>
-                    {plan.exercises.length === 0 && (
+                    {session.exercises.length === 0 && (
                       <p className="text-sm text-muted-foreground">
                         種目が設定されていません
                       </p>
@@ -259,7 +263,7 @@ export function SettingsClient({
                   </CardContent>
                 </Card>
               ))}
-              {sessionPlans.length === 0 && (
+              {workoutSessions.length === 0 && (
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   セッションがありません。
                   <br />
@@ -269,13 +273,13 @@ export function SettingsClient({
             </div>
           </TabsContent>
 
-          {/* Menu Management Tab */}
-          <TabsContent value="menus" className="space-y-4">
+          {/* Template Management Tab */}
+          <TabsContent value="templates" className="space-y-4">
             <Button
               className="w-full gap-2"
               onClick={() => {
-                setIsAddingMenu(true);
-                setEditingMenu(null);
+                setIsAddingTemplate(true);
+                setEditingTemplate(null);
               }}
             >
               <Plus className="h-4 w-4" />
@@ -283,18 +287,18 @@ export function SettingsClient({
             </Button>
 
             <div className="space-y-3">
-              {menus.map((menu) => (
-                <Card key={menu.id} className="overflow-hidden">
+              {templates.map((template) => (
+                <Card key={template.id} className="overflow-hidden">
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-base">{menu.name}</CardTitle>
+                    <CardTitle className="text-base">{template.name}</CardTitle>
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => {
-                          setEditingMenu(menu);
-                          setIsAddingMenu(false);
+                          setEditingTemplate(template);
+                          setIsAddingTemplate(false);
                         }}
                       >
                         <Pencil className="h-4 w-4" />
@@ -303,7 +307,7 @@ export function SettingsClient({
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteMenu(menu.id)}
+                        onClick={() => handleDeleteTemplate(template.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -311,7 +315,7 @@ export function SettingsClient({
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-1.5">
-                      {menu.exercises.map((ex, index) => (
+                      {template.exercises.map((ex, index) => (
                         <div
                           key={ex.id}
                           className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1"
@@ -322,7 +326,7 @@ export function SettingsClient({
                         </div>
                       ))}
                     </div>
-                    {menu.exercises.length === 0 && (
+                    {template.exercises.length === 0 && (
                       <p className="text-sm text-muted-foreground">
                         種目が設定されていません
                       </p>
@@ -413,33 +417,33 @@ export function SettingsClient({
         onDelete={handleDeleteExercise}
       />
 
-      {/* Menu Edit Dialog */}
-      <MenuEditDialog
-        menu={editingMenu}
-        isOpen={!!editingMenu || isAddingMenu}
-        isNew={isAddingMenu}
+      {/* Template Edit Dialog */}
+      <TemplateEditDialog
+        template={editingTemplate}
+        isOpen={!!editingTemplate || isAddingTemplate}
+        isNew={isAddingTemplate}
         exercises={exercises}
         onClose={() => {
-          setEditingMenu(null);
-          setIsAddingMenu(false);
+          setEditingTemplate(null);
+          setIsAddingTemplate(false);
         }}
-        onSave={handleSaveMenu}
-        onDelete={handleDeleteMenu}
+        onSave={handleSaveTemplate}
+        onDelete={handleDeleteTemplate}
       />
 
-      {/* Session Plan Edit Dialog */}
-      <SessionPlanDialog
-        plan={editingPlan}
-        isOpen={!!editingPlan || isAddingPlan}
-        isNew={isAddingPlan}
-        menus={menus}
+      {/* WorkoutSession Edit Dialog */}
+      <WorkoutSessionDialog
+        session={editingSession}
+        isOpen={!!editingSession || isAddingSession}
+        isNew={isAddingSession}
+        templates={templates}
         allExercises={exercises}
         onClose={() => {
-          setEditingPlan(null);
-          setIsAddingPlan(false);
+          setEditingSession(null);
+          setIsAddingSession(false);
         }}
-        onSave={handleSavePlan}
-        onDelete={handleDeletePlan}
+        onSave={handleSaveSession}
+        onDelete={handleDeleteSession}
       />
 
       <BottomNavigation />

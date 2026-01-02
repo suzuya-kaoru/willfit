@@ -10,20 +10,20 @@ export async function GET() {
 
 export async function POST() {
   try {
-    const plan = await prisma.sessionPlan.findFirst({
+    const session = await prisma.workoutSession.findFirst({
       where: { name: { contains: "3日" } },
     });
 
-    if (!plan) return NextResponse.json({ error: "Plan not found" });
+    if (!session) return NextResponse.json({ error: "Session not found" });
 
     // Sync is now rule-based, handled by rules.
     // This debug endpoint might be obsolete or needed for specific testing.
-    // For now, let's list future tasks for this plan.
+    // For now, let's list future tasks for this session.
 
     // Fetch result
     const tasks = await prisma.scheduledTask.findMany({
       where: {
-        sessionPlanId: plan.id,
+        workoutSessionId: session.id,
         status: "pending",
         scheduledDate: { gte: parseDateKey("2026-01-01") },
       },
@@ -33,7 +33,7 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      planId: String(plan.id),
+      sessionId: String(session.id),
       schedules: tasks.map((s) => toDateKey(s.scheduledDate)),
     });
   } catch (error) {

@@ -3,16 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
-  createSessionPlan,
-  deleteSessionPlan,
-  updateSessionPlan,
+  createWorkoutSession,
+  deleteWorkoutSession,
+  updateWorkoutSession,
 } from "@/lib/db/queries";
 
 // =============================================================================
 // 入力型定義
 // =============================================================================
 
-export interface SessionPlanExerciseInput {
+export interface WorkoutSessionExerciseInput {
   exerciseId: number;
   displayOrder: number;
   targetWeight?: number;
@@ -22,25 +22,25 @@ export interface SessionPlanExerciseInput {
   note?: string;
 }
 
-export interface CreateSessionPlanInput {
-  menuId: number;
+export interface CreateWorkoutSessionInput {
+  templateId: number;
   name: string;
   description?: string;
-  exercises: SessionPlanExerciseInput[];
+  exercises: WorkoutSessionExerciseInput[];
 }
 
-export interface UpdateSessionPlanInput {
+export interface UpdateWorkoutSessionInput {
   id: number;
   name: string;
   description?: string;
-  exercises: SessionPlanExerciseInput[];
+  exercises: WorkoutSessionExerciseInput[];
 }
 
 // =============================================================================
 // バリデーションスキーマ
 // =============================================================================
 
-const sessionPlanExerciseSchema = z.object({
+const workoutSessionExerciseSchema = z.object({
   exerciseId: z.number().int().positive("種目IDは正の整数"),
   displayOrder: z.number().int().min(1, "表示順は1以上"),
   targetWeight: z.number().min(0, "重量は0以上").optional(),
@@ -50,19 +50,19 @@ const sessionPlanExerciseSchema = z.object({
   note: z.string().max(500, "メモは500文字以内").optional(),
 });
 
-const createSessionPlanSchema = z.object({
-  menuId: z.number().int().positive("テンプレIDは正の整数"),
+const createWorkoutSessionSchema = z.object({
+  templateId: z.number().int().positive("テンプレートIDは正の整数"),
   name: z
     .string()
     .min(1, "セッション名は必須です")
     .max(100, "セッション名は100文字以内"),
   description: z.string().max(1000, "説明は1000文字以内").optional(),
   exercises: z
-    .array(sessionPlanExerciseSchema)
+    .array(workoutSessionExerciseSchema)
     .min(1, "種目を1つ以上追加してください"),
 });
 
-const updateSessionPlanSchema = z.object({
+const updateWorkoutSessionSchema = z.object({
   id: z.number().int().positive("IDは正の整数"),
   name: z
     .string()
@@ -70,7 +70,7 @@ const updateSessionPlanSchema = z.object({
     .max(100, "セッション名は100文字以内"),
   description: z.string().max(1000, "説明は1000文字以内").optional(),
   exercises: z
-    .array(sessionPlanExerciseSchema)
+    .array(workoutSessionExerciseSchema)
     .min(1, "種目を1つ以上追加してください"),
 });
 
@@ -79,15 +79,15 @@ const updateSessionPlanSchema = z.object({
 // =============================================================================
 
 /**
- * セッションプランを作成
+ * ワークアウトセッションを作成
  */
-export async function createSessionPlanAction(input: CreateSessionPlanInput) {
-  const data = createSessionPlanSchema.parse(input);
+export async function createWorkoutSessionAction(input: CreateWorkoutSessionInput) {
+  const data = createWorkoutSessionSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  const plan = await createSessionPlan({
+  const session = await createWorkoutSession({
     userId,
-    menuId: data.menuId,
+    templateId: data.templateId,
     name: data.name,
     description: data.description,
     exercises: data.exercises,
@@ -97,18 +97,18 @@ export async function createSessionPlanAction(input: CreateSessionPlanInput) {
   revalidatePath("/schedule");
   revalidatePath("/settings");
 
-  return { id: plan.id, name: plan.name };
+  return { id: session.id, name: session.name };
 }
 
 /**
- * セッションプランを更新
+ * ワークアウトセッションを更新
  */
-export async function updateSessionPlanAction(input: UpdateSessionPlanInput) {
-  const data = updateSessionPlanSchema.parse(input);
+export async function updateWorkoutSessionAction(input: UpdateWorkoutSessionInput) {
+  const data = updateWorkoutSessionSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  await updateSessionPlan({
-    sessionPlanId: data.id,
+  await updateWorkoutSession({
+    workoutSessionId: data.id,
     userId,
     name: data.name,
     description: data.description,
@@ -123,13 +123,13 @@ export async function updateSessionPlanAction(input: UpdateSessionPlanInput) {
 }
 
 /**
- * セッションプランを削除（論理削除）
+ * ワークアウトセッションを削除（論理削除）
  */
-export async function deleteSessionPlanAction(id: number) {
+export async function deleteWorkoutSessionAction(id: number) {
   const validId = z.number().int().positive().parse(id);
   const userId = 1; // TODO: 認証実装後に動的取得
 
-  await deleteSessionPlan(userId, validId);
+  await deleteWorkoutSession(userId, validId);
 
   revalidatePath("/");
   revalidatePath("/schedule");
@@ -137,3 +137,37 @@ export async function deleteSessionPlanAction(id: number) {
 
   return { success: true };
 }
+
+// =============================================================================
+// 後方互換性エイリアス（移行期間中のみ使用）
+// =============================================================================
+
+/**
+ * @deprecated Use createWorkoutSessionAction instead
+ */
+export const createSessionPlanAction = createWorkoutSessionAction;
+
+/**
+ * @deprecated Use updateWorkoutSessionAction instead
+ */
+export const updateSessionPlanAction = updateWorkoutSessionAction;
+
+/**
+ * @deprecated Use deleteWorkoutSessionAction instead
+ */
+export const deleteSessionPlanAction = deleteWorkoutSessionAction;
+
+/**
+ * @deprecated Use WorkoutSessionExerciseInput instead
+ */
+export type SessionPlanExerciseInput = WorkoutSessionExerciseInput;
+
+/**
+ * @deprecated Use CreateWorkoutSessionInput instead
+ */
+export type CreateSessionPlanInput = CreateWorkoutSessionInput;
+
+/**
+ * @deprecated Use UpdateWorkoutSessionInput instead
+ */
+export type UpdateSessionPlanInput = UpdateWorkoutSessionInput;

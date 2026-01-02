@@ -12,7 +12,7 @@ import {
   getWorkoutRecordsByDateRange,
 } from "@/lib/db/queries";
 import { APP_TIMEZONE, toUtcDateTimeFromJstString } from "@/lib/timezone";
-import type { ScheduledTaskWithPlan, WorkoutRecord } from "@/lib/types";
+import type { ScheduledTaskWithSession, WorkoutRecord } from "@/lib/types";
 import { DashboardClient } from "./_components/dashboard-client";
 
 /**
@@ -103,7 +103,7 @@ export default async function DashboardPage() {
   }
 
   // スケジュールを日付ごとにマッピング
-  const tasksByDateKey = new Map<string, ScheduledTaskWithPlan[]>();
+  const tasksByDateKey = new Map<string, ScheduledTaskWithSession[]>();
   for (const task of scheduledTasks) {
     const dateKey = toDateKey(task.scheduledDate);
     const list = tasksByDateKey.get(dateKey) ?? [];
@@ -125,19 +125,19 @@ export default async function DashboardPage() {
     // その日すでに実施済みのメニューを除外（WorkoutRecordベース）
     // NOTE: 新システムでは sessionPlanId をチェックすべき
     const dayRecords = dailyRecordsByDateKey.get(dateKey) ?? [];
-    // sessionPlanIdを持つ記録のセット
-    const completedPlanIds = new Set(
+    // workoutSessionIdを持つ記録のセット
+    const completedSessionIds = new Set(
       dayRecords
         .map((r: WorkoutRecord) =>
-          r.sessionPlanId ? Number(r.sessionPlanId) : null,
+          r.workoutSessionId ? Number(r.workoutSessionId) : null,
         )
         .filter(Boolean),
     );
 
     // 未完了(pending)かつ未実施のスケジュールのみ残す
-    const remainingTasks = dbTasks.filter((task: ScheduledTaskWithPlan) => {
+    const remainingTasks = dbTasks.filter((task: ScheduledTaskWithSession) => {
       // すでに記録があれば除外
-      if (completedPlanIds.has(Number(task.sessionPlanId))) return false;
+      if (completedSessionIds.has(Number(task.workoutSessionId))) return false;
 
       // ステータスチェック
       if (task.status === "completed") return false;
@@ -147,12 +147,12 @@ export default async function DashboardPage() {
       return true;
     });
 
-    const schedules = remainingTasks.map((task: ScheduledTaskWithPlan) => {
+    const schedules = remainingTasks.map((task: ScheduledTaskWithSession) => {
       return {
         taskId: Number(task.id),
-        sessionPlanId: Number(task.sessionPlanId),
-        menuId: Number(task.sessionPlan.menu.id),
-        menuName: task.sessionPlan.name,
+        workoutSessionId: Number(task.workoutSessionId),
+        templateId: Number(task.workoutSession.template.id),
+        templateName: task.workoutSession.name,
         ruleType: task.rule?.ruleType,
         isFromReschedule: task.rescheduledFrom != null,
       };

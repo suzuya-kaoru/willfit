@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getWorkoutRecordWithDetails } from "@/lib/db/queries";
 import { CompleteClient } from "./_components/complete-client";
 
-interface ExerciseRecordForStats {
+interface WorkoutRecordExerciseForStats {
   sets: { completed: boolean; weight: number; reps: number }[];
 }
 
@@ -30,17 +30,17 @@ export default async function WorkoutCompletePage({
   }
 
   // サマリー計算
-  const totalSets = workoutRecord.exerciseRecords.reduce(
-    (acc: number, er: ExerciseRecordForStats) => acc + er.sets.length,
+  const totalSets = workoutRecord.workoutRecordExercises.reduce(
+    (acc: number, er: WorkoutRecordExerciseForStats) => acc + er.sets.length,
     0,
   );
-  const completedSets = workoutRecord.exerciseRecords.reduce(
-    (acc: number, er: ExerciseRecordForStats) =>
+  const completedSets = workoutRecord.workoutRecordExercises.reduce(
+    (acc: number, er: WorkoutRecordExerciseForStats) =>
       acc + er.sets.filter((s) => s.completed).length,
     0,
   );
-  const totalVolume = workoutRecord.exerciseRecords.reduce(
-    (acc: number, er: ExerciseRecordForStats) =>
+  const totalVolume = workoutRecord.workoutRecordExercises.reduce(
+    (acc: number, er: WorkoutRecordExerciseForStats) =>
       acc +
       er.sets.reduce(
         (setAcc: number, s) =>

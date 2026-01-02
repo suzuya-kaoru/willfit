@@ -1,8 +1,8 @@
 import {
   getBodyParts,
   getExercisesWithBodyParts,
-  getMenusWithExercises,
-  getSessionPlans,
+  getTemplatesWithExercises,
+  getWorkoutSessions,
 } from "@/lib/db/queries";
 import { SettingsClient } from "./_components/settings-client";
 
@@ -22,33 +22,33 @@ async function getExercises(userId: number) {
 }
 
 /**
- * 全メニューを取得
+ * 全テンプレートを取得
  */
-async function getMenus(userId: number) {
-  return getMenusWithExercises(userId);
+async function getTemplates(userId: number) {
+  return getTemplatesWithExercises(userId);
 }
 
 /**
- * 全セッションプランを取得
+ * 全ワークアウトセッションを取得
  */
-async function getPlans(userId: number) {
-  return getSessionPlans(userId);
+async function getSessions(userId: number) {
+  return getWorkoutSessions(userId);
 }
 
 export default async function SettingsPage() {
   const userId = 1;
-  const [exercises, menus, sessionPlans, bodyParts] = await Promise.all([
+  const [exercises, templates, workoutSessions, bodyParts] = await Promise.all([
     getExercises(userId),
-    getMenus(userId),
-    getPlans(userId),
+    getTemplates(userId),
+    getSessions(userId),
     getBodyParts(),
   ]);
 
   return (
     <SettingsClient
       initialExercises={exercises}
-      initialMenus={menus}
-      initialSessionPlans={sessionPlans}
+      initialTemplates={templates}
+      initialWorkoutSessions={workoutSessions}
       initialBodyParts={bodyParts}
     />
   );

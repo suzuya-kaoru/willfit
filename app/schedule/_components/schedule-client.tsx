@@ -12,7 +12,7 @@ import {
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { toDateKey } from "@/lib/date-key";
-import type { SessionPlanWithExercises } from "@/lib/types";
+import type { WorkoutSessionWithExercises } from "@/lib/types";
 import { CalendarView } from "./calendar-view";
 import {
   type PlanSelectionData,
@@ -31,7 +31,7 @@ export interface ScheduleClientProps {
   calendarDays: CalendarDay[];
   recordsList: WorkoutRecordWithStats[];
   todayDateString: string;
-  plans: SessionPlanWithExercises[];
+  plans: WorkoutSessionWithExercises[];
 }
 
 /**
@@ -157,20 +157,20 @@ export function ScheduleClient({
     startTransition(async () => {
       if (data.type === "manual") {
         await createManualTaskAction({
-          sessionPlanId: data.sessionPlanId,
+          workoutSessionId: data.workoutSessionId,
           scheduledDateKey: toDateKey(selectedDate),
         });
       } else if (data.type === "weekly") {
         if (!data.weekdays) return;
         await createScheduleRuleAction({
-          sessionPlanId: data.sessionPlanId,
+          workoutSessionId: data.workoutSessionId,
           ruleType: "weekly",
           weekdays: data.weekdays,
         });
       } else if (data.type === "interval") {
         if (!data.intervalDays) return;
         await createScheduleRuleAction({
-          sessionPlanId: data.sessionPlanId,
+          workoutSessionId: data.workoutSessionId,
           ruleType: "interval",
           intervalDays: data.intervalDays,
           startDateKey: toDateKey(selectedDate),

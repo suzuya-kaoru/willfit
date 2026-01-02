@@ -82,7 +82,7 @@ export function RescheduleDialog({
         <div className="space-y-4 py-4">
           {/* 振替元情報 */}
           <div className="rounded-lg bg-secondary/30 p-3">
-            <p className="font-medium">{schedule.menuName}</p>
+            <p className="font-medium">{schedule.templateName}</p>
             <p className="text-sm text-muted-foreground">
               {formatDateJaWithWeekday(fromDate)} → ?
             </p>

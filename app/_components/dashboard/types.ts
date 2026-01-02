@@ -1,8 +1,8 @@
 export type TodayScheduleViewModel = {
   taskId: number;
-  sessionPlanId: number;
-  menuId: number;
-  menuName: string;
+  workoutSessionId: number;
+  templateId: number;
+  templateName: string;
   ruleType?: "weekly" | "interval" | "once";
   isFromReschedule: boolean;
 };

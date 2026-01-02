@@ -1,12 +1,12 @@
 import { toDateKey } from "@/lib/date-key";
 import {
   getExerciseRecordsByRecordIds,
-  getMenuWithExercises,
-  getSessionPlanWithDetails,
-  getWorkoutRecordsByMenuIds,
+  getTemplateWithExercises,
+  getWorkoutSessionWithDetails,
+  getWorkoutRecordsByTemplateIds,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
-import type { ExerciseRecord, WorkoutSet } from "@/lib/types";
+import type { WorkoutRecordExercise, WorkoutRecordSet } from "@/lib/types";
 import { WorkoutClient } from "./_components/workout-client";
 
 /**
@@ -18,10 +18,10 @@ import { WorkoutClient } from "./_components/workout-client";
  */
 
 /**
- * 指定されたメニューIDの前回記録を取得
+ * 指定されたテンプレートIDの前回記録を取得
  */
-async function getPreviousRecord(userId: number, menuId: number) {
-  const records = await getWorkoutRecordsByMenuIds(userId, [menuId]);
+async function getPreviousRecord(userId: number, templateId: number) {
+  const records = await getWorkoutRecordsByTemplateIds(userId, [templateId]);
   return records[0] ?? null;
 }
 
@@ -31,11 +31,11 @@ async function getPreviousRecord(userId: number, menuId: number) {
  */
 async function calculatePreviousRecords(
   userId: number,
-  menuId: number,
+  templateId: number,
   exerciseIds: number[],
 ): Promise<Map<number, string>> {
   const previousRecords = new Map<number, string>();
-  const previousWorkoutRecord = await getPreviousRecord(userId, menuId);
+  const previousWorkoutRecord = await getPreviousRecord(userId, templateId);
 
   if (!previousWorkoutRecord) {
     return previousRecords;
@@ -44,23 +44,23 @@ async function calculatePreviousRecords(
   const exerciseRecords = await getExerciseRecordsByRecordIds([
     previousWorkoutRecord.id,
   ]);
-  const exerciseRecordIds = exerciseRecords.map((er: ExerciseRecord) => er.id);
+  const exerciseRecordIds = exerciseRecords.map((er: WorkoutRecordExercise) => er.id);
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
-  const setsByExerciseRecordId = new Map<number, WorkoutSet[]>();
+  const setsByWorkoutRecordExerciseId = new Map<number, WorkoutRecordSet[]>();
   for (const set of sets) {
-    const list = setsByExerciseRecordId.get(set.exerciseRecordId) ?? [];
+    const list = setsByWorkoutRecordExerciseId.get(set.workoutRecordExerciseId) ?? [];
     list.push(set);
-    setsByExerciseRecordId.set(set.exerciseRecordId, list);
+    setsByWorkoutRecordExerciseId.set(set.workoutRecordExerciseId, list);
   }
   const exerciseRecordByExerciseId = new Map(
-    exerciseRecords.map((er: ExerciseRecord) => [er.exerciseId, er]),
+    exerciseRecords.map((er: WorkoutRecordExercise) => [er.exerciseId, er]),
   );
 
   // 各種目ごとに前回記録を計算
   for (const exerciseId of exerciseIds) {
     const exerciseRecord = exerciseRecordByExerciseId.get(exerciseId);
     if (!exerciseRecord) continue;
-    const previousSets = setsByExerciseRecordId.get(exerciseRecord.id) ?? [];
+    const previousSets = setsByWorkoutRecordExerciseId.get(exerciseRecord.id) ?? [];
 
     if (previousSets.length > 0) {
       // セットをセット番号順にソート
@@ -89,19 +89,19 @@ export default async function ActiveWorkoutPage({
   params,
   searchParams,
 }: PageProps) {
-  const { menuId: menuIdStr } = await params;
-  const { date, planId: planIdStr, taskId: taskIdStr } = await searchParams;
+  const { menuId: templateIdStr } = await params;
+  const { date, planId: sessionIdStr, taskId: taskIdStr } = await searchParams;
 
   // dateが指定されていなければ今日の日付を使用
   const scheduledDateKey = date ?? toDateKey(new Date());
   // URLパラメータは文字列で来るため、数値に変換
-  const menuId = parseInt(menuIdStr, 10);
+  const templateId = parseInt(templateIdStr, 10);
   const userId = 1;
 
-  if (Number.isNaN(menuId)) {
+  if (Number.isNaN(templateId)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">テンプレが見つかりません</p>
+        <p className="text-muted-foreground">テンプレートが見つかりません</p>
       </div>
     );
   }
@@ -109,34 +109,34 @@ export default async function ActiveWorkoutPage({
   // ============================================================================
   // データ取得（将来的に DB アクセス層に置き換え）
   // ============================================================================
-  const menu = await getMenuWithExercises(userId, menuId);
+  const template = await getTemplateWithExercises(userId, templateId);
 
-  if (!menu) {
+  if (!template) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">テンプレが見つかりません</p>
+        <p className="text-muted-foreground">テンプレートが見つかりません</p>
       </div>
     );
   }
 
   // ============================================================================
-  // Session Plan 取得 (Option)
+  // Workout Session 取得 (Option)
   // ============================================================================
-  let sessionPlan = null;
-  if (planIdStr) {
-    const planId = parseInt(planIdStr, 10);
-    if (!Number.isNaN(planId)) {
-      sessionPlan = await getSessionPlanWithDetails(userId, planId);
+  let workoutSession = null;
+  if (sessionIdStr) {
+    const sessionId = parseInt(sessionIdStr, 10);
+    if (!Number.isNaN(sessionId)) {
+      workoutSession = await getWorkoutSessionWithDetails(userId, sessionId);
     }
   }
 
   // ============================================================================
   // 前回記録の計算（サーバー側で実行）
   // ============================================================================
-  const exerciseIds = menu.exercises.map((e) => e.id);
+  const exerciseIds = template.exercises.map((e) => e.id);
   const previousRecords = await calculatePreviousRecords(
     userId,
-    menuId,
+    templateId,
     exerciseIds,
   );
 
@@ -145,10 +145,10 @@ export default async function ActiveWorkoutPage({
   // ============================================================================
   return (
     <WorkoutClient
-      menu={menu}
+      template={template}
       previousRecords={previousRecords}
       scheduledDateKey={scheduledDateKey}
-      sessionPlan={sessionPlan}
+      workoutSession={workoutSession}
       scheduledTaskId={taskIdStr ? parseInt(taskIdStr, 10) : undefined}
     />
   );

@@ -27,7 +27,7 @@ export interface RescheduleTaskInput {
 }
 
 export interface CreateManualTaskInput {
-  sessionPlanId: number;
+  workoutSessionId: number;
   scheduledDateKey: string;
 }
 
@@ -48,7 +48,7 @@ const rescheduleTaskSchema = z.object({
 });
 
 const createManualTaskSchema = z.object({
-  sessionPlanId: z.number().int().positive("セッションIDは正の整数"),
+  workoutSessionId: z.number().int().positive("セッションIDは正の整数"),
   scheduledDateKey: dateKeySchema,
 });
 
@@ -142,7 +142,7 @@ export async function createManualTaskAction(input: CreateManualTaskInput) {
 
   await TaskSchedulerService.createManualTask(
     userId,
-    data.sessionPlanId,
+    data.workoutSessionId,
     scheduledDate,
   );
 
@@ -164,7 +164,7 @@ export async function upsertTaskAction(input: CreateManualTaskInput) {
 
   await upsertScheduledTask({
     userId,
-    sessionPlanId: data.sessionPlanId,
+    workoutSessionId: data.workoutSessionId,
     scheduledDate,
     status: "pending",
   });

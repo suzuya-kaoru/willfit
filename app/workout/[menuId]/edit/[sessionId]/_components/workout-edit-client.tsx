@@ -38,7 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { WorkoutRecordWithDetails } from "@/lib/db/queries";
 import type {
   ExerciseWithBodyParts,
-  WorkoutMenuWithExercises,
+  WorkoutTemplateWithExercises,
 } from "@/lib/types";
 
 // ローカル用のセット型（IDはstring）
@@ -59,7 +59,7 @@ interface LocalExerciseRecord {
 }
 
 export interface WorkoutEditClientProps {
-  menu: WorkoutMenuWithExercises;
+  template: WorkoutTemplateWithExercises;
   workoutRecord: WorkoutRecordWithDetails;
 }
 
@@ -68,7 +68,7 @@ export interface WorkoutEditClientProps {
  * 既存セッションを編集して再保存する
  */
 export function WorkoutEditClient({
-  menu,
+  template,
   workoutRecord,
 }: WorkoutEditClientProps) {
   const router = useRouter();
@@ -84,7 +84,7 @@ export function WorkoutEditClient({
 
   // Initialize from existing record
   useEffect(() => {
-    const records: LocalExerciseRecord[] = workoutRecord.exerciseRecords.map(
+    const records: LocalExerciseRecord[] = workoutRecord.workoutRecordExercises.map(
       (er: {
         exerciseId: number;
         exercise: ExerciseWithBodyParts;
@@ -227,7 +227,7 @@ export function WorkoutEditClient({
             </button>
             <div>
               <h1 className="text-sm font-semibold leading-tight">
-                {menu.name}
+                {template.name}
                 <span className="ml-2 text-xs text-muted-foreground">
                   (編集中)
                 </span>

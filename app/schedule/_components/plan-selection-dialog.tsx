@@ -20,10 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WEEKDAY_LABELS } from "@/lib/schedule-utils";
-import type { SessionPlanWithExercises } from "@/lib/types";
+import type { WorkoutSessionWithExercises } from "@/lib/types";
 
 export type PlanSelectionData = {
-  sessionPlanId: number;
+  workoutSessionId: number;
   type: "manual" | "weekly" | "interval";
   weekdays?: number; // bitmask
   intervalDays?: number;
@@ -31,7 +31,7 @@ export type PlanSelectionData = {
 
 interface PlanSelectionDialogProps {
   isOpen: boolean;
-  plans: SessionPlanWithExercises[];
+  plans: WorkoutSessionWithExercises[];
   onClose: () => void;
   onConfirm: (data: PlanSelectionData) => Promise<void>;
 }
@@ -61,7 +61,7 @@ export function PlanSelectionDialog({
       }
 
       await onConfirm({
-        sessionPlanId: parseInt(selectedPlanId, 10),
+        workoutSessionId: parseInt(selectedPlanId, 10),
         type: scheduleType,
         weekdays: scheduleType === "weekly" ? mask : undefined,
         intervalDays: scheduleType === "interval" ? intervalDays : undefined,

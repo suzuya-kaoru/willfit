@@ -3,27 +3,27 @@ import { toUtcDateOnly } from "@/lib/timezone";
 import type {
   BodyPart,
   Exercise,
-  ExerciseRecord,
+  WorkoutRecordExercise,
   ExerciseWithBodyParts,
-  MenuExercise,
+  TemplateExercise,
   ReminderType,
   ScheduledTask,
   ScheduledTaskStatus,
-  ScheduledTaskWithPlan,
+  ScheduledTaskWithSession,
   ScheduleReminder,
   ScheduleRule,
   ScheduleRuleType,
-  // 新スケジュール機能
-  SessionPlan,
-  SessionPlanExercise,
-  SessionPlanExerciseWithDetails,
-  SessionPlanWithExercises,
-  SessionPlanWithRules,
+  // スケジュール機能
+  WorkoutSession,
+  WorkoutSessionExercise,
+  WorkoutSessionExerciseWithDetails,
+  WorkoutSessionWithExercises,
+  WorkoutSessionWithRules,
   WeightRecord,
-  WorkoutMenu,
-  WorkoutMenuWithExercises,
+  WorkoutTemplate,
+  WorkoutTemplateWithExercises,
   WorkoutRecord,
-  WorkoutSet,
+  WorkoutRecordSet,
 } from "@/lib/types";
 import { prisma } from "./prisma";
 
@@ -85,9 +85,9 @@ type ExerciseWithBodyPartsRow = Prisma.ExerciseGetPayload<{
   };
 }>;
 
-type WorkoutMenuWithExercisesRow = Prisma.WorkoutMenuGetPayload<{
+type WorkoutTemplateWithExercisesRow = Prisma.WorkoutTemplateGetPayload<{
   include: {
-    menuExercises: {
+    templateExercises: {
       include: {
         exercise: {
           include: {
@@ -141,17 +141,17 @@ function mapExercise(row: {
   };
 }
 
-function mapMenu(row: {
+function mapTemplate(row: {
   id: bigint;
   userId: bigint;
   name: string;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
-}): WorkoutMenu {
+}): WorkoutTemplate {
   return {
-    id: toSafeNumber(row.id, "workout_menus.id"),
-    userId: toSafeNumber(row.userId, "workout_menus.user_id"),
+    id: toSafeNumber(row.id, "workout_templates.id"),
+    userId: toSafeNumber(row.userId, "workout_templates.user_id"),
     name: row.name,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -159,18 +159,18 @@ function mapMenu(row: {
   };
 }
 
-function mapMenuExercise(row: {
+function mapTemplateExercise(row: {
   id: bigint;
-  menuId: bigint;
+  templateId: bigint;
   exerciseId: bigint;
   displayOrder: number;
   createdAt: Date;
   updatedAt: Date;
-}): MenuExercise {
+}): TemplateExercise {
   return {
-    id: toSafeNumber(row.id, "menu_exercises.id"),
-    menuId: toSafeNumber(row.menuId, "menu_exercises.menu_id"),
-    exerciseId: toSafeNumber(row.exerciseId, "menu_exercises.exercise_id"),
+    id: toSafeNumber(row.id, "template_exercises.id"),
+    templateId: toSafeNumber(row.templateId, "template_exercises.template_id"),
+    exerciseId: toSafeNumber(row.exerciseId, "template_exercises.exercise_id"),
     displayOrder: row.displayOrder,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -180,7 +180,7 @@ function mapMenuExercise(row: {
 function mapWorkoutRecord(row: {
   id: bigint;
   userId: bigint;
-  menuId: bigint;
+  templateId: bigint;
   startedAt: Date;
   endedAt: Date | null;
   condition: number;
@@ -192,7 +192,7 @@ function mapWorkoutRecord(row: {
   return {
     id: toSafeNumber(row.id, "workout_records.id"),
     userId: toSafeNumber(row.userId, "workout_records.user_id"),
-    menuId: toSafeNumber(row.menuId, "workout_records.menu_id"),
+    templateId: toSafeNumber(row.templateId, "workout_records.template_id"),
     startedAt: row.startedAt,
     endedAt: row.endedAt ?? undefined,
     condition: row.condition,
@@ -203,37 +203,40 @@ function mapWorkoutRecord(row: {
   };
 }
 
-function mapExerciseRecord(row: {
+function mapWorkoutRecordExercise(row: {
   id: bigint;
   recordId: bigint;
   exerciseId: bigint;
   createdAt: Date;
   updatedAt: Date;
-}): ExerciseRecord {
+}): WorkoutRecordExercise {
   return {
-    id: toSafeNumber(row.id, "exercise_records.id"),
-    recordId: toSafeNumber(row.recordId, "exercise_records.record_id"),
-    exerciseId: toSafeNumber(row.exerciseId, "exercise_records.exercise_id"),
+    id: toSafeNumber(row.id, "workout_record_exercises.id"),
+    recordId: toSafeNumber(row.recordId, "workout_record_exercises.record_id"),
+    exerciseId: toSafeNumber(
+      row.exerciseId,
+      "workout_record_exercises.exercise_id",
+    ),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
 }
 
-function mapWorkoutSet(row: {
+function mapWorkoutRecordSet(row: {
   id: bigint;
-  exerciseRecordId: bigint;
+  workoutRecordExerciseId: bigint;
   setNumber: number;
   weight: Prisma.Decimal;
   reps: number;
   completed: boolean;
   createdAt: Date;
   updatedAt: Date;
-}): WorkoutSet {
+}): WorkoutRecordSet {
   return {
-    id: toSafeNumber(row.id, "workout_set_records.id"),
-    exerciseRecordId: toSafeNumber(
-      row.exerciseRecordId,
-      "workout_set_records.exercise_record_id",
+    id: toSafeNumber(row.id, "workout_record_sets.id"),
+    workoutRecordExerciseId: toSafeNumber(
+      row.workoutRecordExerciseId,
+      "workout_record_sets.workout_record_exercise_id",
     ),
     setNumber: row.setNumber,
     weight: toDecimalNumber(row.weight),
@@ -275,12 +278,12 @@ function mapExerciseWithBodyParts(
   };
 }
 
-function mapMenuWithExercises(
-  row: WorkoutMenuWithExercisesRow,
-): WorkoutMenuWithExercises {
+function mapTemplateWithExercises(
+  row: WorkoutTemplateWithExercisesRow,
+): WorkoutTemplateWithExercises {
   return {
-    ...mapMenu(row),
-    exercises: row.menuExercises.map((entry) =>
+    ...mapTemplate(row),
+    exercises: row.templateExercises.map((entry) =>
       mapExerciseWithBodyParts(entry.exercise),
     ),
   };
@@ -337,18 +340,18 @@ export async function getExercisesWithBodyParts(
   return rows.map(mapExerciseWithBodyParts);
 }
 
-export async function getMenuWithExercises(
+export async function getTemplateWithExercises(
   userId: number,
-  menuId: number,
-): Promise<WorkoutMenuWithExercises | null> {
-  const menu = await prisma.workoutMenu.findFirst({
+  templateId: number,
+): Promise<WorkoutTemplateWithExercises | null> {
+  const template = await prisma.workoutTemplate.findFirst({
     where: {
-      id: toBigInt(menuId, "menuId"),
+      id: toBigInt(templateId, "templateId"),
       userId: toBigInt(userId, "userId"),
       deletedAt: null,
     },
     include: {
-      menuExercises: {
+      templateExercises: {
         where: { exercise: { deletedAt: null } },
         orderBy: { displayOrder: "asc" },
         include: {
@@ -365,18 +368,18 @@ export async function getMenuWithExercises(
     },
   });
 
-  if (!menu) return null;
-  return mapMenuWithExercises(menu);
+  if (!template) return null;
+  return mapTemplateWithExercises(template);
 }
 
-export async function getMenusWithExercises(
+export async function getTemplatesWithExercises(
   userId: number,
-): Promise<WorkoutMenuWithExercises[]> {
-  const rows = await prisma.workoutMenu.findMany({
+): Promise<WorkoutTemplateWithExercises[]> {
+  const rows = await prisma.workoutTemplate.findMany({
     where: { userId: toBigInt(userId, "userId"), deletedAt: null },
     orderBy: { createdAt: "asc" },
     include: {
-      menuExercises: {
+      templateExercises: {
         where: { exercise: { deletedAt: null } },
         orderBy: { displayOrder: "asc" },
         include: {
@@ -393,42 +396,42 @@ export async function getMenusWithExercises(
     },
   });
 
-  return rows.map(mapMenuWithExercises);
+  return rows.map(mapTemplateWithExercises);
 }
 
-export async function getMenus(userId: number): Promise<WorkoutMenu[]> {
-  const rows = await prisma.workoutMenu.findMany({
+export async function getTemplates(userId: number): Promise<WorkoutTemplate[]> {
+  const rows = await prisma.workoutTemplate.findMany({
     where: { userId: toBigInt(userId, "userId"), deletedAt: null },
     orderBy: { createdAt: "asc" },
   });
-  return rows.map(mapMenu);
+  return rows.map(mapTemplate);
 }
 
-export async function getMenusByIds(
+export async function getTemplatesByIds(
   userId: number,
-  menuIds: number[],
-): Promise<WorkoutMenu[]> {
-  if (menuIds.length === 0) return [];
-  const rows = await prisma.workoutMenu.findMany({
+  templateIds: number[],
+): Promise<WorkoutTemplate[]> {
+  if (templateIds.length === 0) return [];
+  const rows = await prisma.workoutTemplate.findMany({
     where: {
       userId: toBigInt(userId, "userId"),
       deletedAt: null,
-      id: { in: toBigIntArray(menuIds, "menuIds") },
+      id: { in: toBigIntArray(templateIds, "templateIds") },
     },
     orderBy: { createdAt: "asc" },
   });
-  return rows.map(mapMenu);
+  return rows.map(mapTemplate);
 }
 
-export async function getMenuExercisesByMenuIds(
-  menuIds: number[],
-): Promise<MenuExercise[]> {
-  if (menuIds.length === 0) return [];
-  const rows = await prisma.menuExercise.findMany({
-    where: { menuId: { in: toBigIntArray(menuIds, "menuIds") } },
-    orderBy: [{ menuId: "asc" }, { displayOrder: "asc" }],
+export async function getTemplateExercisesByTemplateIds(
+  templateIds: number[],
+): Promise<TemplateExercise[]> {
+  if (templateIds.length === 0) return [];
+  const rows = await prisma.templateExercise.findMany({
+    where: { templateId: { in: toBigIntArray(templateIds, "templateIds") } },
+    orderBy: [{ templateId: "asc" }, { displayOrder: "asc" }],
   });
-  return rows.map(mapMenuExercise);
+  return rows.map(mapTemplateExercise);
 }
 
 export async function getWorkoutRecordsByDateRange(
@@ -459,7 +462,7 @@ export async function getMonthlyStats(
   const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
   // 指定期間のセッションを取得
-  const sessions = await prisma.workoutRecord.findMany({
+  const records = await prisma.workoutRecord.findMany({
     where: {
       userId: toBigInt(userId, "userId"),
       startedAt: { gte: startDate, lte: endDate },
@@ -467,19 +470,17 @@ export async function getMonthlyStats(
     select: { id: true },
   });
 
-  const sessionIds = sessions.map((s: { id: bigint }) => s.id);
+  const recordIds = records.map((s: { id: bigint }) => s.id);
 
-  if (sessionIds.length === 0) {
+  if (recordIds.length === 0) {
     return { totalVolume: 0, workoutCount: 0 };
   }
 
   // 期間内のセット情報を取得してボリュームを計算
-  // Note: Prismaの集計機能を使うとより効率的だが、現在の構造上セットレベルでの結合が必要
-  // ここでは一度生クエリに近い形で集計するか、既存のリレーションを辿る
-  const workoutSets = await prisma.workoutSet.findMany({
+  const workoutRecordSets = await prisma.workoutRecordSet.findMany({
     where: {
-      exerciseRecord: {
-        recordId: { in: sessionIds },
+      workoutRecordExercise: {
+        recordId: { in: recordIds },
       },
       completed: true,
     },
@@ -490,25 +491,25 @@ export async function getMonthlyStats(
   });
 
   // 総重量計算 (kg * reps)
-  const totalVolume = workoutSets.reduce((sum, set) => {
+  const totalVolume = workoutRecordSets.reduce((sum, set) => {
     return sum + set.weight.toNumber() * set.reps;
   }, 0);
 
   return {
     totalVolume,
-    workoutCount: sessionIds.length,
+    workoutCount: recordIds.length,
   };
 }
 
-export async function getWorkoutRecordsByMenuIds(
+export async function getWorkoutRecordsByTemplateIds(
   userId: number,
-  menuIds: number[],
+  templateIds: number[],
 ): Promise<WorkoutRecord[]> {
-  if (menuIds.length === 0) return [];
+  if (templateIds.length === 0) return [];
   const rows = await prisma.workoutRecord.findMany({
     where: {
       userId: toBigInt(userId, "userId"),
-      menuId: { in: toBigIntArray(menuIds, "menuIds") },
+      templateId: { in: toBigIntArray(templateIds, "templateIds") },
     },
     orderBy: { startedAt: "desc" },
   });
@@ -525,29 +526,29 @@ export async function getWorkoutRecords(
   return rows.map(mapWorkoutRecord);
 }
 
-export async function getExerciseRecordsByRecordIds(
+export async function getWorkoutRecordExercisesByRecordIds(
   recordIds: number[],
-): Promise<ExerciseRecord[]> {
+): Promise<WorkoutRecordExercise[]> {
   if (recordIds.length === 0) return [];
-  const rows = await prisma.exerciseRecord.findMany({
+  const rows = await prisma.workoutRecordExercise.findMany({
     where: { recordId: { in: toBigIntArray(recordIds, "recordIds") } },
   });
-  return rows.map(mapExerciseRecord);
+  return rows.map(mapWorkoutRecordExercise);
 }
 
-export async function getWorkoutSetsByExerciseRecordIds(
-  exerciseRecordIds: number[],
-): Promise<WorkoutSet[]> {
-  if (exerciseRecordIds.length === 0) return [];
-  const rows = await prisma.workoutSet.findMany({
+export async function getWorkoutRecordSetsByExerciseIds(
+  workoutRecordExerciseIds: number[],
+): Promise<WorkoutRecordSet[]> {
+  if (workoutRecordExerciseIds.length === 0) return [];
+  const rows = await prisma.workoutRecordSet.findMany({
     where: {
-      exerciseRecordId: {
-        in: toBigIntArray(exerciseRecordIds, "exerciseRecordIds"),
+      workoutRecordExerciseId: {
+        in: toBigIntArray(workoutRecordExerciseIds, "workoutRecordExerciseIds"),
       },
     },
-    orderBy: [{ exerciseRecordId: "asc" }, { setNumber: "asc" }],
+    orderBy: [{ workoutRecordExerciseId: "asc" }, { setNumber: "asc" }],
   });
-  return rows.map(mapWorkoutSet);
+  return rows.map(mapWorkoutRecordSet);
 }
 
 export async function getWeightRecords(
@@ -564,15 +565,15 @@ export async function getWeightRecords(
  * トレーニング記録詳細を取得（種目・セット情報含む）
  */
 export interface WorkoutRecordWithDetails extends WorkoutRecord {
-  menu: {
+  template: {
     id: number;
     name: string;
   };
-  exerciseRecords: {
+  workoutRecordExercises: {
     id: number;
     exerciseId: number;
     exercise: ExerciseWithBodyParts;
-    sets: WorkoutSet[];
+    sets: WorkoutRecordSet[];
   }[];
 }
 
@@ -586,8 +587,8 @@ export async function getWorkoutRecordWithDetails(
       userId: toBigInt(userId, "userId"),
     },
     include: {
-      menu: true,
-      exerciseRecords: {
+      template: true,
+      workoutRecordExercises: {
         include: {
           exercise: {
             include: {
@@ -597,7 +598,7 @@ export async function getWorkoutRecordWithDetails(
               },
             },
           },
-          workoutSets: {
+          workoutRecordSets: {
             orderBy: { setNumber: "asc" },
           },
         },
@@ -609,34 +610,37 @@ export async function getWorkoutRecordWithDetails(
 
   return {
     ...mapWorkoutRecord(row),
-    menu: {
-      id: toSafeNumber(row.menu.id, "workout_menus.id"),
-      name: row.menu.name,
+    template: {
+      id: toSafeNumber(row.template.id, "workout_templates.id"),
+      name: row.template.name,
     },
-    exerciseRecords: row.exerciseRecords.map((er) => ({
-      id: toSafeNumber(er.id, "exercise_records.id"),
-      exerciseId: toSafeNumber(er.exerciseId, "exercise_records.exercise_id"),
+    workoutRecordExercises: row.workoutRecordExercises.map((er) => ({
+      id: toSafeNumber(er.id, "workout_record_exercises.id"),
+      exerciseId: toSafeNumber(
+        er.exerciseId,
+        "workout_record_exercises.exercise_id",
+      ),
       exercise: mapExerciseWithBodyParts(er.exercise),
-      sets: er.workoutSets.map(mapWorkoutSet),
+      sets: er.workoutRecordSets.map(mapWorkoutRecordSet),
     })),
   };
 }
 
 // =============================================================================
-// 新スケジュール機能（SessionPlan ベース）
+// スケジュール機能（WorkoutSession ベース）
 // =============================================================================
 
 // -----------------------------------------------------------------------------
 // マッパー関数
 // -----------------------------------------------------------------------------
 
-type SessionPlanRow = Prisma.SessionPlanGetPayload<object>;
+type WorkoutSessionRow = Prisma.WorkoutSessionGetPayload<object>;
 
-function mapSessionPlan(row: SessionPlanRow): SessionPlan {
+function mapWorkoutSession(row: WorkoutSessionRow): WorkoutSession {
   return {
-    id: toSafeNumber(row.id, "sessionPlan.id"),
-    userId: toSafeNumber(row.userId, "sessionPlan.userId"),
-    menuId: toSafeNumber(row.menuId, "sessionPlan.menuId"),
+    id: toSafeNumber(row.id, "workoutSession.id"),
+    userId: toSafeNumber(row.userId, "workoutSession.userId"),
+    templateId: toSafeNumber(row.templateId, "workoutSession.templateId"),
     name: row.name,
     description: row.description ?? undefined,
     createdAt: row.createdAt,
@@ -645,18 +649,22 @@ function mapSessionPlan(row: SessionPlanRow): SessionPlan {
   };
 }
 
-type SessionPlanExerciseRow = Prisma.SessionPlanExerciseGetPayload<object>;
+type WorkoutSessionExerciseRow =
+  Prisma.WorkoutSessionExerciseGetPayload<object>;
 
-function mapSessionPlanExercise(
-  row: SessionPlanExerciseRow,
-): SessionPlanExercise {
+function mapWorkoutSessionExercise(
+  row: WorkoutSessionExerciseRow,
+): WorkoutSessionExercise {
   return {
-    id: toSafeNumber(row.id, "sessionPlanExercise.id"),
-    sessionPlanId: toSafeNumber(
-      row.sessionPlanId,
-      "sessionPlanExercise.sessionPlanId",
+    id: toSafeNumber(row.id, "workoutSessionExercise.id"),
+    workoutSessionId: toSafeNumber(
+      row.workoutSessionId,
+      "workoutSessionExercise.workoutSessionId",
     ),
-    exerciseId: toSafeNumber(row.exerciseId, "sessionPlanExercise.exerciseId"),
+    exerciseId: toSafeNumber(
+      row.exerciseId,
+      "workoutSessionExercise.exerciseId",
+    ),
     displayOrder: row.displayOrder,
     targetWeight: row.targetWeight
       ? toDecimalNumber(row.targetWeight)
@@ -670,30 +678,31 @@ function mapSessionPlanExercise(
   };
 }
 
-type SessionPlanExerciseWithDetailsRow = Prisma.SessionPlanExerciseGetPayload<{
-  include: {
-    exercise: {
-      include: {
-        bodyParts: {
-          include: { bodyPart: true };
+type WorkoutSessionExerciseWithDetailsRow =
+  Prisma.WorkoutSessionExerciseGetPayload<{
+    include: {
+      exercise: {
+        include: {
+          bodyParts: {
+            include: { bodyPart: true };
+          };
         };
       };
     };
-  };
-}>;
+  }>;
 
-function mapSessionPlanExerciseWithDetails(
-  row: SessionPlanExerciseWithDetailsRow,
-): SessionPlanExerciseWithDetails {
+function mapWorkoutSessionExerciseWithDetails(
+  row: WorkoutSessionExerciseWithDetailsRow,
+): WorkoutSessionExerciseWithDetails {
   return {
-    ...mapSessionPlanExercise(row),
+    ...mapWorkoutSessionExercise(row),
     exercise: mapExerciseWithBodyParts(row.exercise),
   };
 }
 
-type SessionPlanWithExercisesRow = Prisma.SessionPlanGetPayload<{
+type WorkoutSessionWithExercisesRow = Prisma.WorkoutSessionGetPayload<{
   include: {
-    menu: true;
+    template: true;
     exercises: {
       include: {
         exercise: {
@@ -708,15 +717,15 @@ type SessionPlanWithExercisesRow = Prisma.SessionPlanGetPayload<{
   };
 }>;
 
-function mapSessionPlanWithExercises(
-  row: SessionPlanWithExercisesRow,
-): SessionPlanWithExercises {
+function mapWorkoutSessionWithExercises(
+  row: WorkoutSessionWithExercisesRow,
+): WorkoutSessionWithExercises {
   return {
-    ...mapSessionPlan(row),
-    menu: mapMenu(row.menu),
+    ...mapWorkoutSession(row),
+    template: mapTemplate(row.template),
     exercises: row.exercises
       .sort((a, b) => a.displayOrder - b.displayOrder)
-      .map(mapSessionPlanExerciseWithDetails),
+      .map(mapWorkoutSessionExerciseWithDetails),
   };
 }
 
@@ -726,9 +735,9 @@ function mapScheduleRule(row: ScheduleRuleRow): ScheduleRule {
   return {
     id: toSafeNumber(row.id, "scheduleRule.id"),
     userId: toSafeNumber(row.userId, "scheduleRule.userId"),
-    sessionPlanId: toSafeNumber(
-      row.sessionPlanId,
-      "scheduleRule.sessionPlanId",
+    workoutSessionId: toSafeNumber(
+      row.workoutSessionId,
+      "scheduleRule.workoutSessionId",
     ),
     ruleType: row.ruleType as ScheduleRuleType,
     weekdays: row.weekdays ?? undefined,
@@ -751,9 +760,9 @@ function mapScheduledTask(row: ScheduledTaskRow): ScheduledTask {
     ruleId: row.ruleId
       ? toSafeNumber(row.ruleId, "scheduledTask.ruleId")
       : undefined,
-    sessionPlanId: toSafeNumber(
-      row.sessionPlanId,
-      "scheduledTask.sessionPlanId",
+    workoutSessionId: toSafeNumber(
+      row.workoutSessionId,
+      "scheduledTask.workoutSessionId",
     ),
     scheduledDate: row.scheduledDate,
     status: row.status as ScheduledTaskStatus,
@@ -765,11 +774,11 @@ function mapScheduledTask(row: ScheduledTaskRow): ScheduledTask {
   };
 }
 
-type ScheduledTaskWithPlanRow = Prisma.ScheduledTaskGetPayload<{
+type ScheduledTaskWithSessionRow = Prisma.ScheduledTaskGetPayload<{
   include: {
-    sessionPlan: {
+    workoutSession: {
       include: {
-        menu: true;
+        template: true;
         exercises: {
           include: {
             exercise: {
@@ -787,12 +796,12 @@ type ScheduledTaskWithPlanRow = Prisma.ScheduledTaskGetPayload<{
   };
 }>;
 
-function mapScheduledTaskWithPlan(
-  row: ScheduledTaskWithPlanRow,
-): ScheduledTaskWithPlan {
+function mapScheduledTaskWithSession(
+  row: ScheduledTaskWithSessionRow,
+): ScheduledTaskWithSession {
   return {
     ...mapScheduledTask(row),
-    sessionPlan: mapSessionPlanWithExercises(row.sessionPlan),
+    workoutSession: mapWorkoutSessionWithExercises(row.workoutSession),
     rule: row.rule ? mapScheduleRule(row.rule) : undefined,
   };
 }
@@ -803,9 +812,9 @@ function mapScheduleReminder(row: ScheduleReminderRow): ScheduleReminder {
   return {
     id: toSafeNumber(row.id, "scheduleReminder.id"),
     userId: toSafeNumber(row.userId, "scheduleReminder.userId"),
-    sessionPlanId: toSafeNumber(
-      row.sessionPlanId,
-      "scheduleReminder.sessionPlanId",
+    workoutSessionId: toSafeNumber(
+      row.workoutSessionId,
+      "scheduleReminder.workoutSessionId",
     ),
     reminderType: row.reminderType as ReminderType,
     offsetMinutes: row.offsetMinutes ?? undefined,
@@ -820,15 +829,15 @@ function mapScheduleReminder(row: ScheduleReminderRow): ScheduleReminder {
 }
 
 // -----------------------------------------------------------------------------
-// SessionPlan CRUD
+// WorkoutSession CRUD
 // -----------------------------------------------------------------------------
 
 /**
- * セッションプランを作成
+ * ワークアウトセッションを作成
  */
-export async function createSessionPlan(input: {
+export async function createWorkoutSession(input: {
   userId: number;
-  menuId: number;
+  templateId: number;
   name: string;
   description?: string;
   exercises: {
@@ -840,11 +849,11 @@ export async function createSessionPlan(input: {
     restSeconds?: number;
     note?: string;
   }[];
-}): Promise<SessionPlan> {
-  const row = await prisma.sessionPlan.create({
+}): Promise<WorkoutSession> {
+  const row = await prisma.workoutSession.create({
     data: {
       userId: toBigInt(input.userId, "userId"),
-      menuId: toBigInt(input.menuId, "menuId"),
+      templateId: toBigInt(input.templateId, "templateId"),
       name: input.name,
       description: input.description,
       exercises: {
@@ -860,22 +869,22 @@ export async function createSessionPlan(input: {
       },
     },
   });
-  return mapSessionPlan(row);
+  return mapWorkoutSession(row);
 }
 
 /**
- * セッションプラン一覧を取得（削除済み除く）
+ * ワークアウトセッション一覧を取得（削除済み除く）
  */
-export async function getSessionPlans(
+export async function getWorkoutSessions(
   userId: number,
-): Promise<SessionPlanWithExercises[]> {
-  const rows = await prisma.sessionPlan.findMany({
+): Promise<WorkoutSessionWithExercises[]> {
+  const rows = await prisma.workoutSession.findMany({
     where: {
       userId: toBigInt(userId, "userId"),
       deletedAt: null,
     },
     include: {
-      menu: true,
+      template: true,
       exercises: {
         include: {
           exercise: {
@@ -890,24 +899,24 @@ export async function getSessionPlans(
     },
     orderBy: { createdAt: "desc" },
   });
-  return rows.map(mapSessionPlanWithExercises);
+  return rows.map(mapWorkoutSessionWithExercises);
 }
 
 /**
- * セッションプランを取得（種目・ルール・リマインダー付き）
+ * ワークアウトセッションを取得（種目・ルール・リマインダー付き）
  */
-export async function getSessionPlanWithDetails(
+export async function getWorkoutSessionWithDetails(
   userId: number,
-  sessionPlanId: number,
-): Promise<SessionPlanWithRules | null> {
-  const row = await prisma.sessionPlan.findFirst({
+  workoutSessionId: number,
+): Promise<WorkoutSessionWithRules | null> {
+  const row = await prisma.workoutSession.findFirst({
     where: {
-      id: toBigInt(sessionPlanId, "sessionPlanId"),
+      id: toBigInt(workoutSessionId, "workoutSessionId"),
       userId: toBigInt(userId, "userId"),
       deletedAt: null,
     },
     include: {
-      menu: true,
+      template: true,
       exercises: {
         include: {
           exercise: {
@@ -927,17 +936,17 @@ export async function getSessionPlanWithDetails(
   });
   if (!row) return null;
   return {
-    ...mapSessionPlanWithExercises(row),
+    ...mapWorkoutSessionWithExercises(row),
     scheduleRules: row.scheduleRules.map(mapScheduleRule),
     reminders: row.reminders.map(mapScheduleReminder),
   };
 }
 
 /**
- * セッションプランを更新
+ * ワークアウトセッションを更新
  */
-export async function updateSessionPlan(input: {
-  sessionPlanId: number;
+export async function updateWorkoutSession(input: {
+  workoutSessionId: number;
   userId: number;
   name?: string;
   description?: string;
@@ -950,19 +959,22 @@ export async function updateSessionPlan(input: {
     restSeconds?: number;
     note?: string;
   }[];
-}): Promise<SessionPlan> {
+}): Promise<WorkoutSession> {
   const row = await prisma.$transaction(async (tx) => {
     // 種目の更新がある場合は削除して再作成
     if (input.exercises) {
-      await tx.sessionPlanExercise.deleteMany({
+      await tx.workoutSessionExercise.deleteMany({
         where: {
-          sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+          workoutSessionId: toBigInt(
+            input.workoutSessionId,
+            "workoutSessionId",
+          ),
         },
       });
     }
 
-    return tx.sessionPlan.update({
-      where: { id: toBigInt(input.sessionPlanId, "sessionPlanId") },
+    return tx.workoutSession.update({
+      where: { id: toBigInt(input.workoutSessionId, "workoutSessionId") },
       data: {
         name: input.name,
         description: input.description,
@@ -982,18 +994,18 @@ export async function updateSessionPlan(input: {
       },
     });
   });
-  return mapSessionPlan(row);
+  return mapWorkoutSession(row);
 }
 
 /**
- * セッションプランを論理削除
+ * ワークアウトセッションを論理削除
  */
-export async function deleteSessionPlan(
+export async function deleteWorkoutSession(
   _userId: number,
-  sessionPlanId: number,
+  workoutSessionId: number,
 ): Promise<void> {
-  await prisma.sessionPlan.update({
-    where: { id: toBigInt(sessionPlanId, "sessionPlanId") },
+  await prisma.workoutSession.update({
+    where: { id: toBigInt(workoutSessionId, "workoutSessionId") },
     data: { deletedAt: new Date() },
   });
 }
@@ -1007,7 +1019,7 @@ export async function deleteSessionPlan(
  */
 export async function createScheduleRule(input: {
   userId: number;
-  sessionPlanId: number;
+  workoutSessionId: number;
   ruleType: ScheduleRuleType;
   weekdays?: number;
   intervalDays?: number;
@@ -1017,7 +1029,7 @@ export async function createScheduleRule(input: {
   const row = await prisma.scheduleRule.create({
     data: {
       userId: toBigInt(input.userId, "userId"),
-      sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+      workoutSessionId: toBigInt(input.workoutSessionId, "workoutSessionId"),
       ruleType: input.ruleType,
       weekdays: input.weekdays,
       intervalDays: input.intervalDays,
@@ -1046,16 +1058,16 @@ export async function getActiveScheduleRules(
 }
 
 /**
- * セッションプランのスケジュールルール一覧を取得
+ * ワークアウトセッションのスケジュールルール一覧を取得
  */
-export async function getScheduleRulesByPlan(
+export async function getScheduleRulesBySession(
   userId: number,
-  sessionPlanId: number,
+  workoutSessionId: number,
 ): Promise<ScheduleRule[]> {
   const rows = await prisma.scheduleRule.findMany({
     where: {
       userId: toBigInt(userId, "userId"),
-      sessionPlanId: toBigInt(sessionPlanId, "sessionPlanId"),
+      workoutSessionId: toBigInt(workoutSessionId, "workoutSessionId"),
       deletedAt: null,
     },
   });
@@ -1123,14 +1135,14 @@ export async function deleteScheduleRule(ruleId: number): Promise<void> {
 export async function createScheduledTask(input: {
   userId: number;
   ruleId?: number;
-  sessionPlanId: number;
+  workoutSessionId: number;
   scheduledDate: Date;
 }): Promise<ScheduledTask> {
   const row = await prisma.scheduledTask.create({
     data: {
       userId: toBigInt(input.userId, "userId"),
       ruleId: input.ruleId ? toBigInt(input.ruleId, "ruleId") : null,
-      sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+      workoutSessionId: toBigInt(input.workoutSessionId, "workoutSessionId"),
       scheduledDate: toUtcDateOnly(input.scheduledDate),
       status: "pending",
     },
@@ -1145,7 +1157,7 @@ export async function createScheduledTasks(
   tasks: {
     userId: number;
     ruleId?: number;
-    sessionPlanId: number;
+    workoutSessionId: number;
     scheduledDate: Date;
   }[],
 ): Promise<number> {
@@ -1153,7 +1165,7 @@ export async function createScheduledTasks(
     data: tasks.map((t) => ({
       userId: toBigInt(t.userId, "userId"),
       ruleId: t.ruleId ? toBigInt(t.ruleId, "ruleId") : null,
-      sessionPlanId: toBigInt(t.sessionPlanId, "sessionPlanId"),
+      workoutSessionId: toBigInt(t.workoutSessionId, "workoutSessionId"),
       scheduledDate: toUtcDateOnly(t.scheduledDate),
       status: "pending" as const,
     })),
@@ -1184,13 +1196,13 @@ export async function getScheduledTasksByDateRange(
 }
 
 /**
- * 期間内のスケジュールタスクを取得（プラン情報付き）
+ * 期間内のスケジュールタスクを取得（セッション情報付き）
  */
-export async function getScheduledTasksWithPlanByDateRange(
+export async function getScheduledTasksWithSessionByDateRange(
   userId: number,
   fromDate: Date,
   toDate: Date,
-): Promise<ScheduledTaskWithPlan[]> {
+): Promise<ScheduledTaskWithSession[]> {
   const rows = await prisma.scheduledTask.findMany({
     where: {
       userId: toBigInt(userId, "userId"),
@@ -1200,9 +1212,9 @@ export async function getScheduledTasksWithPlanByDateRange(
       },
     },
     include: {
-      sessionPlan: {
+      workoutSession: {
         include: {
-          menu: true,
+          template: true,
           exercises: {
             include: {
               exercise: {
@@ -1220,7 +1232,7 @@ export async function getScheduledTasksWithPlanByDateRange(
     },
     orderBy: { scheduledDate: "asc" },
   });
-  return rows.map(mapScheduledTaskWithPlan);
+  return rows.map(mapScheduledTaskWithSession);
 }
 
 /**
@@ -1270,7 +1282,7 @@ export async function rescheduleTask(input: {
       data: {
         userId: original.userId,
         ruleId: original.ruleId,
-        sessionPlanId: original.sessionPlanId,
+        workoutSessionId: original.workoutSessionId,
         scheduledDate: toUtcDateOnly(input.toDate),
         status: "pending",
         rescheduledFrom: original.scheduledDate,
@@ -1303,26 +1315,26 @@ export async function deleteFuturePendingTasks(
 }
 
 /**
- * 日付とセッションプランでタスクを取得または作成
+ * 日付とワークアウトセッションでタスクを取得または作成
  */
 export async function upsertScheduledTask(input: {
   userId: number;
-  sessionPlanId: number;
+  workoutSessionId: number;
   scheduledDate: Date;
   status: ScheduledTaskStatus;
   completedAt?: Date;
 }): Promise<ScheduledTask> {
   const row = await prisma.scheduledTask.upsert({
     where: {
-      userId_sessionPlanId_scheduledDate: {
+      userId_workoutSessionId_scheduledDate: {
         userId: toBigInt(input.userId, "userId"),
-        sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+        workoutSessionId: toBigInt(input.workoutSessionId, "workoutSessionId"),
         scheduledDate: toUtcDateOnly(input.scheduledDate),
       },
     },
     create: {
       userId: toBigInt(input.userId, "userId"),
-      sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+      workoutSessionId: toBigInt(input.workoutSessionId, "workoutSessionId"),
       scheduledDate: toUtcDateOnly(input.scheduledDate),
       status: input.status,
       completedAt: input.completedAt,
@@ -1344,7 +1356,7 @@ export async function upsertScheduledTask(input: {
  */
 export async function upsertScheduleReminder(input: {
   userId: number;
-  sessionPlanId: number;
+  workoutSessionId: number;
   reminderType: ReminderType;
   offsetMinutes?: number;
   fixedTimeOfDay?: string;
@@ -1359,7 +1371,7 @@ export async function upsertScheduleReminder(input: {
   const existing = await prisma.scheduleReminder.findFirst({
     where: {
       userId: toBigInt(input.userId, "userId"),
-      sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+      workoutSessionId: toBigInt(input.workoutSessionId, "workoutSessionId"),
     },
   });
 
@@ -1377,7 +1389,10 @@ export async function upsertScheduleReminder(input: {
     : await prisma.scheduleReminder.create({
         data: {
           userId: toBigInt(input.userId, "userId"),
-          sessionPlanId: toBigInt(input.sessionPlanId, "sessionPlanId"),
+          workoutSessionId: toBigInt(
+            input.workoutSessionId,
+            "workoutSessionId",
+          ),
           reminderType: input.reminderType,
           offsetMinutes: input.offsetMinutes,
           fixedTimeOfDay: fixedTime,
@@ -1393,10 +1408,10 @@ export async function upsertScheduleReminder(input: {
  * スケジュールリマインダーを削除
  */
 export async function deleteScheduleReminder(
-  sessionPlanId: number,
+  workoutSessionId: number,
 ): Promise<void> {
   await prisma.scheduleReminder.deleteMany({
-    where: { sessionPlanId: toBigInt(sessionPlanId, "sessionPlanId") },
+    where: { workoutSessionId: toBigInt(workoutSessionId, "workoutSessionId") },
   });
 }
 
@@ -1482,24 +1497,24 @@ export async function deleteExercise(userId: number, exerciseId: number) {
 }
 
 // -----------------------------------------------------------------------------
-// WorkoutMenu
+// WorkoutTemplate
 // -----------------------------------------------------------------------------
 
-export interface CreateMenuParams {
+export interface CreateTemplateParams {
   name: string;
   exerciseIds: number[];
 }
 
-export async function createWorkoutMenu(
+export async function createWorkoutTemplate(
   userId: number,
-  params: CreateMenuParams,
+  params: CreateTemplateParams,
 ) {
   const { name, exerciseIds } = params;
-  return await prisma.workoutMenu.create({
+  return await prisma.workoutTemplate.create({
     data: {
       userId: toBigInt(userId, "userId"),
       name,
-      menuExercises: {
+      templateExercises: {
         create: exerciseIds.map((exerciseId, index) => ({
           exerciseId: toBigInt(exerciseId, "exerciseId"),
           displayOrder: index + 1,
@@ -1509,27 +1524,27 @@ export async function createWorkoutMenu(
   });
 }
 
-export interface UpdateMenuParams extends CreateMenuParams {
+export interface UpdateTemplateParams extends CreateTemplateParams {
   id: number;
 }
 
-export async function updateWorkoutMenu(
+export async function updateWorkoutTemplate(
   userId: number,
-  params: UpdateMenuParams,
+  params: UpdateTemplateParams,
 ) {
   const { id, name, exerciseIds } = params;
-  const menuId = toBigInt(id, "menuId");
+  const templateId = toBigInt(id, "templateId");
 
   await prisma.$transaction(async (tx) => {
-    await tx.menuExercise.deleteMany({
-      where: { menuId },
+    await tx.templateExercise.deleteMany({
+      where: { templateId },
     });
 
-    await tx.workoutMenu.update({
-      where: { id: menuId, userId: toBigInt(userId, "userId") },
+    await tx.workoutTemplate.update({
+      where: { id: templateId, userId: toBigInt(userId, "userId") },
       data: {
         name,
-        menuExercises: {
+        templateExercises: {
           create: exerciseIds.map((exerciseId, index) => ({
             exerciseId: toBigInt(exerciseId, "exerciseId"),
             displayOrder: index + 1,
@@ -1540,11 +1555,14 @@ export async function updateWorkoutMenu(
   });
 }
 
-export async function deleteWorkoutMenu(userId: number, menuId: number) {
+export async function deleteWorkoutTemplate(
+  userId: number,
+  templateId: number,
+) {
   // 論理削除
-  await prisma.workoutMenu.update({
+  await prisma.workoutTemplate.update({
     where: {
-      id: toBigInt(menuId, "menuId"),
+      id: toBigInt(templateId, "templateId"),
       userId: toBigInt(userId, "userId"),
     },
     data: { deletedAt: new Date() },
@@ -1642,8 +1660,8 @@ export async function deleteScheduledTask(userId: number, taskId: number) {
 // -----------------------------------------------------------------------------
 
 export interface SaveWorkoutRecordParams {
-  menuId: number;
-  sessionPlanId?: number;
+  templateId: number;
+  workoutSessionId?: number;
   scheduledTaskId?: number;
   startedAt: Date;
   endedAt: Date;
@@ -1667,8 +1685,8 @@ export async function createWorkoutRecord(
   params: SaveWorkoutRecordParams,
 ) {
   const {
-    menuId,
-    sessionPlanId,
+    templateId,
+    workoutSessionId,
     scheduledTaskId,
     startedAt,
     endedAt,
@@ -1684,9 +1702,9 @@ export async function createWorkoutRecord(
     const newRecord = await tx.workoutRecord.create({
       data: {
         userId: userBigId,
-        menuId: toBigInt(menuId, "menuId"),
-        sessionPlanId: sessionPlanId
-          ? toBigInt(sessionPlanId, "sessionPlanId")
+        templateId: toBigInt(templateId, "templateId"),
+        workoutSessionId: workoutSessionId
+          ? toBigInt(workoutSessionId, "workoutSessionId")
           : null,
         scheduledTaskId: scheduledTaskId
           ? toBigInt(scheduledTaskId, "scheduledTaskId")
@@ -1696,10 +1714,10 @@ export async function createWorkoutRecord(
         condition,
         fatigue,
         note,
-        exerciseRecords: {
+        workoutRecordExercises: {
           create: exercises.map((ex) => ({
             exerciseId: toBigInt(ex.exerciseId, "exerciseId"),
-            workoutSets: {
+            workoutRecordSets: {
               create: ex.sets.map((set) => ({
                 setNumber: set.setNumber,
                 weight: new Prisma.Decimal(set.weight),
@@ -1766,7 +1784,7 @@ export async function updateWorkoutRecord(
       throw new Error("記録が見つかりません");
     }
 
-    await tx.exerciseRecord.deleteMany({
+    await tx.workoutRecordExercise.deleteMany({
       where: { recordId: recordBigId },
     });
 
@@ -1777,10 +1795,10 @@ export async function updateWorkoutRecord(
         condition,
         fatigue,
         note,
-        exerciseRecords: {
+        workoutRecordExercises: {
           create: exercises.map((ex) => ({
             exerciseId: toBigInt(ex.exerciseId, "exerciseId"),
-            workoutSets: {
+            workoutRecordSets: {
               create: ex.sets.map((set) => ({
                 setNumber: set.setNumber,
                 weight: new Prisma.Decimal(set.weight),
@@ -1795,3 +1813,100 @@ export async function updateWorkoutRecord(
     });
   });
 }
+
+// =============================================================================
+// 後方互換性エイリアス（移行期間中のみ使用）
+// =============================================================================
+
+/**
+ * @deprecated Use getTemplateWithExercises instead
+ */
+export const getMenuWithExercises = getTemplateWithExercises;
+
+/**
+ * @deprecated Use getTemplatesWithExercises instead
+ */
+export const getMenusWithExercises = getTemplatesWithExercises;
+
+/**
+ * @deprecated Use getTemplates instead
+ */
+export const getMenus = getTemplates;
+
+/**
+ * @deprecated Use getTemplatesByIds instead
+ */
+export const getMenusByIds = getTemplatesByIds;
+
+/**
+ * @deprecated Use getTemplateExercisesByTemplateIds instead
+ */
+export const getMenuExercisesByMenuIds = getTemplateExercisesByTemplateIds;
+
+/**
+ * @deprecated Use getWorkoutRecordsByTemplateIds instead
+ */
+export const getWorkoutRecordsByMenuIds = getWorkoutRecordsByTemplateIds;
+
+/**
+ * @deprecated Use getWorkoutRecordExercisesByRecordIds instead
+ */
+export const getExerciseRecordsByRecordIds =
+  getWorkoutRecordExercisesByRecordIds;
+
+/**
+ * @deprecated Use getWorkoutRecordSetsByExerciseIds instead
+ */
+export const getWorkoutSetsByExerciseRecordIds =
+  getWorkoutRecordSetsByExerciseIds;
+
+/**
+ * @deprecated Use createWorkoutSession instead
+ */
+export const createSessionPlan = createWorkoutSession;
+
+/**
+ * @deprecated Use getWorkoutSessions instead
+ */
+export const getSessionPlans = getWorkoutSessions;
+
+/**
+ * @deprecated Use getWorkoutSessionWithDetails instead
+ */
+export const getSessionPlanWithDetails = getWorkoutSessionWithDetails;
+
+/**
+ * @deprecated Use updateWorkoutSession instead
+ */
+export const updateSessionPlan = updateWorkoutSession;
+
+/**
+ * @deprecated Use deleteWorkoutSession instead
+ */
+export const deleteSessionPlan = deleteWorkoutSession;
+
+/**
+ * @deprecated Use getScheduleRulesBySession instead
+ */
+export const getScheduleRulesByPlan = getScheduleRulesBySession;
+
+/**
+ * @deprecated Use getScheduledTasksWithSessionByDateRange instead
+ */
+export const getScheduledTasksWithPlanByDateRange =
+  getScheduledTasksWithSessionByDateRange;
+
+/**
+ * @deprecated Use createWorkoutTemplate instead
+ */
+export const createWorkoutMenu = createWorkoutTemplate;
+
+/**
+ * @deprecated Use updateWorkoutTemplate instead
+ */
+export const updateWorkoutMenu = updateWorkoutTemplate;
+
+/**
+ * @deprecated Use deleteWorkoutTemplate instead
+ */
+export const deleteWorkoutMenu = deleteWorkoutTemplate;

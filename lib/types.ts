@@ -79,24 +79,24 @@ export interface ExerciseBodyPart {
 }
 
 // =============================================================================
-// メニュー関連
+// テンプレート関連（定義層）
 // =============================================================================
 
 /**
- * トレーニングメニュー
- * @table workout_menus
+ * トレーニングテンプレート
+ * @table workout_templates
  */
-export interface WorkoutMenu extends SoftDeletable {
+export interface WorkoutTemplate extends SoftDeletable {
   userId: number; // FK → users.id
-  name: string; // メニュー名 例: "Day1 胸・背中"
+  name: string; // テンプレート名 例: "Day1 胸・背中"
 }
 
 /**
- * メニュー-種目 中間テーブル
- * @table menu_exercises
+ * テンプレート-種目 中間テーブル
+ * @table template_exercises
  */
-export interface MenuExercise extends BaseEntity {
-  menuId: number; // FK → workout_menus.id
+export interface TemplateExercise extends BaseEntity {
+  templateId: number; // FK → workout_templates.id
   exerciseId: number; // FK → exercises.id
   displayOrder: number; // 表示順序（1, 2, 3...）
 }
@@ -111,9 +111,9 @@ export interface MenuExercise extends BaseEntity {
  */
 export interface WorkoutRecord extends BaseEntity {
   userId: number; // FK → users.id
-  menuId: number; // FK → workout_menus.id
-  sessionPlanId?: number; // FK → session_plans.id（新スケジュール機能）
-  scheduledTaskId?: number; // FK → scheduled_tasks.id（新スケジュール機能）
+  templateId: number; // FK → workout_templates.id
+  workoutSessionId?: number; // FK → workout_sessions.id（スケジュール機能）
+  scheduledTaskId?: number; // FK → scheduled_tasks.id（スケジュール機能）
   startedAt: Date; // 開始日時
   endedAt?: Date; // 終了日時
   condition: number; // 体調（1-10）
@@ -123,19 +123,19 @@ export interface WorkoutRecord extends BaseEntity {
 
 /**
  * 種目ごとの記録
- * @table exercise_records
+ * @table workout_record_exercises
  */
-export interface ExerciseRecord extends BaseEntity {
+export interface WorkoutRecordExercise extends BaseEntity {
   recordId: number; // FK → workout_records.id
   exerciseId: number; // FK → exercises.id
 }
 
 /**
  * セットごとの記録
- * @table workout_set_records
+ * @table workout_record_sets
  */
-export interface WorkoutSet extends BaseEntity {
-  exerciseRecordId: number; // FK → exercise_records.id
+export interface WorkoutRecordSet extends BaseEntity {
+  workoutRecordExerciseId: number; // FK → workout_record_exercises.id
   setNumber: number; // セット番号（1, 2, 3...）
   weight: number; // 重量（kg）- 小数点1桁
   reps: number; // 回数
@@ -169,7 +169,7 @@ export interface WeightRecord extends BaseEntity {
 export type RoutineType = "weekly" | "interval";
 
 // =============================================================================
-// 新スケジュール機能（SessionPlan ベース）
+// スケジュール機能（WorkoutSession ベース）
 // =============================================================================
 
 /**
@@ -192,22 +192,22 @@ export type ScheduledTaskStatus =
 export type ReminderType = "before_scheduled" | "fixed_time";
 
 /**
- * セッションプラン
- * @table session_plans
+ * ワークアウトセッション（計画層）
+ * @table workout_sessions
  */
-export interface SessionPlan extends SoftDeletable {
+export interface WorkoutSession extends SoftDeletable {
   userId: number;
-  menuId: number;
+  templateId: number;
   name: string;
   description?: string;
 }
 
 /**
- * セッションプラン種目詳細
- * @table session_plan_exercises
+ * ワークアウトセッション種目詳細
+ * @table workout_session_exercises
  */
-export interface SessionPlanExercise extends BaseEntity {
-  sessionPlanId: number;
+export interface WorkoutSessionExercise extends BaseEntity {
+  workoutSessionId: number;
   exerciseId: number;
   displayOrder: number;
   targetWeight?: number;
@@ -223,7 +223,7 @@ export interface SessionPlanExercise extends BaseEntity {
  */
 export interface ScheduleRule extends SoftDeletable {
   userId: number;
-  sessionPlanId: number;
+  workoutSessionId: number;
   ruleType: ScheduleRuleType;
   weekdays?: number; // ビットマスク (日=1, 月=2, 火=4, 水=8, 木=16, 金=32, 土=64)
   intervalDays?: number;
@@ -239,7 +239,7 @@ export interface ScheduleRule extends SoftDeletable {
 export interface ScheduledTask extends BaseEntity {
   userId: number;
   ruleId?: number; // NULL = 手動追加
-  sessionPlanId: number;
+  workoutSessionId: number;
   scheduledDate: Date;
   status: ScheduledTaskStatus;
   rescheduledTo?: Date;
@@ -253,7 +253,7 @@ export interface ScheduledTask extends BaseEntity {
  */
 export interface ScheduleReminder extends BaseEntity {
   userId: number;
-  sessionPlanId: number;
+  workoutSessionId: number;
   reminderType: ReminderType;
   offsetMinutes?: number;
   fixedTimeOfDay?: string; // "HH:mm"
@@ -262,58 +262,58 @@ export interface ScheduleReminder extends BaseEntity {
 }
 
 // =============================================================================
-// 新スケジュール機能 派生型
+// スケジュール機能 派生型
 // =============================================================================
 
 /**
- * セッションプラン種目詳細（種目情報付き）
+ * ワークアウトセッション種目詳細（種目情報付き）
  */
-export interface SessionPlanExerciseWithDetails extends SessionPlanExercise {
+export interface WorkoutSessionExerciseWithDetails extends WorkoutSessionExercise {
   exercise: ExerciseWithBodyParts;
 }
 
 /**
- * セッションプラン（種目リスト付き）
+ * ワークアウトセッション（種目リスト付き）
  */
-export interface SessionPlanWithExercises extends SessionPlan {
-  menu: WorkoutMenu;
-  exercises: SessionPlanExerciseWithDetails[];
+export interface WorkoutSessionWithExercises extends WorkoutSession {
+  template: WorkoutTemplate;
+  exercises: WorkoutSessionExerciseWithDetails[];
 }
 
 /**
- * セッションプラン（ルール付き）
+ * ワークアウトセッション（ルール付き）
  */
-export interface SessionPlanWithRules extends SessionPlan {
-  menu: WorkoutMenu;
-  exercises: SessionPlanExerciseWithDetails[];
+export interface WorkoutSessionWithRules extends WorkoutSession {
+  template: WorkoutTemplate;
+  exercises: WorkoutSessionExerciseWithDetails[];
   scheduleRules: ScheduleRule[];
   reminders: ScheduleReminder[];
 }
 
 /**
- * スケジュールルール（プラン情報付き）
+ * スケジュールルール（セッション情報付き）
  */
-export interface ScheduleRuleWithPlan extends ScheduleRule {
-  sessionPlan: SessionPlanWithExercises;
+export interface ScheduleRuleWithSession extends ScheduleRule {
+  workoutSession: WorkoutSessionWithExercises;
 }
 
 /**
- * スケジュールタスク（プラン情報付き）
+ * スケジュールタスク（セッション情報付き）
  */
-export interface ScheduledTaskWithPlan extends ScheduledTask {
-  sessionPlan: SessionPlanWithExercises;
+export interface ScheduledTaskWithSession extends ScheduledTask {
+  workoutSession: WorkoutSessionWithExercises;
   rule?: ScheduleRule;
 }
 
 /**
- * 計算済みタスク（特定日付のスケジュール情報 - 新版）
+ * 計算済みタスク（特定日付のスケジュール情報）
  */
 export interface CalculatedTask {
   taskId?: number; // ScheduledTask.id（未生成の場合はundefined）
-  sessionPlanId: number;
-  sessionPlanName: string;
-  menuId: number;
-  menuName: string;
+  workoutSessionId: number;
+  workoutSessionName: string;
+  templateId: number;
+  templateName: string;
   ruleId?: number;
   ruleType?: ScheduleRuleType;
   weekdays?: number[];
@@ -334,26 +334,26 @@ export interface ExerciseWithBodyParts extends Exercise {
 }
 
 /**
- * メニュー（種目リスト付き）
+ * テンプレート（種目リスト付き）
  */
-export interface WorkoutMenuWithExercises extends WorkoutMenu {
+export interface WorkoutTemplateWithExercises extends WorkoutTemplate {
   exercises: ExerciseWithBodyParts[];
 }
 
 /**
- * トレーニング記録（メニュー・記録付き）
+ * トレーニング記録（テンプレート・記録付き）
  */
 export interface WorkoutRecordWithDetails extends WorkoutRecord {
-  menu: WorkoutMenu;
-  exerciseRecords: ExerciseRecordWithDetails[];
+  template: WorkoutTemplate;
+  workoutRecordExercises: WorkoutRecordExerciseWithDetails[];
 }
 
 /**
  * 種目記録（種目情報・セット付き）
  */
-export interface ExerciseRecordWithDetails extends ExerciseRecord {
+export interface WorkoutRecordExerciseWithDetails extends WorkoutRecordExercise {
   exercise: ExerciseWithBodyParts;
-  sets: WorkoutSet[];
+  sets: WorkoutRecordSet[];
   previousRecord?: PreviousRecord;
 }
 
@@ -387,3 +387,67 @@ export type CreateInput<T extends BaseEntity> = Omit<
 export type UpdateInput<T extends BaseEntity> = Partial<
   Omit<T, "id" | "createdAt">
 >;
+
+// =============================================================================
+// 後方互換性エイリアス（移行期間中のみ使用）
+// =============================================================================
+
+/**
+ * @deprecated Use WorkoutTemplate instead
+ */
+export type WorkoutMenu = WorkoutTemplate;
+
+/**
+ * @deprecated Use TemplateExercise instead
+ */
+export type MenuExercise = TemplateExercise;
+
+/**
+ * @deprecated Use WorkoutSession instead
+ */
+export type SessionPlan = WorkoutSession;
+
+/**
+ * @deprecated Use WorkoutSessionExercise instead
+ */
+export type SessionPlanExercise = WorkoutSessionExercise;
+
+/**
+ * @deprecated Use WorkoutSessionExerciseWithDetails instead
+ */
+export type SessionPlanExerciseWithDetails = WorkoutSessionExerciseWithDetails;
+
+/**
+ * @deprecated Use WorkoutSessionWithExercises instead
+ */
+export type SessionPlanWithExercises = WorkoutSessionWithExercises;
+
+/**
+ * @deprecated Use WorkoutSessionWithRules instead
+ */
+export type SessionPlanWithRules = WorkoutSessionWithRules;
+
+/**
+ * @deprecated Use ScheduledTaskWithSession instead
+ */
+export type ScheduledTaskWithPlan = ScheduledTaskWithSession;
+
+/**
+ * @deprecated Use WorkoutRecordExercise instead
+ */
+export type ExerciseRecord = WorkoutRecordExercise;
+
+/**
+ * @deprecated Use WorkoutRecordSet instead
+ */
+export type WorkoutSet = WorkoutRecordSet;
+
+/**
+ * @deprecated Use WorkoutTemplateWithExercises instead
+ */
+export type WorkoutMenuWithExercises = WorkoutTemplateWithExercises;
+
+/**
+ * @deprecated Use WorkoutRecordExerciseWithDetails instead
+ */
+export type ExerciseRecordWithDetails = WorkoutRecordExerciseWithDetails;
