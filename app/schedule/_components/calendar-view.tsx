@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MONTH_LABELS, WEEKDAY_LABELS } from "@/lib/schedule-utils";
 import { formatTimeJST } from "@/lib/timezone";
-import type { CalendarDay, WorkoutSessionWithStats } from "./types";
+import type { CalendarDay, WorkoutRecordWithStats } from "./types";
 
 export interface CalendarViewProps {
   year: number;
   month: number;
   calendarDays: CalendarDay[];
   selectedDate: Date | null;
-  selectedSession: WorkoutSessionWithStats | null;
+  selectedRecord: WorkoutRecordWithStats | null;
   onNavigateMonth: (direction: number) => void;
   onSelectDate: (date: Date) => void;
 }
@@ -22,7 +22,7 @@ export function CalendarView({
   month,
   calendarDays,
   selectedDate,
-  selectedSession,
+  selectedRecord,
   onNavigateMonth,
   onSelectDate,
 }: CalendarViewProps) {
@@ -91,11 +91,11 @@ export function CalendarView({
                 >
                   {day}
                   {/* Status Dot */}
-                  {(calendarDay.session || calendarDay.isScheduled) &&
+                  {(calendarDay.record || calendarDay.isScheduled) &&
                     !isSelected && (
                       <span
                         className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${
-                          calendarDay.session
+                          calendarDay.record
                             ? "bg-primary"
                             : "bg-muted-foreground/50"
                         }`}
@@ -112,7 +112,7 @@ export function CalendarView({
       {selectedDate && (
         <SelectedDaySummary
           selectedDate={selectedDate}
-          selectedSession={selectedSession}
+          selectedRecord={selectedRecord}
         />
       )}
     </div>
@@ -121,12 +121,12 @@ export function CalendarView({
 
 interface SelectedDaySummaryProps {
   selectedDate: Date;
-  selectedSession: WorkoutSessionWithStats | null;
+  selectedRecord: WorkoutRecordWithStats | null;
 }
 
 function SelectedDaySummary({
   selectedDate,
-  selectedSession,
+  selectedRecord,
 }: SelectedDaySummaryProps) {
   return (
     <Card>
@@ -137,19 +137,19 @@ function SelectedDaySummary({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {selectedSession ? (
+        {selectedRecord ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                   <Dumbbell className="h-4 w-4 text-primary" />
                 </div>
-                <span className="font-medium">{selectedSession.menuName}</span>
+                <span className="font-medium">{selectedRecord.menuName}</span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {formatTimeJST(selectedSession.startedAt)} -{" "}
-                {selectedSession.endedAt
-                  ? formatTimeJST(selectedSession.endedAt)
+                {formatTimeJST(selectedRecord.startedAt)} -{" "}
+                {selectedRecord.endedAt
+                  ? formatTimeJST(selectedRecord.endedAt)
                   : "-"}
               </span>
             </div>
@@ -157,28 +157,28 @@ function SelectedDaySummary({
             <div className="grid grid-cols-3 gap-2 rounded-lg bg-secondary/30 p-3">
               <div className="text-center">
                 <p className="text-lg font-bold text-foreground">
-                  {selectedSession.exerciseCount}
+                  {selectedRecord.exerciseCount}
                 </p>
                 <p className="text-xs text-muted-foreground">種目</p>
               </div>
               <div className="text-center">
                 <p className="text-lg font-bold text-foreground">
-                  {selectedSession.setCount}
+                  {selectedRecord.setCount}
                 </p>
                 <p className="text-xs text-muted-foreground">セット</p>
               </div>
               <div className="text-center">
                 <p className="text-lg font-bold text-foreground">
-                  {(selectedSession.volume / 1000).toFixed(1)}
+                  {(selectedRecord.volume / 1000).toFixed(1)}
                 </p>
                 <p className="text-xs text-muted-foreground">ton</p>
               </div>
             </div>
 
-            {selectedSession.note && (
+            {selectedRecord.note && (
               <div className="rounded-lg bg-muted/50 p-3">
                 <p className="text-sm text-muted-foreground">
-                  {selectedSession.note}
+                  {selectedRecord.note}
                 </p>
               </div>
             )}

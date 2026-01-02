@@ -20,7 +20,7 @@ import {
 } from "./plan-selection-dialog";
 import { RescheduleDialog } from "./reschedule-dialog";
 import { ScheduleDayDialog } from "./schedule-day-dialog";
-import type { CalendarDay, WorkoutSessionWithStats } from "./types";
+import type { CalendarDay, WorkoutRecordWithStats } from "./types";
 
 /**
  * Schedule Client Component Props
@@ -29,7 +29,7 @@ export interface ScheduleClientProps {
   year: number;
   month: number;
   calendarDays: CalendarDay[];
-  sessionsList: WorkoutSessionWithStats[];
+  recordsList: WorkoutRecordWithStats[];
   todayDateString: string;
   plans: SessionPlanWithExercises[];
 }
@@ -79,7 +79,7 @@ export function ScheduleClient({
       null)
     : null;
 
-  const selectedSession = selectedCalendarDay?.session ?? null;
+  const selectedRecord = selectedCalendarDay?.record ?? null;
   const selectedSchedules = selectedCalendarDay?.schedules ?? [];
 
   // 振替対象のタスクオブジェクトを取得
@@ -192,7 +192,7 @@ export function ScheduleClient({
           month={month}
           calendarDays={calendarDays}
           selectedDate={selectedDate}
-          selectedSession={selectedSession}
+          selectedRecord={selectedRecord}
           onNavigateMonth={navigateMonth}
           onSelectDate={handleSelectDate}
         />
@@ -204,7 +204,7 @@ export function ScheduleClient({
       <ScheduleDayDialog
         isOpen={dayDialogOpen && !isPending}
         date={selectedDate}
-        session={selectedSession}
+        record={selectedRecord}
         schedules={selectedSchedules}
         onClose={() => setDayDialogOpen(false)}
         onComplete={handleComplete}
