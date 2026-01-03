@@ -5,7 +5,7 @@
 import { prisma } from "@/lib/db/prisma";
 import type { ReminderType, ScheduleReminder } from "@/lib/types";
 import { timeOfDayToDate, toBigInt } from "../_internal/helpers";
-import { mapScheduleReminder } from "../_internal/mappers";
+import { mapScheduleReminder } from "../_internal/schedule.mapper";
 
 /**
  * スケジュールリマインダーを作成/更新

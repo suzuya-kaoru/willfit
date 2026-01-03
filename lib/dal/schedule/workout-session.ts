@@ -14,7 +14,7 @@ import {
   mapScheduleRule,
   mapWorkoutSession,
   mapWorkoutSessionWithExercises,
-} from "../_internal/mappers";
+} from "../_internal/schedule.mapper";
 
 /**
  * ワークアウトセッションを作成

@@ -15,7 +15,7 @@ import { toBigInt } from "../_internal/helpers";
 import {
   mapScheduledTask,
   mapScheduledTaskWithSession,
-} from "../_internal/mappers";
+} from "../_internal/schedule.mapper";
 
 // =============================================================================
 // Query Functions

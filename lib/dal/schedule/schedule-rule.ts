@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { toUtcDateOnly } from "@/lib/timezone";
 import type { ScheduleRule, ScheduleRuleType } from "@/lib/types";
 import { toBigInt } from "../_internal/helpers";
-import { mapScheduleRule } from "../_internal/mappers";
+import { mapScheduleRule } from "../_internal/schedule.mapper";
 
 /**
  * スケジュールルールを作成

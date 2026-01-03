@@ -13,7 +13,7 @@ import {
   mapTemplate,
   mapTemplateExercise,
   mapTemplateWithExercises,
-} from "./_internal/mappers";
+} from "./_internal/template.mapper";
 
 // =============================================================================
 // Query Functions

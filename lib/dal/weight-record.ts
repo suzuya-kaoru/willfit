@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type { WeightRecord } from "@/lib/types";
 import { toBigInt } from "./_internal/helpers";
-import { mapWeightRecord } from "./_internal/mappers";
+import { mapWeightRecord } from "./_internal/weight-record.mapper";
 
 // =============================================================================
 // Query Functions

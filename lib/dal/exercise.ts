@@ -4,8 +4,8 @@
  */
 import { prisma } from "@/lib/db/prisma";
 import type { ExerciseWithBodyParts } from "@/lib/types";
+import { mapExerciseWithBodyParts } from "./_internal/exercise.mapper";
 import { toBigInt, toBigIntArray } from "./_internal/helpers";
-import { mapExerciseWithBodyParts } from "./_internal/mappers";
 
 // =============================================================================
 // Query Functions

@@ -4,7 +4,7 @@
  */
 import { prisma } from "@/lib/db/prisma";
 import type { BodyPart } from "@/lib/types";
-import { mapBodyPart } from "./_internal/mappers";
+import { mapBodyPart } from "./_internal/body-part.mapper";
 
 /**
  * 全部位を表示順で取得

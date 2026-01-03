@@ -10,13 +10,13 @@ import type {
   WorkoutRecordExercise,
   WorkoutRecordSet,
 } from "@/lib/types";
+import { mapExerciseWithBodyParts } from "./_internal/exercise.mapper";
 import { toBigInt, toBigIntArray, toSafeNumber } from "./_internal/helpers";
 import {
-  mapExerciseWithBodyParts,
   mapWorkoutRecord,
   mapWorkoutRecordExercise,
   mapWorkoutRecordSet,
-} from "./_internal/mappers";
+} from "./_internal/workout-record.mapper";
 
 // =============================================================================
 // Types
