@@ -5,13 +5,18 @@
  * このサービスはDALを経由してデータベース操作を行います。
  */
 import { addDays, differenceInDays, eachDayOfInterval, getDay } from "date-fns";
-import { getAllActiveRulesForCron } from "@/lib/dal/schedule";
 import {
   createScheduledTaskRaw,
   deleteFuturePendingTasksByRule,
   findScheduledTask,
   findScheduledTasksForDates,
 } from "@/lib/dal/schedule/internal";
+import { getAllActiveRulesForCron } from "@/lib/dal/schedule/schedule-rule";
+import {
+  createScheduledTask,
+  createScheduledTasks,
+  deleteFuturePendingTasks,
+} from "@/lib/dal/schedule/scheduled-task";
 import { parseDateKey, toDateKey } from "@/lib/date-key";
 import { isWeekdayInBitmask } from "@/lib/schedule-utils";
 import { getStartOfDayUTC, toUtcDateOnly } from "@/lib/timezone";
@@ -150,7 +155,6 @@ export const TaskSchedulerService = {
     );
 
     if (finalCreates.length > 0) {
-      const { createScheduledTasks } = await import("@/lib/dal/schedule");
       await createScheduledTasks(
         finalCreates.map((d) => ({
           userId: d.userId,
@@ -212,7 +216,7 @@ export const TaskSchedulerService = {
     const today = getStartOfDayUTC(new Date());
     // Note: この関数はuserIdを必要としないので、DALに追加の関数が必要
     // 今回はdeleteFuturePendingTasksを直接使用
-    const { deleteFuturePendingTasks } = await import("@/lib/dal/schedule");
+
     await deleteFuturePendingTasks(ruleId, today);
   },
 
@@ -224,7 +228,6 @@ export const TaskSchedulerService = {
     workoutSessionId: number,
     scheduledDate: Date,
   ): Promise<void> {
-    const { createScheduledTask } = await import("@/lib/dal/schedule");
     await createScheduledTask({
       userId,
       workoutSessionId,

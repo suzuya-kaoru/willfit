@@ -1,6 +1,6 @@
 import { getBodyParts } from "@/lib/dal/body-part";
 import { getExercisesWithBodyParts } from "@/lib/dal/exercise";
-import { getWorkoutSessions } from "@/lib/dal/schedule";
+import { getWorkoutSessions } from "@/lib/dal/schedule/workout-session";
 import { getTemplatesWithExercises } from "@/lib/dal/template";
 import { SettingsClient } from "./_components/settings-client";
 

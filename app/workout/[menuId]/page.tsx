@@ -1,4 +1,4 @@
-import { getWorkoutSessionWithDetails } from "@/lib/dal/schedule";
+import { getWorkoutSessionWithDetails } from "@/lib/dal/schedule/workout-session";
 import { getTemplateWithExercises } from "@/lib/dal/template";
 import {
   getWorkoutRecordExercisesByRecordIds,

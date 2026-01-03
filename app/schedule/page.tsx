@@ -1,8 +1,6 @@
 import { toZonedTime } from "date-fns-tz";
-import {
-  getScheduledTasksWithSessionByDateRange,
-  getWorkoutSessions,
-} from "@/lib/dal/schedule";
+import { getScheduledTasksWithSessionByDateRange } from "@/lib/dal/schedule/scheduled-task";
+import { getWorkoutSessions } from "@/lib/dal/schedule/workout-session";
 import { getTemplatesByIds } from "@/lib/dal/template";
 import {
   getWorkoutRecordExercisesByRecordIds,

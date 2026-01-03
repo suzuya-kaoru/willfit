@@ -6,7 +6,7 @@ import {
   subDays,
 } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { getScheduledTasksWithSessionByDateRange } from "@/lib/dal/schedule";
+import { getScheduledTasksWithSessionByDateRange } from "@/lib/dal/schedule/scheduled-task";
 import { getWorkoutRecordsByDateRange } from "@/lib/dal/workout-record";
 import { parseDateKey, toDateKey } from "@/lib/date-key";
 import { APP_TIMEZONE, toUtcDateTimeFromJstString } from "@/lib/timezone";

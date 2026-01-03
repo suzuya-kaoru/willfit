@@ -8,7 +8,7 @@ import {
   deleteScheduleRule,
   getScheduleRuleById,
   updateScheduleRule,
-} from "@/lib/dal/schedule";
+} from "@/lib/dal/schedule/schedule-rule";
 import { dateKeySchema, parseDateKey } from "@/lib/date-key";
 import { TaskSchedulerService } from "@/lib/services/scheduler";
 import { getStartOfDayUTC } from "@/lib/timezone";

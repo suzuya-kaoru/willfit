@@ -7,7 +7,7 @@ import {
   rescheduleTask,
   updateScheduledTaskStatus,
   upsertScheduledTask,
-} from "@/lib/dal/schedule";
+} from "@/lib/dal/schedule/scheduled-task";
 import { dateKeySchema, parseDateKey } from "@/lib/date-key";
 import { TaskSchedulerService } from "@/lib/services/scheduler";
 import type { ScheduledTaskStatus } from "@/lib/types";

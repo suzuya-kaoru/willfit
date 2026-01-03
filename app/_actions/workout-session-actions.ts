@@ -6,7 +6,7 @@ import {
   createWorkoutSession,
   deleteWorkoutSession,
   updateWorkoutSession,
-} from "@/lib/dal/schedule";
+} from "@/lib/dal/schedule/workout-session";
 
 // =============================================================================
 // 入力型定義
