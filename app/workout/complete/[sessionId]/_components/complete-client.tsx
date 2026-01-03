@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import type { WorkoutRecordWithDetails } from "@/lib/db/queries";
+import type { WorkoutRecordWithDetails } from "@/lib/dal/workout-record";
 import { formatDateJaWithWeekday } from "@/lib/timezone";
 
 export interface CompleteClientProps {

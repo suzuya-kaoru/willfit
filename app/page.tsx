@@ -6,11 +6,9 @@ import {
   subDays,
 } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { getScheduledTasksWithSessionByDateRange } from "@/lib/dal/schedule";
+import { getWorkoutRecordsByDateRange } from "@/lib/dal/workout-record";
 import { parseDateKey, toDateKey } from "@/lib/date-key";
-import {
-  getScheduledTasksWithPlanByDateRange,
-  getWorkoutRecordsByDateRange,
-} from "@/lib/db/queries";
 import { APP_TIMEZONE, toUtcDateTimeFromJstString } from "@/lib/timezone";
 import type { ScheduledTaskWithSession, WorkoutRecord } from "@/lib/types";
 import { DashboardClient } from "./_components/dashboard-client";
@@ -80,7 +78,7 @@ export default async function DashboardPage() {
 
   // データ取得
   const [scheduledTasks, dailyRecords, weeklyRecords] = await Promise.all([
-    getScheduledTasksWithPlanByDateRange(
+    getScheduledTasksWithSessionByDateRange(
       userId,
       dailySessionStart,
       dailySessionEnd,
@@ -173,7 +171,7 @@ export default async function DashboardPage() {
   });
 
   // 今週のスケジュール目標数を計算
-  const weeklyScheduledTasks = await getScheduledTasksWithPlanByDateRange(
+  const weeklyScheduledTasks = await getScheduledTasksWithSessionByDateRange(
     userId,
     weekStart,
     weekEnd,

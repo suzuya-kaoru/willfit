@@ -1,13 +1,14 @@
-import { toDateKey } from "@/lib/date-key";
+import { getExercisesWithBodyParts } from "@/lib/dal/exercise";
+import { getWeightRecords } from "@/lib/dal/weight-record";
 import {
-  getExerciseRecordsByRecordIds,
-  getExercisesWithBodyParts,
   getMonthlyStats,
-  getWeightRecords,
+  getWorkoutRecordExercisesByRecordIds,
+  getWorkoutRecordSetsByExerciseIds,
   getWorkoutRecords,
-  getWorkoutSetsByExerciseRecordIds,
-} from "@/lib/db/queries";
+} from "@/lib/dal/workout-record";
+import { toDateKey } from "@/lib/date-key";
 import { formatDateTimeJST } from "@/lib/timezone";
+
 import type {
   ExerciseWithBodyParts,
   WorkoutRecord,
@@ -145,9 +146,9 @@ export default async function AnalyticsPage() {
     (a, b) => a.startedAt.getTime() - b.startedAt.getTime(),
   );
   const recordIds = workoutRecords.map((record: WorkoutRecord) => record.id);
-  const exerciseRecords = await getExerciseRecordsByRecordIds(recordIds);
+  const exerciseRecords = await getWorkoutRecordExercisesByRecordIds(recordIds);
   const exerciseRecordIds = exerciseRecords.map((record) => record.id);
-  const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
+  const sets = await getWorkoutRecordSetsByExerciseIds(exerciseRecordIds);
   const setsByWorkoutRecordExerciseId = new Map<number, WorkoutRecordSet[]>();
   for (const set of sets) {
     const list =

@@ -6,7 +6,7 @@ import {
   createWorkoutTemplate,
   deleteWorkoutTemplate,
   updateWorkoutTemplate,
-} from "@/lib/db/queries";
+} from "@/lib/dal/template";
 
 // =============================================================================
 // 入力型定義

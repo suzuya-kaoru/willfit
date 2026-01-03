@@ -3,13 +3,13 @@
 import { addDays } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { dateKeySchema, parseDateKey } from "@/lib/date-key";
 import {
   createScheduleRule,
   deleteScheduleRule,
   getScheduleRuleById,
   updateScheduleRule,
-} from "@/lib/db/queries";
+} from "@/lib/dal/schedule";
+import { dateKeySchema, parseDateKey } from "@/lib/date-key";
 import { TaskSchedulerService } from "@/lib/services/scheduler";
 import { getStartOfDayUTC } from "@/lib/timezone";
 import type { ScheduleRule } from "@/lib/types";

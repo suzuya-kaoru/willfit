@@ -1,11 +1,11 @@
-import { toDateKey } from "@/lib/date-key";
+import { getWorkoutSessionWithDetails } from "@/lib/dal/schedule";
+import { getTemplateWithExercises } from "@/lib/dal/template";
 import {
-  getExerciseRecordsByRecordIds,
-  getTemplateWithExercises,
+  getWorkoutRecordExercisesByRecordIds,
+  getWorkoutRecordSetsByExerciseIds,
   getWorkoutRecordsByTemplateIds,
-  getWorkoutSessionWithDetails,
-  getWorkoutSetsByExerciseRecordIds,
-} from "@/lib/db/queries";
+} from "@/lib/dal/workout-record";
+import { toDateKey } from "@/lib/date-key";
 import type { WorkoutRecordExercise, WorkoutRecordSet } from "@/lib/types";
 import { WorkoutClient } from "./_components/workout-client";
 
@@ -41,13 +41,13 @@ async function calculatePreviousRecords(
     return previousRecords;
   }
 
-  const exerciseRecords = await getExerciseRecordsByRecordIds([
+  const exerciseRecords = await getWorkoutRecordExercisesByRecordIds([
     previousWorkoutRecord.id,
   ]);
   const exerciseRecordIds = exerciseRecords.map(
     (er: WorkoutRecordExercise) => er.id,
   );
-  const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
+  const sets = await getWorkoutRecordSetsByExerciseIds(exerciseRecordIds);
   const setsByWorkoutRecordExerciseId = new Map<number, WorkoutRecordSet[]>();
   for (const set of sets) {
     const list =

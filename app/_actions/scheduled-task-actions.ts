@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { dateKeySchema, parseDateKey } from "@/lib/date-key";
 import {
   deleteScheduledTask,
   rescheduleTask,
   updateScheduledTaskStatus,
   upsertScheduledTask,
-} from "@/lib/db/queries";
+} from "@/lib/dal/schedule";
+import { dateKeySchema, parseDateKey } from "@/lib/date-key";
 import { TaskSchedulerService } from "@/lib/services/scheduler";
 import type { ScheduledTaskStatus } from "@/lib/types";
 

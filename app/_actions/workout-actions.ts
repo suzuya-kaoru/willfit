@@ -2,8 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import {
+  createWorkoutRecord,
+  updateWorkoutRecord,
+} from "@/lib/dal/workout-record";
 import { dateKeySchema } from "@/lib/date-key";
-import { createWorkoutRecord, updateWorkoutRecord } from "@/lib/db/queries";
 
 // =============================================================================
 // 入力型定義

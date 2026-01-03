@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getWorkoutRecordWithDetails } from "@/lib/db/queries";
+import { getWorkoutRecordWithDetails } from "@/lib/dal/workout-record";
 import { CompleteClient } from "./_components/complete-client";
 
 interface WorkoutRecordExerciseForStats {

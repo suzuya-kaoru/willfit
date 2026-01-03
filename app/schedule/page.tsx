@@ -1,14 +1,17 @@
 import { toZonedTime } from "date-fns-tz";
-import { formatDateKey, toDateKey } from "@/lib/date-key";
 import {
-  getExerciseRecordsByRecordIds,
   getScheduledTasksWithSessionByDateRange,
-  getTemplatesByIds,
-  getWorkoutRecordsByDateRange,
   getWorkoutSessions,
-  getWorkoutSetsByExerciseRecordIds,
-} from "@/lib/db/queries";
+} from "@/lib/dal/schedule";
+import { getTemplatesByIds } from "@/lib/dal/template";
+import {
+  getWorkoutRecordExercisesByRecordIds,
+  getWorkoutRecordSetsByExerciseIds,
+  getWorkoutRecordsByDateRange,
+} from "@/lib/dal/workout-record";
+import { formatDateKey, toDateKey } from "@/lib/date-key";
 import { weekdaysFromBitmask } from "@/lib/schedule-utils";
+
 import { APP_TIMEZONE, getMonthEndUTC, getMonthStartUTC } from "@/lib/timezone";
 import type {
   CalculatedTask,
@@ -241,11 +244,12 @@ export default async function SchedulePage({
   ]);
 
   const workoutRecordIds = recordsInMonth.map((record) => record.id);
-  const exerciseRecords = await getExerciseRecordsByRecordIds(workoutRecordIds);
+  const exerciseRecords =
+    await getWorkoutRecordExercisesByRecordIds(workoutRecordIds);
   const exerciseRecordIds = exerciseRecords.map(
     (er: WorkoutRecordExercise) => er.id,
   );
-  const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
+  const sets = await getWorkoutRecordSetsByExerciseIds(exerciseRecordIds);
   const templatesByIds = await getTemplatesByIds(userId, [
     ...new Set(recordsInMonth.map((record) => record.templateId)),
   ]);

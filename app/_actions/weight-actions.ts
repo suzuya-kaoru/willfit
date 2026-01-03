@@ -5,7 +5,7 @@ import { z } from "zod";
 import {
   createOrUpdateWeightRecord,
   deleteWeightRecord,
-} from "@/lib/db/queries";
+} from "@/lib/dal/weight-record";
 import { getEndOfDayUTC, getStartOfDayUTC } from "@/lib/timezone";
 
 // =============================================================================

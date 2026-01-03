@@ -1,8 +1,6 @@
 import { notFound } from "next/navigation";
-import {
-  getTemplateWithExercises,
-  getWorkoutRecordWithDetails,
-} from "@/lib/db/queries";
+import { getTemplateWithExercises } from "@/lib/dal/template";
+import { getWorkoutRecordWithDetails } from "@/lib/dal/workout-record";
 import { WorkoutEditClient } from "./_components/workout-edit-client";
 
 /**

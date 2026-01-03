@@ -6,7 +6,7 @@ import {
   createExercise,
   deleteExercise,
   updateExercise,
-} from "@/lib/db/queries";
+} from "@/lib/dal/exercise";
 
 // =============================================================================
 // 入力型定義

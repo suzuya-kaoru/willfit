@@ -35,7 +35,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
-import type { WorkoutRecordWithDetails } from "@/lib/db/queries";
+import type { WorkoutRecordWithDetails } from "@/lib/dal/workout-record";
 import type {
   ExerciseWithBodyParts,
   WorkoutTemplateWithExercises,
