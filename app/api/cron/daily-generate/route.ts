@@ -7,7 +7,15 @@ export const dynamic = "force-dynamic";
  * 毎日のスケジュール生成ジョブ (Cron)
  * 毎日深夜に実行され、全ユーザーの向こう90日分のスケジュールを生成する
  */
-export async function GET() {
+export async function GET(request: Request) {
+  // Bearer token authentication for cron jobs
+  const authHeader = request.headers.get("authorization");
+
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    console.warn("[Cron] Unauthorized access attempt");
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
   try {
     console.log("[Cron] Starting schedule generation for all users...");
 

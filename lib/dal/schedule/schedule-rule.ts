@@ -90,6 +90,7 @@ export async function getScheduleRuleById(
  * スケジュールルールを更新
  */
 export async function updateScheduleRule(input: {
+  userId: number;
   ruleId: number;
   weekdays?: number;
   intervalDays?: number;
@@ -97,8 +98,12 @@ export async function updateScheduleRule(input: {
   endDate?: Date;
   isEnabled?: boolean;
 }): Promise<ScheduleRule> {
-  const row = await prisma.scheduleRule.update({
-    where: { id: toBigInt(input.ruleId, "ruleId") },
+  const result = await prisma.scheduleRule.updateMany({
+    where: {
+      id: toBigInt(input.ruleId, "ruleId"),
+      userId: toBigInt(input.userId, "userId"),
+      deletedAt: null,
+    },
     data: {
       weekdays: input.weekdays,
       intervalDays: input.intervalDays,
@@ -107,17 +112,35 @@ export async function updateScheduleRule(input: {
       isEnabled: input.isEnabled,
     },
   });
+  if (result.count === 0) {
+    throw new Error("ルールが見つかりません");
+  }
+  // 更新後のデータを取得して返す
+  const row = await prisma.scheduleRule.findUnique({
+    where: { id: toBigInt(input.ruleId, "ruleId") },
+  });
+  if (!row) throw new Error("ルールが見つかりません");
   return mapScheduleRule(row);
 }
 
 /**
  * スケジュールルールを論理削除
  */
-export async function deleteScheduleRule(ruleId: number): Promise<void> {
-  await prisma.scheduleRule.update({
-    where: { id: toBigInt(ruleId, "ruleId") },
+export async function deleteScheduleRule(
+  userId: number,
+  ruleId: number,
+): Promise<void> {
+  const result = await prisma.scheduleRule.updateMany({
+    where: {
+      id: toBigInt(ruleId, "ruleId"),
+      userId: toBigInt(userId, "userId"),
+      deletedAt: null,
+    },
     data: { deletedAt: new Date() },
   });
+  if (result.count === 0) {
+    throw new Error("ルールが見つかりません");
+  }
 }
 
 /**

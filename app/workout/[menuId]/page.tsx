@@ -33,8 +33,8 @@ async function calculatePreviousRecords(
   userId: number,
   templateId: number,
   exerciseIds: number[],
-): Promise<Map<number, string>> {
-  const previousRecords = new Map<number, string>();
+): Promise<Record<number, string>> {
+  const previousRecords: Record<number, string> = {};
   const previousWorkoutRecord = await getPreviousRecord(userId, templateId);
 
   if (!previousWorkoutRecord) {
@@ -48,12 +48,12 @@ async function calculatePreviousRecords(
     (er: WorkoutRecordExercise) => er.id,
   );
   const sets = await getWorkoutRecordSetsByRecordExerciseIds(exerciseRecordIds);
-  const setsByWorkoutRecordExerciseId = new Map<number, WorkoutRecordSet[]>();
+  const setsByWorkoutRecordExerciseId: Record<number, WorkoutRecordSet[]> = {};
   for (const set of sets) {
-    const list =
-      setsByWorkoutRecordExerciseId.get(set.workoutRecordExerciseId) ?? [];
-    list.push(set);
-    setsByWorkoutRecordExerciseId.set(set.workoutRecordExerciseId, list);
+    if (!setsByWorkoutRecordExerciseId[set.workoutRecordExerciseId]) {
+      setsByWorkoutRecordExerciseId[set.workoutRecordExerciseId] = [];
+    }
+    setsByWorkoutRecordExerciseId[set.workoutRecordExerciseId].push(set);
   }
   const exerciseRecordByExerciseId = new Map(
     exerciseRecords.map((er: WorkoutRecordExercise) => [er.exerciseId, er]),
@@ -63,8 +63,7 @@ async function calculatePreviousRecords(
   for (const exerciseId of exerciseIds) {
     const exerciseRecord = exerciseRecordByExerciseId.get(exerciseId);
     if (!exerciseRecord) continue;
-    const previousSets =
-      setsByWorkoutRecordExerciseId.get(exerciseRecord.id) ?? [];
+    const previousSets = setsByWorkoutRecordExerciseId[exerciseRecord.id] ?? [];
 
     if (previousSets.length > 0) {
       // セットをセット番号順にソート
@@ -74,7 +73,7 @@ async function calculatePreviousRecords(
       const recordString = sortedSets
         .map((s) => `${s.weight}kg x ${s.reps}`)
         .join(", ");
-      previousRecords.set(exerciseId, recordString);
+      previousRecords[exerciseId] = recordString;
     }
   }
 

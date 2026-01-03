@@ -211,6 +211,7 @@ export async function updateScheduleRuleAction(input: UpdateScheduleRuleInput) {
   }
 
   const updatedRule = await updateScheduleRule({
+    userId,
     ruleId: data.ruleId,
     weekdays: data.weekdays ?? undefined,
     intervalDays: data.intervalDays ?? undefined,
@@ -254,12 +255,12 @@ export async function updateScheduleRuleAction(input: UpdateScheduleRuleInput) {
  */
 export async function deleteScheduleRuleAction(ruleId: number) {
   const validId = z.number().int().positive().parse(ruleId);
-  const _userId = 1; // TODO: 認証実装後に動的取得
+  const userId = 1; // TODO: 認証実装後に動的取得
 
   // 未来のpendingタスクを物理削除
-  await TaskSchedulerService.cleanupFutureTasks(_userId, validId);
+  await TaskSchedulerService.cleanupFutureTasks(userId, validId);
 
-  await deleteScheduleRule(validId);
+  await deleteScheduleRule(userId, validId);
 
   revalidatePath("/");
   revalidatePath("/schedule");

@@ -205,7 +205,7 @@ export function WorkoutSessionDialog({
   const updateExercise = (
     index: number,
     field: keyof WorkoutSessionExerciseInput,
-    value: string | number,
+    value: string | number | undefined,
   ) => {
     setExercises((prev) =>
       prev.map((ex, i) => (i === index ? { ...ex, [field]: value } : ex)),
@@ -343,7 +343,9 @@ export function WorkoutSessionDialog({
                           updateExercise(
                             index,
                             "targetWeight",
-                            parseFloat(e.target.value) || 0,
+                            e.target.value === ""
+                              ? undefined
+                              : parseFloat(e.target.value),
                           )
                         }
                       />
@@ -360,7 +362,9 @@ export function WorkoutSessionDialog({
                           updateExercise(
                             index,
                             "targetReps",
-                            parseFloat(e.target.value) || 0,
+                            e.target.value === ""
+                              ? undefined
+                              : parseFloat(e.target.value),
                           )
                         }
                       />
@@ -377,7 +381,9 @@ export function WorkoutSessionDialog({
                           updateExercise(
                             index,
                             "targetSets",
-                            parseFloat(e.target.value) || 0,
+                            e.target.value === ""
+                              ? undefined
+                              : parseFloat(e.target.value),
                           )
                         }
                       />
@@ -394,7 +400,9 @@ export function WorkoutSessionDialog({
                           updateExercise(
                             index,
                             "restSeconds",
-                            parseFloat(e.target.value) || 0,
+                            e.target.value === ""
+                              ? undefined
+                              : parseFloat(e.target.value),
                           )
                         }
                       />

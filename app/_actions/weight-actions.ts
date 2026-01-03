@@ -36,7 +36,7 @@ const createWeightSchema = z.object({
     .number()
     .min(0, "体脂肪率は0%以上")
     .max(100, "体脂肪率は100%以下")
-    .default(0),
+    .optional(),
   recordedAt: z.date(),
 });
 
@@ -59,10 +59,7 @@ export async function createWeightRecordAction(
       userId,
       {
         weight: data.weight,
-        bodyFat:
-          data.bodyFat !== undefined && data.bodyFat !== null
-            ? data.bodyFat
-            : undefined,
+        bodyFat: data.bodyFat ?? undefined,
         recordedAt: data.recordedAt,
       },
       { start: startOfDay, end: endOfDay },

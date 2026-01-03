@@ -111,17 +111,29 @@ export async function createScheduledTask(input: {
  * スケジュールタスクのステータスを更新
  */
 export async function updateScheduledTaskStatus(input: {
+  userId: number;
   taskId: number;
   status: ScheduledTaskStatus;
   completedAt?: Date;
 }): Promise<ScheduledTask> {
-  const row = await prisma.scheduledTask.update({
-    where: { id: toBigInt(input.taskId, "taskId") },
+  const result = await prisma.scheduledTask.updateMany({
+    where: {
+      id: toBigInt(input.taskId, "taskId"),
+      userId: toBigInt(input.userId, "userId"),
+    },
     data: {
       status: input.status,
       completedAt: input.completedAt,
     },
   });
+  if (result.count === 0) {
+    throw new Error("タスクが見つかりません");
+  }
+  // 更新後のデータを取得
+  const row = await prisma.scheduledTask.findUnique({
+    where: { id: toBigInt(input.taskId, "taskId") },
+  });
+  if (!row) throw new Error("タスクが見つかりません");
   return mapScheduledTask(row);
 }
 
@@ -133,17 +145,20 @@ export async function rescheduleTask(input: {
   taskId: number;
   toDate: Date;
 }): Promise<{ originalTask: ScheduledTask; newTask: ScheduledTask }> {
+  const userBigId = toBigInt(input.userId, "userId");
+  const taskBigId = toBigInt(input.taskId, "taskId");
+
   const result = await prisma.$transaction(
     async (tx: Prisma.TransactionClient) => {
-      // 元のタスクを取得
-      const original = await tx.scheduledTask.findUnique({
-        where: { id: toBigInt(input.taskId, "taskId") },
+      // 元のタスクを取得（userId スコープ付き）
+      const original = await tx.scheduledTask.findFirst({
+        where: { id: taskBigId, userId: userBigId },
       });
       if (!original) throw new Error("タスクが見つかりません");
 
       // 元のタスクを振替済みに更新
       const updatedOriginal = await tx.scheduledTask.update({
-        where: { id: toBigInt(input.taskId, "taskId") },
+        where: { id: taskBigId },
         data: {
           status: "rescheduled",
           rescheduledTo: toUtcDateOnly(input.toDate),

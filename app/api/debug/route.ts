@@ -5,10 +5,17 @@ import { prisma } from "@/lib/db/prisma";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  if (process.env.NODE_ENV === "production") {
+    return new NextResponse("Not Found", { status: 404 });
+  }
   return NextResponse.json({ msg: "Use POST to sync" });
 }
 
 export async function POST() {
+  if (process.env.NODE_ENV === "production") {
+    return new NextResponse("Not Found", { status: 404 });
+  }
+
   try {
     const session = await prisma.workoutSession.findFirst({
       where: { name: { contains: "3日" } },

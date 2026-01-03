@@ -77,7 +77,7 @@ interface LocalExerciseRecord {
  */
 export interface WorkoutClientProps {
   template: WorkoutTemplateWithExercises;
-  previousRecords: Map<number, string>; // exerciseId -> previousRecord string
+  previousRecords: Record<number, string>; // exerciseId -> previousRecord string
   scheduledDateKey: string; // スケジュールの日付キー（YYYY-MM-DD）
   workoutSession: WorkoutSessionWithRules | null; // 適用するセッション
   scheduledTaskId?: number; // 完了対象のタスクID
@@ -135,7 +135,7 @@ export function WorkoutClient({
     }
 
     const records: LocalExerciseRecord[] = targetExercises.map((target) => {
-      const previousRecord = previousRecords.get(target.exerciseId);
+      const previousRecord = previousRecords[target.exerciseId];
       const defaultSetsCount = target.targetSets ?? 3;
       const initialSets: LocalSet[] = [];
 

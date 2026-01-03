@@ -64,9 +64,13 @@ export async function upsertScheduleReminder(input: {
  * スケジュールリマインダーを削除
  */
 export async function deleteScheduleReminder(
+  userId: number,
   workoutSessionId: number,
 ): Promise<void> {
   await prisma.scheduleReminder.deleteMany({
-    where: { workoutSessionId: toBigInt(workoutSessionId, "workoutSessionId") },
+    where: {
+      userId: toBigInt(userId, "userId"),
+      workoutSessionId: toBigInt(workoutSessionId, "workoutSessionId"),
+    },
   });
 }

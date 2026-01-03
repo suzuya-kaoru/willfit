@@ -329,7 +329,10 @@ export async function createWorkoutRecord(
 
     if (scheduledTaskId) {
       await tx.scheduledTask.update({
-        where: { id: toBigInt(scheduledTaskId, "scheduledTaskId") },
+        where: {
+          id: toBigInt(scheduledTaskId, "scheduledTaskId"),
+          userId: userBigId,
+        },
         data: {
           status: "completed",
           completedAt: new Date(),

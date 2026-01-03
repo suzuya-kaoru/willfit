@@ -61,8 +61,10 @@ const createManualTaskSchema = z.object({
  */
 export async function updateTaskStatusAction(input: UpdateTaskStatusInput) {
   const data = updateTaskStatusSchema.parse(input);
+  const userId = 1; // TODO: 認証実装後に動的取得
 
   await updateScheduledTaskStatus({
+    userId,
     taskId: data.taskId,
     status: data.status,
     completedAt: data.status === "completed" ? new Date() : undefined,
@@ -79,9 +81,10 @@ export async function updateTaskStatusAction(input: UpdateTaskStatusInput) {
  */
 export async function completeTaskAction(taskId: number) {
   const validId = z.number().int().positive().parse(taskId);
-  const _userId = 1; // TODO: 認証実装後に動的取得
+  const userId = 1; // TODO: 認証実装後に動的取得
 
   await updateScheduledTaskStatus({
+    userId,
     taskId: validId,
     status: "completed",
     completedAt: new Date(),
@@ -98,9 +101,10 @@ export async function completeTaskAction(taskId: number) {
  */
 export async function skipTaskAction(taskId: number) {
   const validId = z.number().int().positive().parse(taskId);
-  const _userId = 1; // TODO: 認証実装後に動的取得
+  const userId = 1; // TODO: 認証実装後に動的取得
 
   await updateScheduledTaskStatus({
+    userId,
     taskId: validId,
     status: "skipped",
   });

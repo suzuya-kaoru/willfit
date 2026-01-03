@@ -144,21 +144,27 @@ export async function updateWorkoutSession(input: {
     note?: string;
   }[];
 }): Promise<WorkoutSession> {
+  const sessionId = toBigInt(input.workoutSessionId, "workoutSessionId");
+  const userBigId = toBigInt(input.userId, "userId");
+
   const row = await prisma.$transaction(async (tx) => {
+    // セッション存在確認とユーザースコープチェック
+    const existing = await tx.workoutSession.findFirst({
+      where: { id: sessionId, userId: userBigId, deletedAt: null },
+    });
+    if (!existing) {
+      throw new Error("セッションが見つかりません");
+    }
+
     // 種目の更新がある場合は削除して再作成
     if (input.exercises) {
       await tx.workoutSessionExercise.deleteMany({
-        where: {
-          workoutSessionId: toBigInt(
-            input.workoutSessionId,
-            "workoutSessionId",
-          ),
-        },
+        where: { workoutSessionId: sessionId },
       });
     }
 
     return tx.workoutSession.update({
-      where: { id: toBigInt(input.workoutSessionId, "workoutSessionId") },
+      where: { id: sessionId },
       data: {
         name: input.name,
         description: input.description,
@@ -185,11 +191,18 @@ export async function updateWorkoutSession(input: {
  * ワークアウトセッションを論理削除
  */
 export async function deleteWorkoutSession(
-  _userId: number,
+  userId: number,
   workoutSessionId: number,
 ): Promise<void> {
-  await prisma.workoutSession.update({
-    where: { id: toBigInt(workoutSessionId, "workoutSessionId") },
+  const result = await prisma.workoutSession.updateMany({
+    where: {
+      id: toBigInt(workoutSessionId, "workoutSessionId"),
+      userId: toBigInt(userId, "userId"),
+      deletedAt: null,
+    },
     data: { deletedAt: new Date() },
   });
+  if (result.count === 0) {
+    throw new Error("セッションが見つかりません");
+  }
 }
