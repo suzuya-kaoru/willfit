@@ -81,7 +81,9 @@ const updateWorkoutSessionSchema = z.object({
 /**
  * ワークアウトセッションを作成
  */
-export async function createWorkoutSessionAction(input: CreateWorkoutSessionInput) {
+export async function createWorkoutSessionAction(
+  input: CreateWorkoutSessionInput,
+) {
   const data = createWorkoutSessionSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
 
@@ -103,7 +105,9 @@ export async function createWorkoutSessionAction(input: CreateWorkoutSessionInpu
 /**
  * ワークアウトセッションを更新
  */
-export async function updateWorkoutSessionAction(input: UpdateWorkoutSessionInput) {
+export async function updateWorkoutSessionAction(
+  input: UpdateWorkoutSessionInput,
+) {
   const data = updateWorkoutSessionSchema.parse(input);
   const userId = 1; // TODO: 認証実装後に動的取得
 

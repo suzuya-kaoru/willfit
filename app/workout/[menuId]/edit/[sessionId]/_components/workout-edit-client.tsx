@@ -84,30 +84,31 @@ export function WorkoutEditClient({
 
   // Initialize from existing record
   useEffect(() => {
-    const records: LocalExerciseRecord[] = workoutRecord.workoutRecordExercises.map(
-      (er: {
-        exerciseId: number;
-        exercise: ExerciseWithBodyParts;
-        sets: {
-          setNumber: number;
-          weight: number;
-          reps: number;
-          completed: boolean;
-          note?: string;
-        }[];
-      }) => ({
-        exerciseId: er.exerciseId,
-        exercise: er.exercise,
-        sets: er.sets.map((set) => ({
-          id: `${er.exerciseId}-${set.setNumber}`,
-          setNumber: set.setNumber,
-          weight: set.weight,
-          reps: set.reps,
-          completed: set.completed,
-          note: set.note || "",
-        })),
-      }),
-    );
+    const records: LocalExerciseRecord[] =
+      workoutRecord.workoutRecordExercises.map(
+        (er: {
+          exerciseId: number;
+          exercise: ExerciseWithBodyParts;
+          sets: {
+            setNumber: number;
+            weight: number;
+            reps: number;
+            completed: boolean;
+            note?: string;
+          }[];
+        }) => ({
+          exerciseId: er.exerciseId,
+          exercise: er.exercise,
+          sets: er.sets.map((set) => ({
+            id: `${er.exerciseId}-${set.setNumber}`,
+            setNumber: set.setNumber,
+            weight: set.weight,
+            reps: set.reps,
+            completed: set.completed,
+            note: set.note || "",
+          })),
+        }),
+      );
     setExerciseRecords(records);
 
     // Calculate elapsed time from record

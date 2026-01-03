@@ -37,5 +37,7 @@ export default async function WorkoutEditPage({
     notFound();
   }
 
-  return <WorkoutEditClient template={template} workoutRecord={workoutRecord} />;
+  return (
+    <WorkoutEditClient template={template} workoutRecord={workoutRecord} />
+  );
 }

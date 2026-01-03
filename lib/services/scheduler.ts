@@ -1,9 +1,22 @@
+/**
+ * TaskSchedulerService
+ * スケジュールタスク生成サービス
+ *
+ * このサービスはDALを経由してデータベース操作を行います。
+ */
 import { addDays, differenceInDays, eachDayOfInterval, getDay } from "date-fns";
+import {
+  createManyScheduledTasks,
+  createScheduledTaskRaw,
+  deleteFuturePendingTasksByRule,
+  findScheduledTask,
+  findScheduledTasksForDates,
+  getAllActiveRulesForCron,
+} from "@/lib/dal/schedule";
 import { parseDateKey, toDateKey } from "@/lib/date-key";
-import { prisma } from "@/lib/db/prisma";
 import { isWeekdayInBitmask } from "@/lib/schedule-utils";
 import { getStartOfDayUTC, toUtcDateOnly } from "@/lib/timezone";
-import type { ScheduleRule, ScheduleRuleType } from "@/lib/types";
+import type { ScheduleRule } from "@/lib/types";
 
 // =============================================================================
 // スケジュール機能（WorkoutSession ベース）
@@ -75,24 +88,18 @@ export const TaskSchedulerService = {
       const onceDate = rule.startDate;
       if (onceDate >= fromDate && onceDate <= effectiveToDate) {
         // 既存チェック
-        const existing = await prisma.scheduledTask.findUnique({
-          where: {
-            userId_workoutSessionId_scheduledDate: {
-              userId: BigInt(userId),
-              workoutSessionId: BigInt(workoutSessionId),
-              scheduledDate: toUtcDateOnly(onceDate),
-            },
-          },
-        });
+        const existing = await findScheduledTask(
+          userId,
+          workoutSessionId,
+          toUtcDateOnly(onceDate),
+        );
         if (!existing) {
-          await prisma.scheduledTask.create({
-            data: {
-              userId: BigInt(userId),
-              ruleId: BigInt(ruleId),
-              workoutSessionId: BigInt(workoutSessionId),
-              scheduledDate: toUtcDateOnly(onceDate),
-              status: "pending",
-            },
+          await createScheduledTaskRaw({
+            userId,
+            ruleId,
+            workoutSessionId,
+            scheduledDate: toUtcDateOnly(onceDate),
+            status: "pending",
           });
           return 1;
         }
@@ -128,16 +135,11 @@ export const TaskSchedulerService = {
     if (dataToCreate.length === 0) return 0;
 
     // 既に存在する日付をDBから取得
-    const existingTasks = await prisma.scheduledTask.findMany({
-      where: {
-        userId: BigInt(userId),
-        workoutSessionId: BigInt(workoutSessionId),
-        scheduledDate: {
-          in: dataToCreate.map((d) => d.scheduledDate),
-        },
-      },
-      select: { scheduledDate: true },
-    });
+    const existingTasks = await findScheduledTasksForDates(
+      userId,
+      workoutSessionId,
+      dataToCreate.map((d) => d.scheduledDate),
+    );
 
     const existingDateSet = new Set(
       existingTasks.map((s) => toDateKey(s.scheduledDate)),
@@ -149,15 +151,15 @@ export const TaskSchedulerService = {
     );
 
     if (finalCreates.length > 0) {
-      await prisma.scheduledTask.createMany({
-        data: finalCreates.map((d) => ({
-          userId: BigInt(d.userId),
-          ruleId: BigInt(d.ruleId),
-          workoutSessionId: BigInt(d.workoutSessionId),
+      await createManyScheduledTasks(
+        finalCreates.map((d) => ({
+          userId: d.userId,
+          ruleId: d.ruleId,
+          workoutSessionId: d.workoutSessionId,
           scheduledDate: d.scheduledDate,
           status: "pending" as const,
         })),
-      });
+      );
       console.log(
         `[TaskScheduler] Created ${finalCreates.length} tasks for rule ${ruleId}`,
       );
@@ -180,17 +182,14 @@ export const TaskSchedulerService = {
     const today = getStartOfDayUTC(new Date());
 
     // 1. 未来の未完了タスクを物理削除
-    const deleteResult = await prisma.scheduledTask.deleteMany({
-      where: {
-        userId: BigInt(userId),
-        ruleId: BigInt(ruleId),
-        scheduledDate: { gte: today },
-        status: "pending",
-      },
-    });
+    const deleteCount = await deleteFuturePendingTasksByRule(
+      userId,
+      ruleId,
+      today,
+    );
 
     console.log(
-      `[TaskScheduler] Deleted ${deleteResult.count} pending tasks for rule ${ruleId}`,
+      `[TaskScheduler] Deleted ${deleteCount} pending tasks for rule ${ruleId}`,
     );
 
     // 2. 向こう3ヶ月分を再生成
@@ -212,13 +211,10 @@ export const TaskSchedulerService = {
    */
   async cleanupFutureTasks(ruleId: number): Promise<void> {
     const today = getStartOfDayUTC(new Date());
-    await prisma.scheduledTask.deleteMany({
-      where: {
-        ruleId: BigInt(ruleId),
-        scheduledDate: { gte: today },
-        status: "pending",
-      },
-    });
+    // Note: この関数はuserIdを必要としないので、DALに追加の関数が必要
+    // 今回はdeleteFuturePendingTasksを直接使用
+    const { deleteFuturePendingTasks } = await import("@/lib/dal/schedule");
+    await deleteFuturePendingTasks(ruleId, today);
   },
 
   /**
@@ -229,13 +225,11 @@ export const TaskSchedulerService = {
     workoutSessionId: number,
     scheduledDate: Date,
   ): Promise<void> {
-    await prisma.scheduledTask.create({
-      data: {
-        userId: BigInt(userId),
-        workoutSessionId: BigInt(workoutSessionId),
-        scheduledDate: toUtcDateOnly(scheduledDate),
-        status: "pending",
-      },
+    const { createScheduledTask } = await import("@/lib/dal/schedule");
+    await createScheduledTask({
+      userId,
+      workoutSessionId,
+      scheduledDate: toUtcDateOnly(scheduledDate),
     });
   },
 
@@ -248,34 +242,14 @@ export const TaskSchedulerService = {
     const threeMonthsLater = addDays(today, 90);
 
     // 有効なルールを全て取得
-    const rules = await prisma.scheduleRule.findMany({
-      where: {
-        isEnabled: true,
-        deletedAt: null,
-      },
-    });
+    const rules = await getAllActiveRulesForCron();
 
     for (const rule of rules) {
-      const mappedRule: ScheduleRule = {
-        id: Number(rule.id),
-        userId: Number(rule.userId),
-        workoutSessionId: Number(rule.workoutSessionId),
-        ruleType: rule.ruleType as ScheduleRuleType,
-        weekdays: rule.weekdays ?? undefined,
-        intervalDays: rule.intervalDays ?? undefined,
-        startDate: rule.startDate ?? undefined,
-        endDate: rule.endDate ?? undefined,
-        isEnabled: rule.isEnabled,
-        createdAt: rule.createdAt,
-        updatedAt: rule.updatedAt,
-        deletedAt: rule.deletedAt ?? undefined,
-      };
-
       await this.generateTasks(
-        Number(rule.userId),
-        Number(rule.id),
-        Number(rule.workoutSessionId),
-        mappedRule,
+        rule.userId,
+        rule.id,
+        rule.workoutSessionId,
+        rule,
         today,
         threeMonthsLater,
       );

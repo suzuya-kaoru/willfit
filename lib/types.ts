@@ -268,7 +268,8 @@ export interface ScheduleReminder extends BaseEntity {
 /**
  * ワークアウトセッション種目詳細（種目情報付き）
  */
-export interface WorkoutSessionExerciseWithDetails extends WorkoutSessionExercise {
+export interface WorkoutSessionExerciseWithDetails
+  extends WorkoutSessionExercise {
   exercise: ExerciseWithBodyParts;
 }
 
@@ -351,7 +352,8 @@ export interface WorkoutRecordWithDetails extends WorkoutRecord {
 /**
  * 種目記録（種目情報・セット付き）
  */
-export interface WorkoutRecordExerciseWithDetails extends WorkoutRecordExercise {
+export interface WorkoutRecordExerciseWithDetails
+  extends WorkoutRecordExercise {
   exercise: ExerciseWithBodyParts;
   sets: WorkoutRecordSet[];
   previousRecord?: PreviousRecord;

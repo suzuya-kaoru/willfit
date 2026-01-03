@@ -2,18 +2,18 @@ import { toZonedTime } from "date-fns-tz";
 import { formatDateKey, toDateKey } from "@/lib/date-key";
 import {
   getExerciseRecordsByRecordIds,
-  getTemplatesByIds,
   getScheduledTasksWithSessionByDateRange,
-  getWorkoutSessions,
+  getTemplatesByIds,
   getWorkoutRecordsByDateRange,
+  getWorkoutSessions,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
 import { weekdaysFromBitmask } from "@/lib/schedule-utils";
 import { APP_TIMEZONE, getMonthEndUTC, getMonthStartUTC } from "@/lib/timezone";
 import type {
   CalculatedTask,
-  WorkoutRecordExercise,
   WorkoutRecord,
+  WorkoutRecordExercise,
   WorkoutRecordSet,
 } from "@/lib/types";
 import { ScheduleClient } from "./_components/schedule-client";
@@ -242,15 +242,20 @@ export default async function SchedulePage({
 
   const workoutRecordIds = recordsInMonth.map((record) => record.id);
   const exerciseRecords = await getExerciseRecordsByRecordIds(workoutRecordIds);
-  const exerciseRecordIds = exerciseRecords.map((er: WorkoutRecordExercise) => er.id);
+  const exerciseRecordIds = exerciseRecords.map(
+    (er: WorkoutRecordExercise) => er.id,
+  );
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
   const templatesByIds = await getTemplatesByIds(userId, [
     ...new Set(recordsInMonth.map((record) => record.templateId)),
   ]);
-  const templatesById = new Map(templatesByIds.map((template) => [template.id, template]));
+  const templatesById = new Map(
+    templatesByIds.map((template) => [template.id, template]),
+  );
   const exerciseRecordsByRecordId =
     buildExerciseRecordsByRecordId(exerciseRecords);
-  const setsByWorkoutRecordExerciseId = buildSetsByWorkoutRecordExerciseId(sets);
+  const setsByWorkoutRecordExerciseId =
+    buildSetsByWorkoutRecordExerciseId(sets);
 
   // ============================================================================
   // データ計算（サーバー側で実行）

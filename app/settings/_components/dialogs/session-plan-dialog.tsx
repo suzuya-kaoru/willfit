@@ -4,8 +4,8 @@ import { ArrowDown, ArrowUp, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   CreateWorkoutSessionInput,
-  WorkoutSessionExerciseInput,
   UpdateWorkoutSessionInput,
+  WorkoutSessionExerciseInput,
 } from "@/app/_actions/workout-session-actions";
 import { Button } from "@/components/ui/button";
 import {

@@ -238,7 +238,9 @@ export function WorkoutClient({
       try {
         const input: SaveWorkoutRecordInput = {
           templateId: template.id,
-          workoutSessionId: workoutSession?.id ? Number(workoutSession.id) : undefined,
+          workoutSessionId: workoutSession?.id
+            ? Number(workoutSession.id)
+            : undefined,
           scheduledTaskId: scheduledTaskId,
           scheduledDateKey,
           startedAt: startedAtRef.current,

@@ -9,9 +9,9 @@ import {
 } from "@/lib/db/queries";
 import { formatDateTimeJST } from "@/lib/timezone";
 import type {
-  WorkoutRecordExercise,
   ExerciseWithBodyParts,
   WorkoutRecord,
+  WorkoutRecordExercise,
   WorkoutRecordSet,
 } from "@/lib/types";
 import {
@@ -150,7 +150,8 @@ export default async function AnalyticsPage() {
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
   const setsByWorkoutRecordExerciseId = new Map<number, WorkoutRecordSet[]>();
   for (const set of sets) {
-    const list = setsByWorkoutRecordExerciseId.get(set.workoutRecordExerciseId) ?? [];
+    const list =
+      setsByWorkoutRecordExerciseId.get(set.workoutRecordExerciseId) ?? [];
     list.push(set);
     setsByWorkoutRecordExerciseId.set(set.workoutRecordExerciseId, list);
   }

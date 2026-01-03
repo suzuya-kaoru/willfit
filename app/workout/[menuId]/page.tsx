@@ -2,8 +2,8 @@ import { toDateKey } from "@/lib/date-key";
 import {
   getExerciseRecordsByRecordIds,
   getTemplateWithExercises,
-  getWorkoutSessionWithDetails,
   getWorkoutRecordsByTemplateIds,
+  getWorkoutSessionWithDetails,
   getWorkoutSetsByExerciseRecordIds,
 } from "@/lib/db/queries";
 import type { WorkoutRecordExercise, WorkoutRecordSet } from "@/lib/types";
@@ -44,11 +44,14 @@ async function calculatePreviousRecords(
   const exerciseRecords = await getExerciseRecordsByRecordIds([
     previousWorkoutRecord.id,
   ]);
-  const exerciseRecordIds = exerciseRecords.map((er: WorkoutRecordExercise) => er.id);
+  const exerciseRecordIds = exerciseRecords.map(
+    (er: WorkoutRecordExercise) => er.id,
+  );
   const sets = await getWorkoutSetsByExerciseRecordIds(exerciseRecordIds);
   const setsByWorkoutRecordExerciseId = new Map<number, WorkoutRecordSet[]>();
   for (const set of sets) {
-    const list = setsByWorkoutRecordExerciseId.get(set.workoutRecordExerciseId) ?? [];
+    const list =
+      setsByWorkoutRecordExerciseId.get(set.workoutRecordExerciseId) ?? [];
     list.push(set);
     setsByWorkoutRecordExerciseId.set(set.workoutRecordExerciseId, list);
   }
@@ -60,7 +63,8 @@ async function calculatePreviousRecords(
   for (const exerciseId of exerciseIds) {
     const exerciseRecord = exerciseRecordByExerciseId.get(exerciseId);
     if (!exerciseRecord) continue;
-    const previousSets = setsByWorkoutRecordExerciseId.get(exerciseRecord.id) ?? [];
+    const previousSets =
+      setsByWorkoutRecordExerciseId.get(exerciseRecord.id) ?? [];
 
     if (previousSets.length > 0) {
       // セットをセット番号順にソート
