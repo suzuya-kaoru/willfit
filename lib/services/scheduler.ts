@@ -7,16 +7,13 @@
 import { addDays, differenceInDays, eachDayOfInterval, getDay } from "date-fns";
 import {
   createScheduledTaskRaw,
+  createScheduledTasks,
   deleteFuturePendingTasksByRule,
   findScheduledTask,
   findScheduledTasksForDates,
-} from "@/lib/dal/schedule/_internal/scheduler-engine";
+} from "@/lib/dal/schedule/_internal/scheduler-dal";
 import { getAllActiveRulesForCron } from "@/lib/dal/schedule/schedule-rule";
-import {
-  createScheduledTask,
-  createScheduledTasks,
-  deleteFuturePendingTasks,
-} from "@/lib/dal/schedule/scheduled-task";
+import { createScheduledTask } from "@/lib/dal/schedule/scheduled-task";
 import { parseDateKey, toDateKey } from "@/lib/date-key";
 import { isWeekdayInBitmask } from "@/lib/schedule-utils";
 import { getStartOfDayUTC, toUtcDateOnly } from "@/lib/timezone";
@@ -212,12 +209,9 @@ export const TaskSchedulerService = {
    * ルール削除時のクリーンアップ
    * 未来の未完了タスクのみ削除する
    */
-  async cleanupFutureTasks(ruleId: number): Promise<void> {
+  async cleanupFutureTasks(userId: number, ruleId: number): Promise<void> {
     const today = getStartOfDayUTC(new Date());
-    // Note: この関数はuserIdを必要としないので、DALに追加の関数が必要
-    // 今回はdeleteFuturePendingTasksを直接使用
-
-    await deleteFuturePendingTasks(ruleId, today);
+    await deleteFuturePendingTasksByRule(userId, ruleId, today);
   },
 
   /**

@@ -199,7 +199,7 @@ export async function getWorkoutRecordExercisesByRecordIds(
 }
 
 /**
- * 指定種目IDのセット一覧を取得
+ * 指定ワークアウト実施種目IDのセット一覧を取得
  */
 export async function getWorkoutRecordSetsByRecordExerciseIds(
   workoutRecordExerciseIds: number[],

@@ -257,7 +257,7 @@ export async function deleteScheduleRuleAction(ruleId: number) {
   const _userId = 1; // TODO: 認証実装後に動的取得
 
   // 未来のpendingタスクを物理削除
-  await TaskSchedulerService.cleanupFutureTasks(validId);
+  await TaskSchedulerService.cleanupFutureTasks(_userId, validId);
 
   await deleteScheduleRule(validId);
 

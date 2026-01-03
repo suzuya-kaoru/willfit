@@ -108,30 +108,6 @@ export async function createScheduledTask(input: {
 }
 
 /**
- * スケジュールタスクを一括作成
- */
-export async function createScheduledTasks(
-  tasks: {
-    userId: number;
-    ruleId?: number;
-    workoutSessionId: number;
-    scheduledDate: Date;
-  }[],
-): Promise<number> {
-  const result = await prisma.scheduledTask.createMany({
-    data: tasks.map((t) => ({
-      userId: toBigInt(t.userId, "userId"),
-      ruleId: t.ruleId ? toBigInt(t.ruleId, "ruleId") : null,
-      workoutSessionId: toBigInt(t.workoutSessionId, "workoutSessionId"),
-      scheduledDate: toUtcDateOnly(t.scheduledDate),
-      status: "pending" as const,
-    })),
-    skipDuplicates: true,
-  });
-  return result.count;
-}
-
-/**
  * スケジュールタスクのステータスを更新
  */
 export async function updateScheduledTaskStatus(input: {
@@ -193,23 +169,6 @@ export async function rescheduleTask(input: {
     },
   );
   return result;
-}
-
-/**
- * 特定ルールの未来のpendingタスクを削除
- */
-export async function deleteFuturePendingTasks(
-  ruleId: number,
-  fromDate: Date,
-): Promise<number> {
-  const result = await prisma.scheduledTask.deleteMany({
-    where: {
-      ruleId: toBigInt(ruleId, "ruleId"),
-      scheduledDate: { gte: toUtcDateOnly(fromDate) },
-      status: "pending",
-    },
-  });
-  return result.count;
 }
 
 /**

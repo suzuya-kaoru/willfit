@@ -52,6 +52,30 @@ export async function createScheduledTaskRaw(data: {
 }
 
 /**
+ * スケジュールタスクを一括作成
+ */
+export async function createScheduledTasks(
+  tasks: {
+    userId: number;
+    ruleId?: number;
+    workoutSessionId: number;
+    scheduledDate: Date;
+  }[],
+): Promise<number> {
+  const result = await prisma.scheduledTask.createMany({
+    data: tasks.map((t) => ({
+      userId: toBigInt(t.userId, "userId"),
+      ruleId: t.ruleId ? toBigInt(t.ruleId, "ruleId") : null,
+      workoutSessionId: toBigInt(t.workoutSessionId, "workoutSessionId"),
+      scheduledDate: toUtcDateOnly(t.scheduledDate),
+      status: "pending" as const,
+    })),
+    skipDuplicates: true,
+  });
+  return result.count;
+}
+
+/**
  * 指定日付リストの既存タスクを取得（scheduler用）
  */
 export async function findScheduledTasksForDates(
