@@ -29,7 +29,7 @@ export async function getWeightRecords(
 // Mutation Types
 // =============================================================================
 
-export interface SaveWeightRecordParams {
+export interface UpsertWeightRecordParams {
   weight: number;
   bodyFat?: number;
   recordedAt: Date;
@@ -44,7 +44,7 @@ export interface SaveWeightRecordParams {
  */
 export async function upsertWeightRecord(
   userId: number,
-  params: SaveWeightRecordParams,
+  params: UpsertWeightRecordParams,
   dateRange: { start: Date; end: Date },
 ) {
   const { weight, bodyFat, recordedAt } = params;

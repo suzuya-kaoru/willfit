@@ -8,6 +8,7 @@
  *   ├── exercise.mapper.ts
  *   ├── template.mapper.ts
  *   ├── workout-record.mapper.ts
+ *   ├── weight-record.mapper.ts
  *   ├── schedule.mapper.ts
  *   └── mappers.ts (このファイル - 再エクスポート)
  */
@@ -48,7 +49,7 @@ export {
   type WorkoutTemplateWithExercisesRow,
 } from "./template.mapper";
 // WorkoutRecord / WeightRecord
-export * from "./weight-record.mapper";
+export { mapWeightRecord } from "./weight-record.mapper";
 export {
   mapWorkoutRecord,
   mapWorkoutRecordExercise,

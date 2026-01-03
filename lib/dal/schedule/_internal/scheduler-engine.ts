@@ -6,8 +6,8 @@
 import { prisma } from "@/lib/db/prisma";
 import { toUtcDateOnly } from "@/lib/timezone";
 import type { ScheduledTask } from "@/lib/types";
-import { toBigInt } from "../_internal/helpers";
-import { mapScheduledTask } from "../_internal/mappers";
+import { toBigInt } from "../../_internal/helpers";
+import { mapScheduledTask } from "../../_internal/mappers";
 
 /**
  * 既存のスケジュールタスクを検索（冪等性チェック用）

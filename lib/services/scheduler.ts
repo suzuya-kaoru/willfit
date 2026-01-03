@@ -10,7 +10,7 @@ import {
   deleteFuturePendingTasksByRule,
   findScheduledTask,
   findScheduledTasksForDates,
-} from "@/lib/dal/schedule/internal";
+} from "@/lib/dal/schedule/_internal/scheduler-engine";
 import { getAllActiveRulesForCron } from "@/lib/dal/schedule/schedule-rule";
 import {
   createScheduledTask,
