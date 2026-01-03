@@ -3,7 +3,7 @@ import { getWeightRecords } from "@/lib/dal/weight-record";
 import {
   getMonthlyStats,
   getWorkoutRecordExercisesByRecordIds,
-  getWorkoutRecordSetsByExerciseIds,
+  getWorkoutRecordSetsByRecordExerciseIds,
   getWorkoutRecords,
 } from "@/lib/dal/workout-record";
 import { toDateKey } from "@/lib/date-key";
@@ -148,7 +148,7 @@ export default async function AnalyticsPage() {
   const recordIds = workoutRecords.map((record: WorkoutRecord) => record.id);
   const exerciseRecords = await getWorkoutRecordExercisesByRecordIds(recordIds);
   const exerciseRecordIds = exerciseRecords.map((record) => record.id);
-  const sets = await getWorkoutRecordSetsByExerciseIds(exerciseRecordIds);
+  const sets = await getWorkoutRecordSetsByRecordExerciseIds(exerciseRecordIds);
   const setsByWorkoutRecordExerciseId = new Map<number, WorkoutRecordSet[]>();
   for (const set of sets) {
     const list =

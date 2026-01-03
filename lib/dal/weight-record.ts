@@ -42,7 +42,7 @@ export interface SaveWeightRecordParams {
 /**
  * 体重記録を作成または更新
  */
-export async function createOrUpdateWeightRecord(
+export async function upsertWeightRecord(
   userId: number,
   params: SaveWeightRecordParams,
   dateRange: { start: Date; end: Date },

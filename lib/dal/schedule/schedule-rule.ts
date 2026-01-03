@@ -55,7 +55,7 @@ export async function getActiveScheduleRules(
 /**
  * ワークアウトセッションのスケジュールルール一覧を取得
  */
-export async function getScheduleRulesBySession(
+export async function getScheduleRulesByWorkoutSession(
   userId: number,
   workoutSessionId: number,
 ): Promise<ScheduleRule[]> {

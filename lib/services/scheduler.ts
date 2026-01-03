@@ -5,14 +5,13 @@
  * このサービスはDALを経由してデータベース操作を行います。
  */
 import { addDays, differenceInDays, eachDayOfInterval, getDay } from "date-fns";
+import { getAllActiveRulesForCron } from "@/lib/dal/schedule";
 import {
-  createManyScheduledTasks,
   createScheduledTaskRaw,
   deleteFuturePendingTasksByRule,
   findScheduledTask,
   findScheduledTasksForDates,
-  getAllActiveRulesForCron,
-} from "@/lib/dal/schedule";
+} from "@/lib/dal/schedule/internal";
 import { parseDateKey, toDateKey } from "@/lib/date-key";
 import { isWeekdayInBitmask } from "@/lib/schedule-utils";
 import { getStartOfDayUTC, toUtcDateOnly } from "@/lib/timezone";
@@ -151,13 +150,13 @@ export const TaskSchedulerService = {
     );
 
     if (finalCreates.length > 0) {
-      await createManyScheduledTasks(
+      const { createScheduledTasks } = await import("@/lib/dal/schedule");
+      await createScheduledTasks(
         finalCreates.map((d) => ({
           userId: d.userId,
           ruleId: d.ruleId,
           workoutSessionId: d.workoutSessionId,
           scheduledDate: d.scheduledDate,
-          status: "pending" as const,
         })),
       );
       console.log(

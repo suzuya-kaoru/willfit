@@ -25,26 +25,20 @@ export {
 } from "./exercise";
 // Schedule subdomain
 export {
-  createManyScheduledTasks,
   createScheduledTask,
-  createScheduledTaskRaw,
   createScheduledTasks,
   createScheduleRule,
   createWorkoutSession,
   deleteFuturePendingTasks,
-  deleteFuturePendingTasksByRule,
   deleteScheduledTask,
   deleteScheduleReminder,
   deleteScheduleRule,
   deleteWorkoutSession,
-  findScheduledTask,
-  findScheduledTasksForDates,
   getActiveScheduleRules,
-  getAllActiveRulesForCron,
   getScheduledTasksByDateRange,
   getScheduledTasksWithSessionByDateRange,
   getScheduleRuleById,
-  getScheduleRulesBySession,
+  getScheduleRulesByWorkoutSession,
   getWorkoutSessions,
   getWorkoutSessionWithDetails,
   rescheduleTask,
@@ -69,17 +63,17 @@ export {
 } from "./template";
 // WeightRecord
 export {
-  createOrUpdateWeightRecord,
   deleteWeightRecord,
   getWeightRecords,
   type SaveWeightRecordParams,
+  upsertWeightRecord,
 } from "./weight-record";
 // WorkoutRecord
 export {
   createWorkoutRecord,
   getMonthlyStats,
   getWorkoutRecordExercisesByRecordIds,
-  getWorkoutRecordSetsByExerciseIds,
+  getWorkoutRecordSetsByRecordExerciseIds,
   getWorkoutRecords,
   getWorkoutRecordsByDateRange,
   getWorkoutRecordsByTemplateIds,
@@ -100,7 +94,7 @@ export {
   createWorkoutSession as createSessionPlan,
   deleteWorkoutSession as deleteSessionPlan,
   getScheduledTasksWithSessionByDateRange as getScheduledTasksWithPlanByDateRange,
-  getScheduleRulesBySession as getScheduleRulesByPlan,
+  getScheduleRulesByWorkoutSession as getScheduleRulesByPlan,
   getWorkoutSessions as getSessionPlans,
   getWorkoutSessionWithDetails as getSessionPlanWithDetails,
   updateWorkoutSession as updateSessionPlan,
@@ -119,6 +113,6 @@ export {
 // WorkoutRecord aliases
 export {
   getWorkoutRecordExercisesByRecordIds as getExerciseRecordsByRecordIds,
-  getWorkoutRecordSetsByExerciseIds as getWorkoutSetsByExerciseRecordIds,
+  getWorkoutRecordSetsByRecordExerciseIds as getWorkoutSetsByExerciseRecordIds,
   getWorkoutRecordsByTemplateIds as getWorkoutRecordsByMenuIds,
 } from "./workout-record";

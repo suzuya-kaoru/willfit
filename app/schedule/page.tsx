@@ -6,7 +6,7 @@ import {
 import { getTemplatesByIds } from "@/lib/dal/template";
 import {
   getWorkoutRecordExercisesByRecordIds,
-  getWorkoutRecordSetsByExerciseIds,
+  getWorkoutRecordSetsByRecordExerciseIds,
   getWorkoutRecordsByDateRange,
 } from "@/lib/dal/workout-record";
 import { formatDateKey, toDateKey } from "@/lib/date-key";
@@ -249,7 +249,7 @@ export default async function SchedulePage({
   const exerciseRecordIds = exerciseRecords.map(
     (er: WorkoutRecordExercise) => er.id,
   );
-  const sets = await getWorkoutRecordSetsByExerciseIds(exerciseRecordIds);
+  const sets = await getWorkoutRecordSetsByRecordExerciseIds(exerciseRecordIds);
   const templatesByIds = await getTemplatesByIds(userId, [
     ...new Set(recordsInMonth.map((record) => record.templateId)),
   ]);

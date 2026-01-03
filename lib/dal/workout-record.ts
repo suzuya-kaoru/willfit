@@ -2,7 +2,7 @@
  * WorkoutRecord DAL
  * ワークアウト記録のCRUD操作
  */
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type {
   ExerciseWithBodyParts,
@@ -141,9 +141,12 @@ export async function getMonthlyStats(
   });
 
   // 総重量計算 (kg * reps)
-  const totalVolume = workoutRecordSets.reduce((sum, set) => {
-    return sum + set.weight.toNumber() * set.reps;
-  }, 0);
+  const totalVolume = workoutRecordSets.reduce(
+    (sum: number, set: { weight: Prisma.Decimal; reps: number }) => {
+      return sum + set.weight.toNumber() * set.reps;
+    },
+    0,
+  );
 
   return {
     totalVolume,
@@ -198,7 +201,7 @@ export async function getWorkoutRecordExercisesByRecordIds(
 /**
  * 指定種目IDのセット一覧を取得
  */
-export async function getWorkoutRecordSetsByExerciseIds(
+export async function getWorkoutRecordSetsByRecordExerciseIds(
   workoutRecordExerciseIds: number[],
 ): Promise<WorkoutRecordSet[]> {
   if (workoutRecordExerciseIds.length === 0) return [];
@@ -253,7 +256,8 @@ export async function getWorkoutRecordWithDetails(
       id: toSafeNumber(row.template.id, "workout_templates.id"),
       name: row.template.name,
     },
-    workoutRecordExercises: row.workoutRecordExercises.map((er) => ({
+    // biome-ignore lint/suspicious/noExplicitAny: implicit any from prisma inference
+    workoutRecordExercises: row.workoutRecordExercises.map((er: any) => ({
       id: toSafeNumber(er.id, "workout_record_exercises.id"),
       exerciseId: toSafeNumber(
         er.exerciseId,
@@ -290,7 +294,7 @@ export async function createWorkoutRecord(
 
   const userBigId = toBigInt(userId, "userId");
 
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const newRecord = await tx.workoutRecord.create({
       data: {
         userId: userBigId,
@@ -312,7 +316,7 @@ export async function createWorkoutRecord(
             workoutRecordSets: {
               create: ex.sets.map((set) => ({
                 setNumber: set.setNumber,
-                weight: new Prisma.Decimal(set.weight),
+                weight: set.weight,
                 reps: set.reps,
                 completed: set.completed,
                 note: set.note,
@@ -349,7 +353,7 @@ export async function updateWorkoutRecord(
   const recordBigId = toBigInt(recordId, "recordId");
   const userBigId = toBigInt(userId, "userId");
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const existingRecord = await tx.workoutRecord.findFirst({
       where: {
         id: recordBigId,
@@ -378,7 +382,7 @@ export async function updateWorkoutRecord(
             workoutRecordSets: {
               create: ex.sets.map((set) => ({
                 setNumber: set.setNumber,
-                weight: new Prisma.Decimal(set.weight),
+                weight: set.weight,
                 reps: set.reps,
                 completed: set.completed,
                 note: set.note,

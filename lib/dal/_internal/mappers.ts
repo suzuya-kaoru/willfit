@@ -48,8 +48,8 @@ export {
   type WorkoutTemplateWithExercisesRow,
 } from "./template.mapper";
 // WorkoutRecord / WeightRecord
+export * from "./weight-record.mapper";
 export {
-  mapWeightRecord,
   mapWorkoutRecord,
   mapWorkoutRecordExercise,
   mapWorkoutRecordSet,

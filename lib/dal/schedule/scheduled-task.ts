@@ -3,6 +3,7 @@
  * スケジュールタスクのCRUD操作
  */
 
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { toUtcDateOnly } from "@/lib/timezone";
 import type {
@@ -156,39 +157,41 @@ export async function rescheduleTask(input: {
   taskId: number;
   toDate: Date;
 }): Promise<{ originalTask: ScheduledTask; newTask: ScheduledTask }> {
-  const result = await prisma.$transaction(async (tx) => {
-    // 元のタスクを取得
-    const original = await tx.scheduledTask.findUnique({
-      where: { id: toBigInt(input.taskId, "taskId") },
-    });
-    if (!original) throw new Error("タスクが見つかりません");
+  const result = await prisma.$transaction(
+    async (tx: Prisma.TransactionClient) => {
+      // 元のタスクを取得
+      const original = await tx.scheduledTask.findUnique({
+        where: { id: toBigInt(input.taskId, "taskId") },
+      });
+      if (!original) throw new Error("タスクが見つかりません");
 
-    // 元のタスクを振替済みに更新
-    const updatedOriginal = await tx.scheduledTask.update({
-      where: { id: toBigInt(input.taskId, "taskId") },
-      data: {
-        status: "rescheduled",
-        rescheduledTo: toUtcDateOnly(input.toDate),
-      },
-    });
+      // 元のタスクを振替済みに更新
+      const updatedOriginal = await tx.scheduledTask.update({
+        where: { id: toBigInt(input.taskId, "taskId") },
+        data: {
+          status: "rescheduled",
+          rescheduledTo: toUtcDateOnly(input.toDate),
+        },
+      });
 
-    // 新しいタスクを作成
-    const newTask = await tx.scheduledTask.create({
-      data: {
-        userId: original.userId,
-        ruleId: original.ruleId,
-        workoutSessionId: original.workoutSessionId,
-        scheduledDate: toUtcDateOnly(input.toDate),
-        status: "pending",
-        rescheduledFrom: original.scheduledDate,
-      },
-    });
+      // 新しいタスクを作成
+      const newTask = await tx.scheduledTask.create({
+        data: {
+          userId: original.userId,
+          ruleId: original.ruleId,
+          workoutSessionId: original.workoutSessionId,
+          scheduledDate: toUtcDateOnly(input.toDate),
+          status: "pending",
+          rescheduledFrom: original.scheduledDate,
+        },
+      });
 
-    return {
-      originalTask: mapScheduledTask(updatedOriginal),
-      newTask: mapScheduledTask(newTask),
-    };
-  });
+      return {
+        originalTask: mapScheduledTask(updatedOriginal),
+        newTask: mapScheduledTask(newTask),
+      };
+    },
+  );
   return result;
 }
 
@@ -263,128 +266,4 @@ export async function deleteScheduledTask(userId: number, taskId: number) {
   await prisma.scheduledTask.delete({
     where: { id },
   });
-}
-
-// =============================================================================
-// Scheduler Service Functions
-// scheduler.ts から使用されるDAL関数
-// =============================================================================
-
-/**
- * 既存のスケジュールタスクを検索（冪等性チェック用）
- */
-export async function findScheduledTask(
-  userId: number,
-  workoutSessionId: number,
-  scheduledDate: Date,
-): Promise<ScheduledTask | null> {
-  const row = await prisma.scheduledTask.findUnique({
-    where: {
-      userId_workoutSessionId_scheduledDate: {
-        userId: toBigInt(userId, "userId"),
-        workoutSessionId: toBigInt(workoutSessionId, "workoutSessionId"),
-        scheduledDate: toUtcDateOnly(scheduledDate),
-      },
-    },
-  });
-  return row ? mapScheduledTask(row) : null;
-}
-
-/**
- * スケジュールタスクを直接作成（scheduler用）
- */
-export async function createScheduledTaskRaw(data: {
-  userId: number;
-  ruleId: number;
-  workoutSessionId: number;
-  scheduledDate: Date;
-  status: "pending";
-}): Promise<ScheduledTask> {
-  const row = await prisma.scheduledTask.create({
-    data: {
-      userId: toBigInt(data.userId, "userId"),
-      ruleId: toBigInt(data.ruleId, "ruleId"),
-      workoutSessionId: toBigInt(data.workoutSessionId, "workoutSessionId"),
-      scheduledDate: toUtcDateOnly(data.scheduledDate),
-      status: data.status,
-    },
-  });
-  return mapScheduledTask(row);
-}
-
-/**
- * スケジュールタスクを一括作成（scheduler用、skipDuplicates付き）
- */
-export async function createManyScheduledTasks(
-  tasks: {
-    userId: number;
-    ruleId: number;
-    workoutSessionId: number;
-    scheduledDate: Date;
-    status: "pending";
-  }[],
-): Promise<number> {
-  const result = await prisma.scheduledTask.createMany({
-    data: tasks.map((t) => ({
-      userId: toBigInt(t.userId, "userId"),
-      ruleId: toBigInt(t.ruleId, "ruleId"),
-      workoutSessionId: toBigInt(t.workoutSessionId, "workoutSessionId"),
-      scheduledDate: toUtcDateOnly(t.scheduledDate),
-      status: t.status,
-    })),
-    skipDuplicates: true,
-  });
-  return result.count;
-}
-
-/**
- * 指定日付リストの既存タスクを取得（scheduler用）
- */
-export async function findScheduledTasksForDates(
-  userId: number,
-  workoutSessionId: number,
-  scheduledDates: Date[],
-): Promise<ScheduledTask[]> {
-  const rows = await prisma.scheduledTask.findMany({
-    where: {
-      userId: toBigInt(userId, "userId"),
-      workoutSessionId: toBigInt(workoutSessionId, "workoutSessionId"),
-      scheduledDate: {
-        in: scheduledDates.map((d) => toUtcDateOnly(d)),
-      },
-    },
-    select: {
-      scheduledDate: true,
-      id: true,
-      userId: true,
-      workoutSessionId: true,
-      ruleId: true,
-      status: true,
-      rescheduledTo: true,
-      rescheduledFrom: true,
-      completedAt: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-  return rows.map(mapScheduledTask);
-}
-
-/**
- * 特定ルールの未来のpendingタスクを削除（scheduler用）
- */
-export async function deleteFuturePendingTasksByRule(
-  userId: number,
-  ruleId: number,
-  fromDate: Date,
-): Promise<number> {
-  const result = await prisma.scheduledTask.deleteMany({
-    where: {
-      userId: toBigInt(userId, "userId"),
-      ruleId: toBigInt(ruleId, "ruleId"),
-      scheduledDate: { gte: toUtcDateOnly(fromDate) },
-      status: "pending",
-    },
-  });
-  return result.count;
 }

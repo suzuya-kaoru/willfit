@@ -16,22 +16,16 @@ export {
   getActiveScheduleRules,
   getAllActiveRulesForCron,
   getScheduleRuleById,
-  getScheduleRulesBySession,
+  getScheduleRulesByWorkoutSession,
   updateScheduleRule,
 } from "./schedule-rule";
 
 // ScheduledTask
 export {
-  createManyScheduledTasks,
   createScheduledTask,
-  createScheduledTaskRaw,
   createScheduledTasks,
   deleteFuturePendingTasks,
-  deleteFuturePendingTasksByRule,
   deleteScheduledTask,
-  // Scheduler service functions
-  findScheduledTask,
-  findScheduledTasksForDates,
   getScheduledTasksByDateRange,
   getScheduledTasksWithSessionByDateRange,
   rescheduleTask,

@@ -2,7 +2,7 @@ import { getWorkoutSessionWithDetails } from "@/lib/dal/schedule";
 import { getTemplateWithExercises } from "@/lib/dal/template";
 import {
   getWorkoutRecordExercisesByRecordIds,
-  getWorkoutRecordSetsByExerciseIds,
+  getWorkoutRecordSetsByRecordExerciseIds,
   getWorkoutRecordsByTemplateIds,
 } from "@/lib/dal/workout-record";
 import { toDateKey } from "@/lib/date-key";
@@ -47,7 +47,7 @@ async function calculatePreviousRecords(
   const exerciseRecordIds = exerciseRecords.map(
     (er: WorkoutRecordExercise) => er.id,
   );
-  const sets = await getWorkoutRecordSetsByExerciseIds(exerciseRecordIds);
+  const sets = await getWorkoutRecordSetsByRecordExerciseIds(exerciseRecordIds);
   const setsByWorkoutRecordExerciseId = new Map<number, WorkoutRecordSet[]>();
   for (const set of sets) {
     const list =

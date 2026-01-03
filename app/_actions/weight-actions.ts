@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
-  createOrUpdateWeightRecord,
   deleteWeightRecord,
+  upsertWeightRecord,
 } from "@/lib/dal/weight-record";
 import { getEndOfDayUTC, getStartOfDayUTC } from "@/lib/timezone";
 
@@ -55,7 +55,7 @@ export async function createWeightRecordAction(
     const startOfDay = getStartOfDayUTC(data.recordedAt);
     const endOfDay = getEndOfDayUTC(data.recordedAt);
 
-    await createOrUpdateWeightRecord(
+    await upsertWeightRecord(
       userId,
       {
         weight: data.weight,
