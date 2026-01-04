@@ -4,15 +4,15 @@
  */
 import { prisma } from "@/lib/db/prisma";
 import type {
-  TemplateExercise,
   WorkoutTemplate,
+  WorkoutTemplateExercise,
   WorkoutTemplateWithExercises,
 } from "@/lib/types";
 import { toBigInt, toBigIntArray } from "./_internal/helpers";
 import {
   mapTemplate,
-  mapTemplateExercise,
   mapTemplateWithExercises,
+  mapWorkoutTemplateExercise,
 } from "./_internal/template.mapper";
 
 // =============================================================================
@@ -33,7 +33,7 @@ export async function getTemplateWithExercises(
       deletedAt: null,
     },
     include: {
-      templateExercises: {
+      workoutTemplateExercises: {
         where: { exercise: { deletedAt: null } },
         orderBy: { displayOrder: "asc" },
         include: {
@@ -64,7 +64,7 @@ export async function getTemplatesWithExercises(
     where: { userId: toBigInt(userId, "userId"), deletedAt: null },
     orderBy: { createdAt: "asc" },
     include: {
-      templateExercises: {
+      workoutTemplateExercises: {
         where: { exercise: { deletedAt: null } },
         orderBy: { displayOrder: "asc" },
         include: {
@@ -117,15 +117,15 @@ export async function getTemplatesByIds(
 /**
  * 指定テンプレートIDの種目一覧を取得
  */
-export async function getTemplateExercisesByTemplateIds(
+export async function getWorkoutTemplateExercisesByTemplateIds(
   templateIds: number[],
-): Promise<TemplateExercise[]> {
+): Promise<WorkoutTemplateExercise[]> {
   if (templateIds.length === 0) return [];
-  const rows = await prisma.templateExercise.findMany({
+  const rows = await prisma.workoutTemplateExercise.findMany({
     where: { templateId: { in: toBigIntArray(templateIds, "templateIds") } },
     orderBy: [{ templateId: "asc" }, { displayOrder: "asc" }],
   });
-  return rows.map(mapTemplateExercise);
+  return rows.map(mapWorkoutTemplateExercise);
 }
 
 // =============================================================================
@@ -157,7 +157,7 @@ export async function createWorkoutTemplate(
     data: {
       userId: toBigInt(userId, "userId"),
       name,
-      templateExercises: {
+      workoutTemplateExercises: {
         create: exerciseIds.map((exerciseId, index) => ({
           exerciseId: toBigInt(exerciseId, "exerciseId"),
           displayOrder: index + 1,
@@ -178,7 +178,7 @@ export async function updateWorkoutTemplate(
   const templateId = toBigInt(id, "templateId");
 
   await prisma.$transaction(async (tx) => {
-    await tx.templateExercise.deleteMany({
+    await tx.workoutTemplateExercise.deleteMany({
       where: { templateId },
     });
 
@@ -186,7 +186,7 @@ export async function updateWorkoutTemplate(
       where: { id: templateId, userId: toBigInt(userId, "userId") },
       data: {
         name,
-        templateExercises: {
+        workoutTemplateExercises: {
           create: exerciseIds.map((exerciseId, index) => ({
             exerciseId: toBigInt(exerciseId, "exerciseId"),
             displayOrder: index + 1,

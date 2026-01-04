@@ -95,7 +95,7 @@ model Exercise {
   user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   bodyParts      ExerciseBodyPart[]
   workoutRecordExercises WorkoutRecordExercise[]
-  templateExercises  TemplateExercise[]
+  workoutTemplateExercises  WorkoutTemplateExercise[]
   workoutSessionExercises WorkoutSessionExercise[]
 
   @@index([userId], map: "idx_exercises_user_id")
@@ -122,7 +122,7 @@ model WorkoutTemplate {
   updatedAt     DateTime        @updatedAt @map("updated_at")
   deletedAt     DateTime?       @map("deleted_at")
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  templateExercises TemplateExercise[]
+  workoutTemplateExercises WorkoutTemplateExercise[]
   workoutRecords WorkoutRecord[]
   workoutSessions  WorkoutSession[]
 
@@ -131,7 +131,7 @@ model WorkoutTemplate {
   @@map("workout_templates")
 }
 
-model TemplateExercise {
+model WorkoutTemplateExercise {
   id           BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
   templateId   BigInt       @map("template_id") @db.UnsignedBigInt
   exerciseId   BigInt       @map("exercise_id") @db.UnsignedBigInt
@@ -141,10 +141,10 @@ model TemplateExercise {
   template     WorkoutTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
   exercise     Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
-  @@index([templateId], map: "idx_template_exercises_template_id")
-  @@index([templateId, displayOrder], map: "idx_template_exercises_template_id_display_order")
-  @@unique([templateId, exerciseId], map: "uk_template_exercises_template_id_exercise_id")
-  @@map("template_exercises")
+  @@index([templateId], map: "idx_workout_template_exercises_template_id")
+  @@index([templateId, displayOrder], map: "idx_workout_template_exercises_template_id_display_order")
+  @@unique([templateId, exerciseId], map: "uk_workout_template_exercises_template_id_exercise_id")
+  @@map("workout_template_exercises")
 }
 
 model WorkoutRecord {

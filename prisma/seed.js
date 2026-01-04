@@ -258,8 +258,8 @@ const workoutTemplates = [
   },
 ];
 
-// TemplateExercise (旧 MenuExercise)
-const templateExercises = [
+// WorkoutTemplateExercise (旧 MenuExercise)
+const workoutTemplateExercises = [
   {
     id: 1,
     templateId: 1,
@@ -611,7 +611,7 @@ function buildWorkoutRecordExercises(records, templateEntries) {
 
 const workoutRecordExercises = buildWorkoutRecordExercises(
   workoutRecords,
-  templateExercises,
+  workoutTemplateExercises,
 );
 
 // WorkoutRecordSet - プロトレーニー観点のリアルなデータ生成
@@ -1574,7 +1574,7 @@ async function resetDatabase() {
   await prisma.scheduleReminder.deleteMany();
   await prisma.workoutSessionExercise.deleteMany();
   await prisma.workoutSession.deleteMany();
-  await prisma.templateExercise.deleteMany();
+  await prisma.workoutTemplateExercise.deleteMany();
   await prisma.exerciseBodyPart.deleteMany();
   await prisma.weightRecord.deleteMany();
   await prisma.workoutTemplate.deleteMany();
@@ -1592,7 +1592,9 @@ async function seed() {
   await prisma.exercise.createMany({ data: exercises });
   await prisma.exerciseBodyPart.createMany({ data: exerciseBodyParts });
   await prisma.workoutTemplate.createMany({ data: workoutTemplates });
-  await prisma.templateExercise.createMany({ data: templateExercises });
+  await prisma.workoutTemplateExercise.createMany({
+    data: workoutTemplateExercises,
+  });
 
   // ワークアウト記録
   await prisma.workoutRecord.createMany({ data: workoutRecords });

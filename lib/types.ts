@@ -93,9 +93,9 @@ export interface WorkoutTemplate extends SoftDeletable {
 
 /**
  * テンプレート-種目 中間テーブル
- * @table template_exercises
+ * @table workout_template_exercises
  */
-export interface TemplateExercise extends BaseEntity {
+export interface WorkoutTemplateExercise extends BaseEntity {
   templateId: number; // FK → workout_templates.id
   exerciseId: number; // FK → exercises.id
   displayOrder: number; // 表示順序（1, 2, 3...）
@@ -400,9 +400,14 @@ export type UpdateInput<T extends BaseEntity> = Partial<
 export type WorkoutMenu = WorkoutTemplate;
 
 /**
- * @deprecated Use TemplateExercise instead
+ * @deprecated Use WorkoutTemplateExercise instead
  */
-export type MenuExercise = TemplateExercise;
+export type MenuExercise = WorkoutTemplateExercise;
+
+/**
+ * @deprecated Use WorkoutTemplateExercise instead
+ */
+export type TemplateExercise = WorkoutTemplateExercise;
 
 /**
  * @deprecated Use WorkoutSession instead
