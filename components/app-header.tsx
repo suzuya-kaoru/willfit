@@ -1,6 +1,7 @@
 "use client";
 
-import { Dumbbell, User } from "lucide-react";
+import { User } from "lucide-react";
+import { Logo } from "@/components/logo";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface AppHeaderProps {
@@ -12,9 +13,7 @@ export function AppHeader({ title = "WillFit" }: AppHeaderProps) {
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-md items-center justify-between px-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary/80 shadow-lg shadow-primary/25">
-            <Dumbbell className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <Logo className="h-9 w-9" />
           <span className="text-xl font-bold tracking-tight">{title}</span>
         </div>
         <Avatar className="h-9 w-9 ring-2 ring-border/50 transition-all hover:ring-primary/50">

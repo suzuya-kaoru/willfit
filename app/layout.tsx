@@ -9,7 +9,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 // <CHANGE> Updated metadata for workout tracker app
 export const metadata: Metadata = {
-  title: "FitLog - Workout Tracker",
+  title: "WillFit - Workout Tracker",
   description:
     "Track your workouts, monitor progress, and achieve your fitness goals",
   generator: "v0.app",

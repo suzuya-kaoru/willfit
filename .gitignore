@@ -40,7 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-prisma/migrations/migration_lock.toml
+/prisma/migrations/migration_lock.toml
+/public/logo
 /docker/mysql/*
 /docs
 .claude

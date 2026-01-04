@@ -1,0 +1,52 @@
+<svg width="280" height="60" viewBox="0 0 280 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Main lime green gradient (oklch 0.72 0.19 145) -->
+    <linearGradient id="limeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7AED8D"/>
+      <stop offset="50%" stop-color="#5DD970"/>
+      <stop offset="100%" stop-color="#4BC45F"/>
+    </linearGradient>
+    
+    <!-- Highlight gradient for 3D effect -->
+    <linearGradient id="highlightGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9FF5AB"/>
+      <stop offset="40%" stop-color="#5DD970"/>
+      <stop offset="100%" stop-color="#3DA84A"/>
+    </linearGradient>
+    
+    <!-- Text gradient (horizontal) -->
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7AED8D"/>
+      <stop offset="100%" stop-color="#4BC45F"/>
+    </linearGradient>
+    
+    <!-- Subtle drop shadow -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="0.8" flood-color="#1A5C2A" flood-opacity="0.35"/>
+    </filter>
+    
+    <style>
+      @media (prefers-color-scheme: light) {
+        .text-main { fill: #0D0D14; }
+      }
+      @media (prefers-color-scheme: dark) {
+        .text-main { fill: #F5F5F7; }
+      }
+    </style>
+  </defs>
+
+  <!-- Icon (mini version) with shadow -->
+  <g transform="translate(30, 30)" filter="url(#shadow)">
+    <rect x="-22" y="-12" width="5" height="24" rx="1.5" fill="url(#highlightGrad)"/>
+    <rect x="17" y="-12" width="5" height="24" rx="1.5" fill="url(#highlightGrad)"/>
+    <path
+      d="M-15 -10 L-15 12 L-8 12 L-8 -2 L0 15 L8 -2 L8 12 L15 12 L15 -10"
+      fill="url(#limeGrad)"
+    />
+  </g>
+
+  <!-- Text: WillFit -->
+  <text x="70" y="42" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="36" font-weight="700" letter-spacing="-1">
+    <tspan fill="url(#textGrad)">Will</tspan><tspan class="text-main">Fit</tspan>
+  </text>
+</svg>
