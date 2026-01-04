@@ -25,7 +25,7 @@ export function WeeklyProgress({
     weeklyGoal > 0 ? Math.round((weeklyCompleted / weeklyGoal) * 100) : 0;
 
   return (
-    <Card className="overflow-hidden border-0 bg-linear-to-br from-card to-primary/5 shadow-lg">
+    <Card className="overflow-hidden bg-linear-to-br from-card to-primary/5 shadow-lg">
       <CardContent className="p-4">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">

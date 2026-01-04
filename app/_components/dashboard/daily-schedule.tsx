@@ -83,7 +83,7 @@ export function DailySchedule({
     : [];
 
   return (
-    <Card className="overflow-hidden border-0 shadow-lg">
+    <Card className="overflow-hidden shadow-lg">
       {/* Header with gradient */}
       <div className="flex items-center justify-between bg-linear-to-r from-primary/10 to-transparent px-4 py-3">
         <div className="flex items-center gap-2">

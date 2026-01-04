@@ -4,45 +4,46 @@
 @custom-variant dark (&:is(.dark *));
 
 /* <CHANGE> Fitness app dark theme - optimized for gym use */
+/* Light theme */
 :root {
-  --background: oklch(0.13 0.01 250);
-  --foreground: oklch(0.95 0 0);
-  --card: oklch(0.18 0.01 250);
-  --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.18 0.01 250);
-  --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.72 0.19 145);
-  --primary-foreground: oklch(0.13 0.01 250);
-  --secondary: oklch(0.25 0.01 250);
-  --secondary-foreground: oklch(0.95 0 0);
-  --muted: oklch(0.22 0.01 250);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.72 0.19 145);
-  --accent-foreground: oklch(0.13 0.01 250);
-  --destructive: oklch(0.65 0.2 25);
-  --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.28 0.01 250);
-  --input: oklch(0.22 0.01 250);
-  --ring: oklch(0.72 0.19 145);
-  --chart-1: oklch(0.72 0.19 145);
-  --chart-2: oklch(0.65 0.15 200);
-  --chart-3: oklch(0.7 0.18 80);
-  --chart-4: oklch(0.65 0.2 25);
-  --chart-5: oklch(0.6 0.2 280);
+  --background: oklch(0.985 0 0); /* Slightly off-white to make cards pop */
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);   /* Pure white cards */
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.96 0 0); /* Darkened slightly */
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.95 0 0);
+  --muted-foreground: oklch(0.40 0 0); /* Even darker for readability */
+  --accent: oklch(0.95 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.75 0 0); /* Much darker, approaching mid-gray for clear edges */
+  --input: oklch(0.70 0 0);  /* Inputs even darker to stand out */
+  --ring: oklch(0.60 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.75rem;
-  --sidebar: oklch(0.15 0.01 250);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.72 0.19 145);
-  --sidebar-primary-foreground: oklch(0.13 0.01 250);
-  --sidebar-accent: oklch(0.22 0.01 250);
-  --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.28 0.01 250);
-  --sidebar-ring: oklch(0.72 0.19 145);
+  --sidebar: oklch(0.97 0 0); /* Distinct from main background */
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.95 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.75 0 0); /* Matched main border */
+  --sidebar-ring: oklch(0.70 0 0);
 
-  /* Custom fitness colors */
-  --success: oklch(0.72 0.19 145);
-  --warning: oklch(0.8 0.18 80);
-  --info: oklch(0.65 0.15 200);
+  /* Custom fitness colors - adjusted for light */
+  --success: oklch(0.6 0.18 145);
+  --warning: oklch(0.7 0.15 80);
+  --info: oklch(0.55 0.15 240);
 }
 
 .dark {
@@ -169,6 +170,20 @@
 @layer utilities {
   .animate-in {
     animation: fadeIn 0.3s ease-out;
+  }
+  
+  /* Override shadows for better visibility in light mode */
+  .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.15);
+  }
+  .shadow, .shadow-md {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+  }
+  .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.25), 0 4px 6px -4px rgb(0 0 0 / 0.25);
+  }
+  .shadow-xl {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.25), 0 8px 10px -6px rgb(0 0 0 / 0.25);
   }
 }
 
