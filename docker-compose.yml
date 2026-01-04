@@ -17,18 +17,6 @@ services:
       - ./docker/nginx/ssl/server.key:/etc/nginx/ssl/server.key
     restart: always
 
-  # laravel:
-  #   build: ./docker/laravel
-  #   container_name: "laravel"
-  #   working_dir: /var/www
-  #   volumes:
-  #     - ./docker/laravel/src/php.ini:/usr/local/etc/php/php.ini
-  #     - .:/var/www:cached
-  #   networks:
-  #     - allbum_network
-  #   ports:
-  #     - "9000:9000"
-
   node:
     image: node:24
     volumes:
